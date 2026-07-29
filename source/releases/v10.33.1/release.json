@@ -4,11 +4,11 @@
   "builder": "scripts/build-v10.33.1.mjs",
   "output": "site/index.html",
   "downloadName": "beaufort_learning_harbor_v10_33_1.html",
-  "sha256": "7abc21eea99fa043546b3e3570c27ee796f23261a632076615f2e3761a927cfd",
-  "bytes": 5281640,
+  "sha256": "cf865083621407cb284d8088d16bb70c12200aa9c76294e25afd456384bc2157",
+  "bytes": 5281852,
   "title": "Beaufort Learning Harbor v10.33.1",
   "dockOwner": "BLHMobileDock@v10.33.1",
   "heroOwner": "BLHHero@v10.33.1",
   "demoBuild": "synthetic",
-  "notes": "Stabilizes the hero/version area by aligning thirteen legacy release constants, making repeated title writes idempotent, and assigning one authoritative hero owner."
+  "notes": "Stabilizes the hero/version area by aligning thirteen legacy release constants, making repeated title and kicker writes idempotent, and assigning one authoritative hero owner."
 }
