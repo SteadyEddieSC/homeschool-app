@@ -36,11 +36,15 @@ export async function buildRelease(manifest) {
     ['if(t) t.textContent=TITLE;', 'if(t && t.textContent!==TITLE) t.textContent=TITLE;'],
     ['if(title) title.textContent=TITLE;', 'if(title && title.textContent!==TITLE) title.textContent=TITLE;'],
     ['if(titleEl) titleEl.textContent=TITLE;', 'if(titleEl && titleEl.textContent!==TITLE) titleEl.textContent=TITLE;'],
+    ["$$('title').forEach(x=>x.textContent=TITLE);", "$$('title').forEach(x=>{if(x.textContent!==TITLE) x.textContent=TITLE;});"],
+    ["$$('title').forEach(t=>t.textContent=TITLE);", "$$('title').forEach(t=>{if(t.textContent!==TITLE) t.textContent=TITLE;});"],
     ['el.textContent=APP;', 'if(el.textContent!==APP) el.textContent=APP;'],
     ['el.textContent=TITLE;', 'if(el.textContent!==TITLE) el.textContent=TITLE;'],
     ['b.textContent=VERSION;', 'if(b.textContent!==VERSION) b.textContent=VERSION;'],
     ['badge.textContent=VERSION;', 'if(badge.textContent!==VERSION) badge.textContent=VERSION;'],
-    ["kicker.textContent='Offline-first learning harbor · '+VERSION;", "if(kicker.textContent!=='Offline-first learning harbor · '+VERSION) kicker.textContent='Offline-first learning harbor · '+VERSION;"]
+    ["kicker.textContent='Offline-first learning harbor · '+VERSION;", "if(kicker.textContent!=='Offline-first learning harbor · '+VERSION) kicker.textContent='Offline-first learning harbor · '+VERSION;"],
+    ["if(/Offline-first/i.test(el.textContent||'')) el.textContent='Offline-first learning harbor';", "if(/Offline-first/i.test(el.textContent||'') && el.textContent!=='Offline-first learning harbor · '+VERSION) el.textContent='Offline-first learning harbor · '+VERSION;"],
+    ["if(kicker&&/Offline-first/i.test(kicker.textContent||'')) kicker.textContent='Offline-first learning harbor';", "if(kicker&&/Offline-first/i.test(kicker.textContent||'')&&kicker.textContent!=='Offline-first learning harbor · v10.33.1') kicker.textContent='Offline-first learning harbor · v10.33.1';"]
   ]);
   for (const [oldValue, newValue] of idempotentReplacements) text = replaceAll(text, oldValue, newValue);
 
