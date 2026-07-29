@@ -15,6 +15,8 @@ if (!text.includes(manifest.title)) failures.push(`stable title/version missing:
 if (!text.includes(`data-release="${manifest.release}"`)) failures.push(`release marker missing: ${manifest.release}`);
 if (!text.includes(`data-demo-build="${manifest.demoBuild}"`)) failures.push('synthetic demo marker missing');
 if (!new RegExp(`const\\s+OWNER\\s*=\\s*['"]${manifest.dockOwner.replaceAll('.', '\\.') }['"]`).test(text)) failures.push('mobile dock owner missing');
+if (manifest.heroOwner && !new RegExp(`const\\s+OWNER\\s*=\\s*['"]${manifest.heroOwner.replaceAll('.', '\\.') }['"]`).test(text)) failures.push('hero owner missing');
+if (manifest.heroOwner && text.includes("const VERSION='v10.32';")) failures.push('legacy v10.32 title writer remains active');
 for (const route of ['learn','practice','quiz','proof','feedback']) {
   if (!new RegExp(`route\\s*:\\s*['"]${route}['"]`).test(text)) failures.push(`dock route missing: ${route}`);
 }
