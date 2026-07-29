@@ -1,0 +1,11 @@
+{
+  "schema": "beaufortLearningHarbor.demoFixture.v1",
+  "fixtureId": "demo-family-fresh",
+  "description": "Synthetic two-student family with no completed progress.",
+  "family": { "id": "family_demo", "name": "Demo Family" },
+  "students": [
+    { "id": "stu_jordan", "name": "Jordan", "levelId": "upper", "avatar": "🦊" },
+    { "id": "stu_avery", "name": "Avery", "levelId": "lower", "avatar": "🦄" }
+  ],
+  "progress": { "status": "fresh" }
+}
