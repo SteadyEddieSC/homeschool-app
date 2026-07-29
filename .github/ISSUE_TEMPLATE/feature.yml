@@ -1,0 +1,21 @@
+name: Feature request
+description: Propose a product or curriculum improvement
+title: "feature: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options: [App shell, Navigation, Learning, Assessment, Portfolio, Adult workflows, Data, Testing, Deployment]
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true for this to be complete?
