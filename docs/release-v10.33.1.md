@@ -27,7 +27,7 @@ Thirteen legacy compatibility layers still declared `VERSION='v10.32'`. Several 
 ## Artifact contract
 
 - File: `beaufort_learning_harbor_v10_33_1.html`
-- SHA-256: `cf865083621407cb284d8088d16bb70c12200aa9c76294e25afd456384bc2157`
+- SHA-256: `88341fadd45fa19a4f3b3328f56f39fe79510004051cbdcfd7a66c51ea14fd8a`
 - Bytes: `5281852`
 - Title: `Beaufort Learning Harbor v10.33.1`
 - Hero owner: `BLHHero@v10.33.1`
