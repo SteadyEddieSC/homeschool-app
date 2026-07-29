@@ -8,7 +8,7 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 - Public identities: Jordan, Avery, Guest Student, and Demo Family
 - Demo behavior: deterministic Load Demo Family and Reset Demo Data controls
 - Hero/title behavior: one authoritative owner with legacy version writers made idempotent
-- Deployment target: Cloudflare Pages demo
+- Deployment target: Cloudflare Workers Static Assets demo
 - Automated flow: integrity/privacy checks, Playwright desktop/mobile coverage, hero stability, dock stability, visual capture, and axe-core
 
 ## Repository model
@@ -38,9 +38,21 @@ Playwright and axe are pinned exactly in `package.json`. The lockfile is intenti
 
 The validated single-file output is generated at `site/index.html`. GitHub Actions also publishes it as a downloadable workflow artifact.
 
-## Cloudflare Pages
+## Cloudflare Workers
 
-Connect the repository using the **SteadyEddieSC** GitHub owner installation. Use `main` as the production branch, `node scripts/build.mjs && node scripts/check-release.mjs && node scripts/check-privacy.mjs` as the build command, `site` as the output directory, and set `SKIP_DEPENDENCY_INSTALL=1` because the deployment build uses only Node built-ins.
+Connect the repository using the **SteadyEddieSC** GitHub owner installation. The root `wrangler.jsonc` is the deployment source of truth and matches the connected Worker name `beaufort-learning-harbor`.
+
+Use these connected-build settings:
+
+```text
+Production branch: main
+Root directory: /
+Build command: npm run verify:release
+Deploy command: npx wrangler deploy
+Non-production deploy command: npx wrangler versions upload
+```
+
+Wrangler serves the generated `site` directory as static assets with single-page-application fallback behavior.
 
 ## Privacy
 
