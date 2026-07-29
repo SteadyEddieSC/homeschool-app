@@ -33,6 +33,8 @@ export async function buildRelease(manifest) {
     ['document.title = TITLE;', 'if(document.title !== TITLE) document.title = TITLE;'],
     ['document.title=TITLE;', 'if(document.title!==TITLE) document.title=TITLE;'],
     ['document.title=APP_TITLE;', 'if(document.title!==APP_TITLE) document.title=APP_TITLE;'],
+    ["document.title=APP+' '+VERSION;", "if(document.title!==APP+' '+VERSION) document.title=APP+' '+VERSION;"],
+    ['document.title=`${APP} ${VERSION}`;', 'if(document.title!==`${APP} ${VERSION}`) document.title=`${APP} ${VERSION}`;'],
     ['if(t) t.textContent=TITLE;', 'if(t && t.textContent!==TITLE) t.textContent=TITLE;'],
     ['if(title) title.textContent=TITLE;', 'if(title && title.textContent!==TITLE) title.textContent=TITLE;'],
     ['if(titleEl) titleEl.textContent=TITLE;', 'if(titleEl && titleEl.textContent!==TITLE) titleEl.textContent=TITLE;'],
@@ -40,11 +42,15 @@ export async function buildRelease(manifest) {
     ["$$('title').forEach(t=>t.textContent=TITLE);", "$$('title').forEach(t=>{if(t.textContent!==TITLE) t.textContent=TITLE;});"],
     ['el.textContent=APP;', 'if(el.textContent!==APP) el.textContent=APP;'],
     ['el.textContent=TITLE;', 'if(el.textContent!==TITLE) el.textContent=TITLE;'],
+    ['h1.textContent=APP;', 'if(h1.textContent!==APP) h1.textContent=APP;'],
     ['b.textContent=VERSION;', 'if(b.textContent!==VERSION) b.textContent=VERSION;'],
     ['badge.textContent=VERSION;', 'if(badge.textContent!==VERSION) badge.textContent=VERSION;'],
     ["kicker.textContent='Offline-first learning harbor · '+VERSION;", "if(kicker.textContent!=='Offline-first learning harbor · '+VERSION) kicker.textContent='Offline-first learning harbor · '+VERSION;"],
+    ["if(/Offline-first.*v10\\./i.test(el.textContent||'')) el.textContent='Offline-first learning harbor · '+VERSION;", "if(/Offline-first.*v10\\./i.test(el.textContent||'') && el.textContent!=='Offline-first learning harbor · '+VERSION) el.textContent='Offline-first learning harbor · '+VERSION;"],
     ["if(/Offline-first/i.test(el.textContent||'')) el.textContent='Offline-first learning harbor';", "if(/Offline-first/i.test(el.textContent||'') && el.textContent!=='Offline-first learning harbor · '+VERSION) el.textContent='Offline-first learning harbor · '+VERSION;"],
-    ["if(kicker&&/Offline-first/i.test(kicker.textContent||'')) kicker.textContent='Offline-first learning harbor';", "if(kicker&&/Offline-first/i.test(kicker.textContent||'')&&kicker.textContent!=='Offline-first learning harbor · v10.33.1') kicker.textContent='Offline-first learning harbor · v10.33.1';"]
+    ["if(kicker&&/Offline-first/i.test(kicker.textContent||'')) kicker.textContent='Offline-first learning harbor';", "if(kicker&&/Offline-first/i.test(kicker.textContent||'')&&kicker.textContent!=='Offline-first learning harbor · v10.33.1') kicker.textContent='Offline-first learning harbor · v10.33.1';"],
+    ["if (heroIntro) heroIntro.textContent = ui.role === 'student' ? '' : 'Pick a profile, follow the next clear path, and keep each role focused on only the tools it needs.';", "if (heroIntro) { const nextHeroIntro = ui.role === 'student' ? '' : 'Pick a profile, follow the next clear path, and keep each role focused on only the tools it needs.'; if (heroIntro.textContent !== nextHeroIntro) heroIntro.textContent = nextHeroIntro; }"],
+    ["$$('*').forEach(el=>{ if(el.childNodes.length===1 && el.firstChild.nodeType===3){ el.textContent=el.textContent.replace('v10.23 route QA','Route QA'); } });", "$$('*').forEach(el=>{ if(el.childNodes.length===1 && el.firstChild.nodeType===3){ const next=el.textContent.replace('v10.23 route QA','Route QA'); if(next!==el.textContent) el.textContent=next; } });"]
   ]);
   for (const [oldValue, newValue] of idempotentReplacements) text = replaceAll(text, oldValue, newValue);
 
