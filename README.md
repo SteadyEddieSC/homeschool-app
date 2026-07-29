@@ -25,11 +25,13 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 ## Local workflow
 
 ```bash
-npm ci
+npm install --no-package-lock
 npm run verify:release
 npx playwright install chromium
 npm test
 ```
+
+Playwright and axe are pinned exactly in `package.json`. The lockfile is intentionally omitted while npm's newly published Playwright tarball URLs are inconsistent under `npm ci`; clean pinned installs are exercised independently in both CI jobs.
 
 The validated single-file output is generated at `site/index.html`. GitHub Actions also publishes it as a downloadable workflow artifact.
 
