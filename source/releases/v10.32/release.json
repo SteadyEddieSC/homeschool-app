@@ -1,0 +1,13 @@
+{
+  "release": "v10.32",
+  "source": "source/releases/v10.32/beaufort_learning_harbor_v10_32.html",
+  "output": "site/index.html",
+  "sha256": "b01a707ba20a7f997b662f999ce25f2440b222cde30800f0efaf131da3b11036",
+  "bytes": 5272653,
+  "privacy": "synthetic-demo-data",
+  "students": [
+    { "id": "stu_jordan", "name": "Jordan", "level": "upper" },
+    { "id": "stu_avery", "name": "Avery", "level": "lower" },
+    { "id": "stu_guest", "name": "Guest Student", "level": "lower" }
+  ]
+}
