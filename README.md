@@ -1,22 +1,37 @@
 # Beaufort Learning Harbor
 
-Beaufort Learning Harbor is an offline-first homeschool and co-op learning application. The project currently ships as a reproducible single-file web app while the repository introduces modular boundaries, synthetic demo data, documentation, and automated validation around that release artifact.
-
-## Principles
-
-- Offline-first and local-data-first
-- Student-safe, role-aware navigation
-- Synthetic data only in the public repository and public demo
-- Reproducible releases with integrity checks
-- Automated static, privacy, accessibility, and browser testing
-- Short-lived branches and pull requests for all normal changes
+Beaufort Learning Harbor is an offline-first homeschool and co-op learning application. The repository preserves the validated single-file app while introducing modular boundaries, synthetic demo data, repeatable builds, and automated validation.
 
 ## Current baseline
 
-- Application release: `v10.32`
-- Repository foundation: modular monorepo layout
+- Application: v10.32
+- Public identities: Jordan, Avery, and Guest Student
 - Deployment target: Cloudflare Pages demo
-- Test direction: Node validation, Playwright, screenshot baselines, and axe-core
+- Automated flow: deterministic integrity/privacy checks plus Playwright and axe-core
+
+## Repository model
+
+The folders under `modules/` define controlled extraction boundaries around the current single-file release. They are documentation-first until browser regression coverage protects the existing behavior.
+
+- `modules/`: source boundaries for app shell, navigation, learning, assessment, portfolio, adult workflows, data, and shared code
+- `fixtures/`: synthetic test and demo scenarios
+- `tests/`: Playwright browser checks
+- `scripts/`: build, integrity, privacy, and local-server tooling
+- `docs/`: architecture, privacy, releases, roadmap, and testing guidance
+- `.github/`: CI, issue forms, and pull-request standards
+
+## Local workflow
+
+```bash
+npm install
+npm run verify
+npx playwright install chromium
+npm test
+```
+
+## Privacy
+
+Only synthetic demo data belongs in this public repository. Real family exports, screenshots, backups, and local data must remain outside Git.
 
 ## License
 
