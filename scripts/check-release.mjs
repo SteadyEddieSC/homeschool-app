@@ -12,8 +12,10 @@ if (digest !== manifest.sha256) failures.push(`sha256 mismatch: ${digest}`);
 if (source.length !== manifest.bytes) failures.push(`byte mismatch: ${source.length}`);
 if (!source.equals(output)) failures.push('build output differs from release source');
 if (!text.includes('Beaufort Learning Harbor v10.32')) failures.push('stable title/version missing');
-if (!text.includes("OWNER = 'BLHMobileDock@v10.32'")) failures.push('mobile dock owner missing');
-for (const route of ['learn','practice','quiz','proof','feedback']) if (!text.includes(`${route}:`)) failures.push(`route missing: ${route}`);
+if (!/const\s+OWNER\s*=\s*['"]BLHMobileDock@v10\.32['"]/.test(text)) failures.push('mobile dock owner missing');
+for (const route of ['learn','practice','quiz','proof','feedback']) {
+  if (!new RegExp(`route\\s*:\\s*['"]${route}['"]`).test(text)) failures.push(`dock route missing: ${route}`);
+}
 for (const [index, match] of [...text.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)].entries()) {
   const script = match[1].trim();
   if (script) try { new vm.Script(script); } catch (error) { failures.push(`inline script ${index + 1}: ${error.message}`); }
