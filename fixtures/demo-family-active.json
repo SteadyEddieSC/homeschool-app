@@ -1,0 +1,17 @@
+{
+  "schema": "beaufortLearningHarbor.demoFixture.v1",
+  "fixtureId": "demo-family-active",
+  "description": "Synthetic active-term scenario for dashboard, routing, and review-flow tests. This is a design fixture until the application import adapter is formalized.",
+  "family": { "id": "family_demo", "name": "Demo Family" },
+  "students": [
+    { "id": "stu_jordan", "name": "Jordan", "levelId": "upper" },
+    { "id": "stu_avery", "name": "Avery", "levelId": "lower" }
+  ],
+  "progress": {
+    "status": "active",
+    "completedLessons": 7,
+    "pendingPractice": 2,
+    "availableAssessments": 1,
+    "pendingAdultReview": 2
+  }
+}
