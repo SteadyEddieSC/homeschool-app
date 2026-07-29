@@ -5,9 +5,11 @@
   "type": "module",
   "scripts": {
     "build": "node scripts/build.mjs",
+    "check:foundation": "node scripts/check-foundation.mjs",
     "check:release": "node scripts/check-release.mjs",
     "check:privacy": "node scripts/check-privacy.mjs",
-    "verify": "npm run build && npm run check:release && npm run check:privacy",
+    "verify": "npm run check:foundation",
+    "verify:release": "npm run build && npm run check:release && npm run check:privacy",
     "serve": "node scripts/serve.mjs",
     "test": "playwright test",
     "test:smoke": "playwright test tests/smoke.spec.mjs",
