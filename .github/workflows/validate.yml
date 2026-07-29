@@ -17,8 +17,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
+      - run: npm install --no-package-lock
       - run: npm run verify
 
   browser:
@@ -30,11 +29,21 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: npm
-      - run: npm ci
+      - run: npm install --no-package-lock
       - run: npm run verify:release
       - run: npx playwright install --with-deps chromium
       - run: npm test
+      - name: Stage downloadable release
+        if: success()
+        run: cp site/index.html beaufort_learning_harbor_v10_33.html
+      - name: Upload validated single-file release
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beaufort-learning-harbor-v10.33
+          path: beaufort_learning_harbor_v10_33.html
+          if-no-files-found: error
+          retention-days: 30
       - name: Upload Playwright results
         if: always()
         uses: actions/upload-artifact@v4

@@ -1,33 +1,39 @@
 # Beaufort Learning Harbor
 
-Beaufort Learning Harbor is an offline-first homeschool and co-op learning application. The repository preserves the validated single-file app while introducing modular boundaries, synthetic demo data, repeatable builds, and automated validation.
+Beaufort Learning Harbor is an offline-first homeschool and co-op learning application. The repository preserves an immutable validated single-file baseline, builds newer releases reproducibly, and adds modular boundaries, synthetic demo data, and automated validation.
 
 ## Current baseline
 
-- Application: v10.32
-- Public identities: Jordan, Avery, and Guest Student
+- Application: v10.33
+- Public identities: Jordan, Avery, Guest Student, and Demo Family
+- Demo behavior: deterministic Load Demo Family and Reset Demo Data controls
 - Deployment target: Cloudflare Pages demo
-- Automated flow: deterministic integrity/privacy checks plus Playwright and axe-core
+- Automated flow: integrity/privacy checks, Playwright desktop/mobile coverage, dock stability, visual capture, and axe-core
 
 ## Repository model
 
-The folders under `modules/` define controlled extraction boundaries around the current single-file release. They are documentation-first until browser regression coverage protects the existing behavior.
-
-- `modules/`: source boundaries for app shell, navigation, learning, assessment, portfolio, adult workflows, data, and shared code
+- `source/releases/v10.32/`: immutable sanitized baseline
+- `source/releases/v10.33/release.json`: v10.33 artifact contract
+- `source/current-release.json`: current release pointer
+- `scripts/build-v10.33.mjs`: deterministic transformation from v10.32 to v10.33
+- `modules/`: controlled extraction boundaries for later physical modularization
 - `fixtures/`: synthetic test and demo scenarios
 - `tests/`: Playwright browser checks
-- `scripts/`: build, integrity, privacy, and local-server tooling
 - `docs/`: architecture, privacy, releases, roadmap, and testing guidance
 - `.github/`: CI, issue forms, and pull-request standards
 
 ## Local workflow
 
 ```bash
-npm install
-npm run verify
+npm install --no-package-lock
+npm run verify:release
 npx playwright install chromium
 npm test
 ```
+
+Playwright and axe are pinned exactly in `package.json`. The lockfile is intentionally omitted while npm's newly published Playwright tarball URLs are inconsistent under `npm ci`; clean pinned installs are exercised independently in both CI jobs.
+
+The validated single-file output is generated at `site/index.html`. GitHub Actions also publishes it as a downloadable workflow artifact.
 
 ## Privacy
 
