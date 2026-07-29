@@ -1,0 +1,14 @@
+{
+  "release": "v10.33.1",
+  "base": "source/releases/v10.32/beaufort_learning_harbor_v10_32.html",
+  "builder": "scripts/build-v10.33.1.mjs",
+  "output": "site/index.html",
+  "downloadName": "beaufort_learning_harbor_v10_33_1.html",
+  "sha256": "cfdb6d1714f45a928ee67163e7efe72a300c93b94b4438de40153569e080f8c4",
+  "bytes": 5282189,
+  "title": "Beaufort Learning Harbor v10.33.1",
+  "dockOwner": "BLHMobileDock@v10.33.1",
+  "heroOwner": "BLHHero@v10.33.1",
+  "demoBuild": "synthetic",
+  "notes": "Stops the legacy no-op text cleanup mutation loop, aligns all title and kicker writers, and assigns one authoritative hero owner."
+}
