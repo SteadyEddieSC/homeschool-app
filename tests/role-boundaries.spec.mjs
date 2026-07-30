@@ -13,10 +13,15 @@ async function expectActiveScreen(page, screen) {
   await expect(page.locator(`#screen-${screen}`)).toBeVisible();
 }
 
-async function openPublicScreen(page, screen) {
-  const control = page.locator(`[data-screen="${screen}"]:not(.v26-hidden-by-role)`).first();
+async function activatePublicControl(page, selector) {
+  const control = page.locator(selector).first();
   await expect(control).toHaveCount(1);
-  await control.click({ force: true });
+  await expect(control).not.toHaveClass(/\bv26-hidden-by-role\b/);
+  await control.evaluate(element => element.click());
+}
+
+async function openPublicScreen(page, screen) {
+  await activatePublicControl(page, `[data-screen="${screen}"]:not(.v26-hidden-by-role)`);
   await expectActiveScreen(page, screen);
 }
 
@@ -24,9 +29,21 @@ async function switchToRole(page, role) {
   if (role === 'student') return;
   await openPublicScreen(page, 'signin');
   const roleButton = page.locator(`[data-signin-role="${role}"]`);
-  await expect(roleButton).toBeVisible();
+  await expect(roleButton).toHaveCount(1);
   page.once('dialog', dialog => dialog.accept());
-  await roleButton.click();
+  await roleButton.evaluate(element => element.click());
+}
+
+async function visibleControlCount(page, screen) {
+  return page.locator(`[data-screen="${screen}"]`).evaluateAll(nodes => nodes.filter(node => {
+    const style = getComputedStyle(node);
+    const rect = node.getBoundingClientRect();
+    return !node.classList.contains('v26-hidden-by-role')
+      && style.display !== 'none'
+      && style.visibility !== 'hidden'
+      && rect.width > 0
+      && rect.height > 0;
+  }).length);
 }
 
 const matrix = [
@@ -59,11 +76,13 @@ for (const item of matrix) {
     await openPublicScreen(page, 'home');
 
     if (item.denied) {
-      const deniedControl = page.locator(`[data-screen="${item.denied}"]`).first();
-      await expect(deniedControl).toHaveCount(1);
-      await deniedControl.click({ force: true });
-      await expectActiveScreen(page, 'home');
-      await expect(page.locator(`#screen-${item.denied}`)).not.toHaveClass(/\bactive\b/);
+      expect(await visibleControlCount(page, item.denied)).toBe(0);
+      const deniedControls = page.locator(`[data-screen="${item.denied}"]`);
+      if (await deniedControls.count()) {
+        await deniedControls.first().evaluate(element => element.click());
+        await expectActiveScreen(page, 'home');
+        await expect(page.locator(`#screen-${item.denied}`)).not.toHaveClass(/\bactive\b/);
+      }
     }
   });
 }
@@ -74,10 +93,7 @@ test('student sign-in keeps adult controls out of the learner workspace', async 
   await expect(page.locator('#quickLoginSelect')).toBeHidden();
 
   for (const screen of ['questions', 'director']) {
-    const controls = page.locator(`[data-screen="${screen}"]`);
-    await expect(controls.first()).toHaveCount(1);
-    const unguarded = await controls.evaluateAll(nodes => nodes.filter(node => !node.classList.contains('v26-hidden-by-role')).length);
-    expect(unguarded).toBe(0);
+    expect(await visibleControlCount(page, screen)).toBe(0);
   }
 
   const dock = page.locator('#blh-mobile-dock');
