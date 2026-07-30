@@ -4,24 +4,27 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 
 ## Current baseline
 
-- Application: v10.34
+- Application: v10.34.1
 - Public identities: Jordan, Avery, Guest Student, and Demo Family
 - Demo behavior: deterministic Load Demo Family and Reset Demo Data controls
 - Hero/title behavior: one authoritative owner with legacy version writers made idempotent
 - Route/role behavior: exact student route coverage and explicit Parent/Teacher/Director/Admin access-boundary checks
+- Destination stability: source-media galleries and visual models render once instead of rebuilding through their own MutationObserver
 - Deployment target: Cloudflare Workers Static Assets demo
-- Automated flow: integrity/privacy checks, Playwright desktop/tablet/mobile coverage, route and role coverage, hero stability, dock stability, visual capture, and axe-core
+- Automated flow: integrity/privacy checks, Playwright desktop/tablet/mobile coverage, route and role coverage, destination stability, hero stability, dock stability, visual capture, and axe-core
 
 ## Repository model
 
 - `source/releases/v10.32/`: immutable sanitized baseline
 - `source/releases/v10.33/release.json`: v10.33 demo-foundation contract
 - `source/releases/v10.33.1/release.json`: hero-stability patch contract
-- `source/releases/v10.34/release.json`: current route/role regression contract
+- `source/releases/v10.34/release.json`: route/role regression contract
+- `source/releases/v10.34.1/release.json`: current mobile destination-stability contract
 - `source/current-release.json`: current release pointer
 - `scripts/build-v10.33.mjs`: deterministic v10.33 transformation
 - `scripts/build-v10.33.1.mjs`: deterministic hero/title stabilization patch
 - `scripts/build-v10.34.mjs`: deterministic v10.34 route-contract release
+- `scripts/build-v10.34.1.mjs`: deterministic mobile destination-stability patch
 - `modules/`: controlled extraction boundaries for later physical modularization
 - `fixtures/`: synthetic test and demo scenarios
 - `tests/`: Playwright browser checks
@@ -56,6 +59,8 @@ Non-production deploy command: npx wrangler versions upload
 ```
 
 Wrangler serves the generated `site` directory as static assets with single-page-application fallback behavior.
+
+The default `workers.dev` address is public when enabled and includes the account-level subdomain. For a public-facing link, attach a neutral custom domain and disable the old `workers.dev` route after the custom hostname is verified.
 
 ## Privacy
 
