@@ -1,6 +1,6 @@
 {
   "name": "beaufort-learning-harbor",
-  "version": "10.33.1",
+  "version": "10.34.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,6 +16,8 @@
     "test:mobile": "playwright test tests/mobile-dock.spec.mjs",
     "test:demo": "playwright test tests/demo-state.spec.mjs",
     "test:hero": "playwright test tests/hero-stability.spec.mjs",
+    "test:routes": "playwright test tests/student-routes.spec.mjs",
+    "test:roles": "playwright test tests/role-boundaries.spec.mjs",
     "test:a11y": "playwright test tests/accessibility.spec.mjs"
   },
   "devDependencies": {
