@@ -7,10 +7,10 @@ test('hero title and home content remain stable after startup', async ({ page })
   const heading = hero.locator('h1');
   const kicker = hero.locator('.kicker');
 
-  await expect(page).toHaveTitle('Beaufort Learning Harbor v10.33.1');
-  await expect(hero).toHaveAttribute('data-blh-hero-owner', 'BLHHero@v10.33.1');
+  await expect(page).toHaveTitle('Beaufort Learning Harbor v10.34');
+  await expect(hero).toHaveAttribute('data-blh-hero-owner', 'BLHHero@v10.34');
   await expect(heading).toHaveText('Beaufort Learning Harbor');
-  await expect(kicker).toHaveText('Offline-first learning harbor · v10.33.1');
+  await expect(kicker).toHaveText('Offline-first learning harbor · v10.34');
 
   await page.waitForTimeout(2500);
 
