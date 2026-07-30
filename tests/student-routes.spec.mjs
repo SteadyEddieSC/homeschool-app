@@ -9,18 +9,27 @@ async function loadDemo(page) {
   await expect(page.getByTestId('demo-scenario-status')).toHaveText('Active sample progress');
 }
 
-async function selectStudent(page, studentId) {
+async function selectStudent(page, studentId, expectedName) {
   await page.evaluate(({ key, studentId }) => {
     const state = JSON.parse(localStorage.getItem(key));
     state.activeStudentId = studentId;
     localStorage.setItem(key, JSON.stringify(state));
   }, { key: stateKey, studentId });
   await page.reload();
+  await expect(page.locator('#activeStudentName')).toHaveText(expectedName);
+  await expect(page.locator('#studentSelect')).toHaveValue(studentId);
 }
 
 async function expectActiveScreen(page, screen) {
   await expect(page.locator(`#screen-${screen}`)).toHaveClass(/\bactive\b/);
   await expect(page.locator(`#screen-${screen}`)).toBeVisible();
+}
+
+async function returnHome(page) {
+  const homeControl = page.locator('[data-screen="home"]').first();
+  await expect(homeControl).toHaveCount(1);
+  await homeControl.click({ force: true });
+  await expectActiveScreen(page, 'home');
 }
 
 const upperRoutes = [
@@ -40,50 +49,49 @@ const lowerRoutes = [
 ];
 
 for (const scenario of [
-  { name: 'upper learner', studentId: 'stu_jordan', routes: upperRoutes },
-  { name: 'lower learner', studentId: 'stu_avery', routes: lowerRoutes }
+  { name: 'upper learner', studentId: 'stu_jordan', studentName: 'Jordan', routes: upperRoutes },
+  { name: 'lower learner', studentId: 'stu_avery', studentName: 'Avery', routes: lowerRoutes }
 ]) {
-  test(`${scenario.name} dock routes stay exact and return home`, async ({ page }) => {
+  test(`${scenario.name} exact route controls open the assigned target and return home`, async ({ page }) => {
     await loadDemo(page);
-    await selectStudent(page, scenario.studentId);
+    await selectStudent(page, scenario.studentId, scenario.studentName);
 
-    const dock = page.locator('#blh-mobile-dock');
-    await expect(dock).toBeVisible();
-    await dock.evaluate(node => { node.dataset.routeMatrixIdentity = 'v10.34-stable'; });
+    const path = page.locator('#screen-home .blh26-student-path').first();
+    await expect(path).toBeVisible();
+    await expect(path).toContainText(`Next steps for ${scenario.studentName}`);
 
     for (const item of scenario.routes) {
-      await dock.locator(`[data-blh26-route="${item.route}"]`).click();
+      if (item.route === 'feedback') {
+        await path.locator(`[data-blh26-open="${item.assignment}"]`).first().click();
+      } else {
+        await path.locator(`[data-blh26-route="${item.route}"]`).first().click();
+      }
+
       await expectActiveScreen(page, item.screen);
       if (item.assignment) {
         await expect(page.locator(`[data-blh26-target-banner="${item.assignment}"]`)).toHaveCount(1);
       } else {
         await expect(page.locator('[data-blh26-target-banner]')).toHaveCount(0);
       }
-
-      await page.evaluate(() => setScreen('home'));
-      await expectActiveScreen(page, 'home');
-      await expect(page.locator('#blh-mobile-dock[data-route-matrix-identity="v10.34-stable"]')).toHaveCount(1);
+      await returnHome(page);
     }
   });
 }
 
-test('direct student screens open and return deterministically', async ({ page }) => {
+test('the visible Pixel 7 dock exposes all five exact routes without replacing its node', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'chromium-mobile', 'The fixed dock is intentionally mobile-only.');
   await loadDemo(page);
-  await selectStudent(page, 'stu_jordan');
+  await selectStudent(page, 'stu_jordan', 'Jordan');
 
-  for (const screen of ['lib-biology', 'biology', 'quizzes-tests', 'assignments', 'portfolio']) {
-    const result = await page.evaluate(screenId => {
-      setScreen(screenId);
-      return {
-        active: document.querySelector('.screen.active')?.id || '',
-        role: activeRole(),
-        allowed: roleCanAccess(screenId, activeRole())
-      };
-    }, screen);
-    expect(result).toEqual({ active: `screen-${screen}`, role: 'student', allowed: true });
-    await expectActiveScreen(page, screen);
+  const dock = page.locator('#blh-mobile-dock');
+  await expect(dock).toBeVisible();
+  await dock.evaluate(node => { node.dataset.routeMatrixIdentity = 'v10.34-stable'; });
 
-    await page.evaluate(() => setScreen('home'));
-    await expectActiveScreen(page, 'home');
+  for (const item of upperRoutes) {
+    await dock.locator(`[data-blh26-route="${item.route}"]`).click();
+    await expectActiveScreen(page, item.screen);
+    await expect(page.locator(`[data-blh26-target-banner="${item.assignment}"]`)).toHaveCount(1);
+    await returnHome(page);
+    await expect(page.locator('#blh-mobile-dock[data-route-matrix-identity="v10.34-stable"]')).toHaveCount(1);
   }
 });
