@@ -63,11 +63,11 @@ jobs:
           node-version: 22
       - run: npm run verify:release
       - name: Stage downloadable release
-        run: cp site/index.html beaufort_learning_harbor_v10_34.html
+        run: cp site/index.html beaufort_learning_harbor_v10_34_1.html
       - name: Upload validated single-file release
         uses: actions/upload-artifact@v4
         with:
-          name: beaufort-learning-harbor-v10.34
-          path: beaufort_learning_harbor_v10_34.html
+          name: beaufort-learning-harbor-v10.34.1
+          path: beaufort_learning_harbor_v10_34_1.html
           if-no-files-found: error
           retention-days: 30

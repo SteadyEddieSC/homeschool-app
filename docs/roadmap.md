@@ -28,7 +28,7 @@ Completed:
 
 ## v10.34 — Route and Role Regression Coverage
 
-Release scope:
+Completed:
 
 - Student navigation coverage for Learn, Practice, Quiz/Test, Proof, and Feedback
 - Upper- and lower-learner route targets
@@ -37,6 +37,16 @@ Release scope:
 - Direct-screen and return-to-Home tests
 - Desktop, tablet, and Pixel 7 viewport matrix
 - Preserve demo persistence, hero stability, dock stability, accessibility, privacy, and Cloudflare deployment
+
+## v10.34.1 — Mobile Destination Stability Patch
+
+Release scope:
+
+- Stop source-media gallery and visual-model self-rebuild loops
+- Preserve destination-screen, visual-model, and mobile-dock node identity after routing
+- Verify stable widths after Learn, Practice, Quiz/Test, Proof, and Feedback navigation on Pixel 7
+- Preserve all v10.34 route, role, privacy, accessibility, demo-state, hero, and dock gates
+- Publish a validated standalone HTML artifact and deploy through Cloudflare Workers
 
 ## v10.35 — Versioned Data Adapter
 
@@ -51,4 +61,4 @@ Release scope:
 - Screenshot comparison baselines
 - Offline/network-blocked tests
 - Firefox and WebKit coverage
-- Protected Cloudflare preview and optional sanitized public demo
+- Neutral custom production domain and optional protected preview

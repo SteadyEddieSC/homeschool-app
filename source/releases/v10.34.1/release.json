@@ -1,0 +1,16 @@
+{
+  "release": "v10.34.1",
+  "base": "source/releases/v10.32/beaufort_learning_harbor_v10_32.html",
+  "builder": "scripts/build-v10.34.1.mjs",
+  "output": "site/index.html",
+  "downloadName": "beaufort_learning_harbor_v10_34_1.html",
+  "sha256": "1bc017dfa90cd4718269a5a1b5103aec5cbd98db29926aab15ca4f0ab2b4367a",
+  "bytes": 5282950,
+  "title": "Beaufort Learning Harbor v10.34.1",
+  "dockOwner": "BLHMobileDock@v10.34.1",
+  "heroOwner": "BLHHero@v10.34.1",
+  "routeContract": "v10.34.1",
+  "destinationStability": "v10.34.1",
+  "demoBuild": "synthetic",
+  "notes": "Stops the source-media and visual-model MutationObserver rebuild loop that caused routed learning pages to blink or resize on mobile."
+}
