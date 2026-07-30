@@ -14,6 +14,7 @@ if (output.length !== manifest.bytes) failures.push(`byte mismatch: ${output.len
 if (!text.includes(manifest.title)) failures.push(`stable title/version missing: ${manifest.title}`);
 if (!text.includes(`data-release="${manifest.release}"`)) failures.push(`release marker missing: ${manifest.release}`);
 if (!text.includes(`data-demo-build="${manifest.demoBuild}"`)) failures.push('synthetic demo marker missing');
+if (manifest.routeContract && !text.includes(`data-route-contract="${manifest.routeContract}"`)) failures.push(`route contract missing: ${manifest.routeContract}`);
 if (!new RegExp(`const\\s+OWNER\\s*=\\s*['"]${manifest.dockOwner.replaceAll('.', '\\.') }['"]`).test(text)) failures.push('mobile dock owner missing');
 if (manifest.heroOwner && !new RegExp(`const\\s+OWNER\\s*=\\s*['"]${manifest.heroOwner.replaceAll('.', '\\.') }['"]`).test(text)) failures.push('hero owner missing');
 if (manifest.heroOwner && text.includes("const VERSION='v10.32';")) failures.push('legacy v10.32 title writer remains active');
