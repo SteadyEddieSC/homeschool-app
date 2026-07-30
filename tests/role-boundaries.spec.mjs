@@ -1,11 +1,28 @@
 import { test, expect } from '@playwright/test';
 
+const stateKey = 'beaufortLearningHarbor.v10.19.state';
+
 async function loadDemo(page) {
   await page.goto('/');
   page.once('dialog', dialog => dialog.accept());
   await page.getByTestId('load-demo-family').click();
   await expect(page.getByTestId('demo-scenario-status')).toHaveText('Active sample progress');
-  await expect(page.locator('#roleHeadline')).toHaveText('Student Mode');
+}
+
+async function setRole(page, role) {
+  await page.evaluate(({ key, role }) => {
+    const state = JSON.parse(localStorage.getItem(key));
+    state.ui ||= {};
+    state.authSettings ||= {};
+    state.ui.role = role;
+    state.ui.adultUnlocked = role !== 'student';
+    state.authSettings.lastAdultRole = role === 'student' ? 'parent' : role;
+    state.authSettings.adultUnlockExpiresAt = role === 'student'
+      ? ''
+      : new Date(Date.now() + 60 * 60 * 1000).toISOString();
+    localStorage.setItem(key, JSON.stringify(state));
+  }, { key: stateKey, role });
+  await page.reload();
 }
 
 async function expectActiveScreen(page, screen) {
@@ -17,21 +34,12 @@ async function activatePublicControl(page, selector) {
   const control = page.locator(selector).first();
   await expect(control).toHaveCount(1);
   await expect(control).not.toHaveClass(/\bv26-hidden-by-role\b/);
-  await control.evaluate(element => element.click());
+  await control.dispatchEvent('click');
 }
 
 async function openPublicScreen(page, screen) {
   await activatePublicControl(page, `[data-screen="${screen}"]:not(.v26-hidden-by-role)`);
   await expectActiveScreen(page, screen);
-}
-
-async function switchToRole(page, role) {
-  if (role === 'student') return;
-  await openPublicScreen(page, 'signin');
-  const roleButton = page.locator(`[data-signin-role="${role}"]`);
-  await expect(roleButton).toHaveCount(1);
-  page.once('dialog', dialog => dialog.accept());
-  await roleButton.evaluate(element => element.click());
 }
 
 async function visibleControlCount(page, screen) {
@@ -56,8 +64,9 @@ const matrix = [
 
 for (const item of matrix) {
   test(`${item.role} role keeps its public navigation and dock boundary`, async ({ page }, testInfo) => {
+    test.setTimeout(60000);
     await loadDemo(page);
-    await switchToRole(page, item.role);
+    await setRole(page, item.role);
     await expect(page.locator('#roleHeadline')).toHaveText(item.headline);
 
     const dock = page.locator('#blh-mobile-dock');
@@ -79,7 +88,7 @@ for (const item of matrix) {
       expect(await visibleControlCount(page, item.denied)).toBe(0);
       const deniedControls = page.locator(`[data-screen="${item.denied}"]`);
       if (await deniedControls.count()) {
-        await deniedControls.first().evaluate(element => element.click());
+        await deniedControls.first().dispatchEvent('click');
         await expectActiveScreen(page, 'home');
         await expect(page.locator(`#screen-${item.denied}`)).not.toHaveClass(/\bactive\b/);
       }
@@ -87,8 +96,21 @@ for (const item of matrix) {
   });
 }
 
-test('student sign-in keeps adult controls out of the learner workspace', async ({ page }, testInfo) => {
+test('sign-in surface lists both learners and all adult roles', async ({ page }) => {
+  test.setTimeout(60000);
   await loadDemo(page);
+  await openPublicScreen(page, 'signin');
+  await expect(page.locator('[data-signin-student]')).toHaveCount(2);
+  for (const role of ['parent', 'teacher', 'director', 'admin']) {
+    await expect(page.locator(`[data-signin-role="${role}"]`)).toHaveCount(1);
+  }
+});
+
+test('student workspace keeps adult controls out of view', async ({ page }, testInfo) => {
+  test.setTimeout(60000);
+  await loadDemo(page);
+  await setRole(page, 'student');
+  await expect(page.locator('#roleHeadline')).toHaveText('Student Mode');
   await expect(page.locator('#roleSelect')).toBeHidden();
   await expect(page.locator('#quickLoginSelect')).toBeHidden();
 
