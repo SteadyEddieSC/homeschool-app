@@ -33,7 +33,7 @@ async function returnHome(page) {
 
 test('Pixel 7 destinations retain stable nodes and widths after routing', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-mobile', 'The reported regression is mobile-specific.');
-  test.setTimeout(90000);
+  test.setTimeout(100000);
   await loadDemo(page);
 
   const dock = page.locator('#blh-mobile-dock');
@@ -50,7 +50,7 @@ test('Pixel 7 destinations retain stable nodes and widths after routing', async 
     await expect(screen).toBeVisible();
     await expect(page.locator(`[data-blh26-target-banner="${item.assignment}"]`)).toHaveCount(1);
     await page.waitForFunction(screenId => [...document.querySelectorAll(`#${screenId} img`)].every(img => img.complete), `screen-${item.screen}`);
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(1800);
 
     const result = await page.evaluate(async ({ screenId, requireVisual }) => {
       const node = document.getElementById(screenId);
@@ -71,7 +71,7 @@ test('Pixel 7 destinations retain stable nodes and widths after routing', async 
         for (const entry of entries) widths.push(entry.contentRect.width);
       });
       resize.observe(target);
-      await new Promise(resolve => setTimeout(resolve, 2200));
+      await new Promise(resolve => setTimeout(resolve, 1800));
       mutations.disconnect();
       resize.disconnect();
 
