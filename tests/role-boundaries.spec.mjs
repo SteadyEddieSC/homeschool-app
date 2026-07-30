@@ -96,11 +96,14 @@ for (const item of matrix) {
   });
 }
 
-test('sign-in surface lists both learners and all adult roles', async ({ page }) => {
+test('sign-in surface lists all three demo learners and all adult roles', async ({ page }) => {
   test.setTimeout(60000);
   await loadDemo(page);
   await openPublicScreen(page, 'signin');
-  await expect(page.locator('[data-signin-student]')).toHaveCount(2);
+  await expect(page.locator('[data-signin-student]')).toHaveCount(3);
+  for (const studentId of ['stu_jordan', 'stu_avery', 'stu_guest']) {
+    await expect(page.locator(`[data-signin-student="${studentId}"]`)).toHaveCount(1);
+  }
   for (const role of ['parent', 'teacher', 'director', 'admin']) {
     await expect(page.locator(`[data-signin-role="${role}"]`)).toHaveCount(1);
   }
