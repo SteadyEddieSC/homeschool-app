@@ -67,8 +67,8 @@ test('Pixel 7 destinations retain stable nodes and widths after routing', async 
         childMutations += records.filter(record => record.type === 'childList').length;
       });
       mutations.observe(target, { childList: true, subtree: true });
-      const resize = new ResizeObserver(entries => {
-        for (const entry of entries) widths.push(entry.contentRect.width);
+      const resize = new ResizeObserver(() => {
+        widths.push(target.getBoundingClientRect().width);
       });
       resize.observe(target);
       await new Promise(resolve => setTimeout(resolve, 1800));
