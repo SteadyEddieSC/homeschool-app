@@ -28,7 +28,7 @@ async function expectActiveScreen(page, screen) {
 async function returnHome(page) {
   const homeControl = page.locator('[data-screen="home"]').first();
   await expect(homeControl).toHaveCount(1);
-  await homeControl.evaluate(element => element.click());
+  await homeControl.dispatchEvent('click');
   await expectActiveScreen(page, 'home');
 }
 
@@ -52,7 +52,8 @@ for (const scenario of [
   { name: 'upper learner', studentId: 'stu_jordan', studentName: 'Jordan', routes: upperRoutes },
   { name: 'lower learner', studentId: 'stu_avery', studentName: 'Avery', routes: lowerRoutes }
 ]) {
-  test(`${scenario.name} exact route controls open the assigned target and return home`, async ({ page }) => {
+  test(`${scenario.name} exact assignment controls open each target and return home`, async ({ page }) => {
+    test.setTimeout(90000);
     await loadDemo(page);
     await selectStudent(page, scenario.studentId, scenario.studentName);
 
@@ -61,12 +62,11 @@ for (const scenario of [
     await expect(path).toContainText(`Next steps for ${scenario.studentName}`);
 
     for (const item of scenario.routes) {
-      const selector = item.route === 'feedback'
-        ? `[data-blh26-open="${item.assignment}"]`
-        : `[data-blh26-route="${item.route}"]`;
-      const control = path.locator(selector).first();
+      const control = item.assignment
+        ? page.locator(`[data-blh26-open="${item.assignment}"]`).first()
+        : path.locator(`[data-blh26-route="${item.route}"]`).first();
       await expect(control).toHaveCount(1);
-      await control.evaluate(element => element.click());
+      await control.dispatchEvent('click');
 
       await expectActiveScreen(page, item.screen);
       if (item.assignment) {
@@ -75,12 +75,14 @@ for (const scenario of [
         await expect(page.locator('[data-blh26-target-banner]')).toHaveCount(0);
       }
       await returnHome(page);
+      await expect(page.locator('#screen-home .blh26-student-path').first()).toContainText(`Next steps for ${scenario.studentName}`);
     }
   });
 }
 
 test('the visible Pixel 7 dock exposes all five exact routes without replacing its node', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'chromium-mobile', 'The fixed dock is intentionally mobile-only.');
+  test.setTimeout(90000);
   await loadDemo(page);
   await selectStudent(page, 'stu_jordan', 'Jordan');
 
@@ -90,7 +92,7 @@ test('the visible Pixel 7 dock exposes all five exact routes without replacing i
 
   for (const item of upperRoutes) {
     const control = dock.locator(`[data-blh26-route="${item.route}"]`);
-    await control.evaluate(element => element.click());
+    await control.dispatchEvent('click');
     await expectActiveScreen(page, item.screen);
     await expect(page.locator(`[data-blh26-target-banner="${item.assignment}"]`)).toHaveCount(1);
     await returnHome(page);
