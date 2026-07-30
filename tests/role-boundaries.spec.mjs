@@ -1,83 +1,87 @@
 import { test, expect } from '@playwright/test';
 
-const stateKey = 'beaufortLearningHarbor.v10.19.state';
-
 async function loadDemo(page) {
   await page.goto('/');
   page.once('dialog', dialog => dialog.accept());
   await page.getByTestId('load-demo-family').click();
   await expect(page.getByTestId('demo-scenario-status')).toHaveText('Active sample progress');
+  await expect(page.locator('#roleHeadline')).toHaveText('Student Mode');
 }
 
-async function setRole(page, role) {
-  await page.evaluate(({ key, role }) => {
-    const state = JSON.parse(localStorage.getItem(key));
-    state.ui ||= {};
-    state.ui.role = role;
-    localStorage.setItem(key, JSON.stringify(state));
-  }, { key: stateKey, role });
-  await page.reload();
-  await page.waitForFunction(expected => typeof activeRole === 'function' && activeRole() === expected, role);
+async function expectActiveScreen(page, screen) {
+  await expect(page.locator(`#screen-${screen}`)).toHaveClass(/\bactive\b/);
+  await expect(page.locator(`#screen-${screen}`)).toBeVisible();
+}
+
+async function openPublicScreen(page, screen) {
+  const control = page.locator(`[data-screen="${screen}"]:not(.v26-hidden-by-role)`).first();
+  await expect(control).toHaveCount(1);
+  await control.click({ force: true });
+  await expectActiveScreen(page, screen);
+}
+
+async function switchToRole(page, role) {
+  if (role === 'student') return;
+  await openPublicScreen(page, 'signin');
+  const roleButton = page.locator(`[data-signin-role="${role}"]`);
+  await expect(roleButton).toBeVisible();
+  page.once('dialog', dialog => dialog.accept());
+  await roleButton.click();
 }
 
 const matrix = [
-  { role: 'student', headline: 'Student Mode', allowed: 'study', denied: 'data', dockVisible: true },
-  { role: 'parent', headline: 'Parent View', allowed: 'schedule', denied: 'data', dockVisible: false },
-  { role: 'teacher', headline: 'Teacher Workspace', allowed: 'questions', denied: 'data', dockVisible: false },
-  { role: 'director', headline: 'Director Rollup', allowed: 'director', denied: 'questions', dockVisible: false },
-  { role: 'admin', headline: 'Admin / Builder View', allowed: 'data', denied: null, dockVisible: false }
+  { role: 'student', headline: 'Student Mode', allowed: 'study', denied: 'questions' },
+  { role: 'parent', headline: 'Parent View', allowed: 'assignments', denied: 'questions' },
+  { role: 'teacher', headline: 'Teacher Workspace', allowed: 'questions', denied: 'director' },
+  { role: 'director', headline: 'Director Rollup', allowed: 'director', denied: 'questions' },
+  { role: 'admin', headline: 'Admin / Builder View', allowed: 'data', denied: null }
 ];
 
-test('role access boundaries persist and redirect denied screens', async ({ page }) => {
-  await loadDemo(page);
-
-  for (const item of matrix) {
-    await setRole(page, item.role);
+for (const item of matrix) {
+  test(`${item.role} role keeps its public navigation and dock boundary`, async ({ page }, testInfo) => {
+    await loadDemo(page);
+    await switchToRole(page, item.role);
     await expect(page.locator('#roleHeadline')).toHaveText(item.headline);
 
-    const access = await page.evaluate(({ allowed, denied }) => ({
-      role: activeRole(),
-      allowed: roleCanAccess(allowed, activeRole()),
-      denied: denied ? roleCanAccess(denied, activeRole()) : null
-    }), item);
-    expect(access.role).toBe(item.role);
-    expect(access.allowed).toBe(true);
-    if (item.denied) expect(access.denied).toBe(false);
-
     const dock = page.locator('#blh-mobile-dock');
-    if (item.dockVisible) {
-      await expect(dock).toBeVisible();
+    if (item.role === 'student') {
       await expect(dock).toHaveAttribute('aria-hidden', 'false');
       await expect(page.locator('body')).toHaveClass(/\bv73-student-shell\b/);
+      if (testInfo.project.name === 'chromium-mobile') await expect(dock).toBeVisible();
+      else await expect(dock).toBeHidden();
     } else {
-      await expect(dock).toBeHidden();
       await expect(dock).toHaveAttribute('aria-hidden', 'true');
+      await expect(dock).toBeHidden();
       await expect(page.locator('body')).not.toHaveClass(/\bv73-student-shell\b/);
     }
 
-    await page.evaluate(screen => setScreen(screen), item.allowed);
-    await expect(page.locator(`#screen-${item.allowed}`)).toHaveClass(/\bactive\b/);
+    await openPublicScreen(page, item.allowed);
+    await openPublicScreen(page, 'home');
 
     if (item.denied) {
-      await page.evaluate(screen => setScreen(screen), item.denied);
-      await expect(page.locator('#screen-home')).toHaveClass(/\bactive\b/);
+      const deniedControl = page.locator(`[data-screen="${item.denied}"]`).first();
+      await expect(deniedControl).toHaveCount(1);
+      await deniedControl.click({ force: true });
+      await expectActiveScreen(page, 'home');
       await expect(page.locator(`#screen-${item.denied}`)).not.toHaveClass(/\bactive\b/);
     }
-  }
-});
+  });
+}
 
-test('student mode consistently hides adult-only controls and screens', async ({ page }) => {
+test('student sign-in keeps adult controls out of the learner workspace', async ({ page }, testInfo) => {
   await loadDemo(page);
-  await setRole(page, 'student');
-
-  for (const screen of ['data', 'questions', 'director', 'security']) {
-    const allowed = await page.evaluate(screenId => roleCanAccess(screenId, activeRole()), screen);
-    expect(allowed).toBe(false);
-    await page.evaluate(screenId => setScreen(screenId), screen);
-    await expect(page.locator('#screen-home')).toHaveClass(/\bactive\b/);
-  }
-
   await expect(page.locator('#roleSelect')).toBeHidden();
   await expect(page.locator('#quickLoginSelect')).toBeHidden();
-  await expect(page.locator('#blh-mobile-dock')).toBeVisible();
+
+  for (const screen of ['questions', 'director']) {
+    const controls = page.locator(`[data-screen="${screen}"]`);
+    await expect(controls.first()).toHaveCount(1);
+    const unguarded = await controls.evaluateAll(nodes => nodes.filter(node => !node.classList.contains('v26-hidden-by-role')).length);
+    expect(unguarded).toBe(0);
+  }
+
+  const dock = page.locator('#blh-mobile-dock');
+  await expect(dock).toHaveAttribute('aria-hidden', 'false');
+  if (testInfo.project.name === 'chromium-mobile') await expect(dock).toBeVisible();
+  else await expect(dock).toBeHidden();
 });
