@@ -21,9 +21,14 @@ jobs:
       - run: npm run verify
 
   browser:
+    name: browser-${{ matrix.project }}
     runs-on: ubuntu-latest
     needs: foundation
-    timeout-minutes: 45
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        project: [chromium-desktop, chromium-tablet, chromium-mobile]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -32,25 +37,33 @@ jobs:
       - run: npm install --no-package-lock
       - run: npm run verify:release
       - run: npx playwright install --with-deps chromium
-      - run: npm test
+      - run: npx playwright test --project=${{ matrix.project }}
+      - name: Upload Playwright results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-results-${{ matrix.project }}
+          path: |
+            playwright-report/
+            test-results/
+          if-no-files-found: ignore
+          retention-days: 14
+
+  release-artifact:
+    runs-on: ubuntu-latest
+    needs: browser
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run verify:release
       - name: Stage downloadable release
-        if: success()
         run: cp site/index.html beaufort_learning_harbor_v10_34.html
       - name: Upload validated single-file release
-        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: beaufort-learning-harbor-v10.34
           path: beaufort_learning_harbor_v10_34.html
           if-no-files-found: error
           retention-days: 30
-      - name: Upload Playwright results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: playwright-results
-          path: |
-            playwright-report/
-            test-results/
-          if-no-files-found: ignore
-          retention-days: 14
