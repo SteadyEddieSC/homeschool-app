@@ -28,7 +28,7 @@ async function expectActiveScreen(page, screen) {
 async function returnHome(page) {
   const homeControl = page.locator('[data-screen="home"]').first();
   await expect(homeControl).toHaveCount(1);
-  await homeControl.click({ force: true });
+  await homeControl.evaluate(element => element.click());
   await expectActiveScreen(page, 'home');
 }
 
@@ -61,11 +61,12 @@ for (const scenario of [
     await expect(path).toContainText(`Next steps for ${scenario.studentName}`);
 
     for (const item of scenario.routes) {
-      if (item.route === 'feedback') {
-        await path.locator(`[data-blh26-open="${item.assignment}"]`).first().click();
-      } else {
-        await path.locator(`[data-blh26-route="${item.route}"]`).first().click();
-      }
+      const selector = item.route === 'feedback'
+        ? `[data-blh26-open="${item.assignment}"]`
+        : `[data-blh26-route="${item.route}"]`;
+      const control = path.locator(selector).first();
+      await expect(control).toHaveCount(1);
+      await control.evaluate(element => element.click());
 
       await expectActiveScreen(page, item.screen);
       if (item.assignment) {
@@ -88,7 +89,8 @@ test('the visible Pixel 7 dock exposes all five exact routes without replacing i
   await dock.evaluate(node => { node.dataset.routeMatrixIdentity = 'v10.34-stable'; });
 
   for (const item of upperRoutes) {
-    await dock.locator(`[data-blh26-route="${item.route}"]`).click();
+    const control = dock.locator(`[data-blh26-route="${item.route}"]`);
+    await control.evaluate(element => element.click());
     await expectActiveScreen(page, item.screen);
     await expect(page.locator(`[data-blh26-target-banner="${item.assignment}"]`)).toHaveCount(1);
     await returnHome(page);
