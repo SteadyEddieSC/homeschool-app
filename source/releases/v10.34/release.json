@@ -1,0 +1,15 @@
+{
+  "release": "v10.34",
+  "base": "source/releases/v10.32/beaufort_learning_harbor_v10_32.html",
+  "builder": "scripts/build-v10.34.mjs",
+  "output": "site/index.html",
+  "downloadName": "beaufort_learning_harbor_v10_34.html",
+  "sha256": "d9d5e9f5645e3830fba6377266920cd022f28bd731d05fffaa565309917ee419",
+  "bytes": 5282670,
+  "title": "Beaufort Learning Harbor v10.34",
+  "dockOwner": "BLHMobileDock@v10.34",
+  "heroOwner": "BLHHero@v10.34",
+  "routeContract": "v10.34",
+  "demoBuild": "synthetic",
+  "notes": "Expands route and role regression coverage across desktop, tablet, and mobile, and bridges the legacy exact-route and dock layers to the persisted active learner and role."
+}

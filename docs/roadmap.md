@@ -17,21 +17,26 @@ Completed:
 
 ## v10.33.1 — Hero and Home Stability Patch
 
+Completed:
+
 - Align all legacy title/version constants with the current release
 - Make recurring title and hero writes idempotent
 - Assign one authoritative `BLHHero@v10.33.1` owner
 - Add an automated multi-second mutation watch for the hero and home screen
 - Preserve the stable five-action mobile dock and demo controls
-
-Cloudflare Pages preview connection remains an operational deployment step. The GitHub App should be installed through the repository owner account, SteadyEddieSC.
+- Connect and validate Cloudflare Workers Static Assets deployment
 
 ## v10.34 — Route and Role Regression Coverage
 
+Release scope:
+
 - Student navigation coverage for Learn, Practice, Quiz/Test, Proof, and Feedback
+- Upper- and lower-learner route targets
 - Parent/Teacher/Director/Admin role-boundary checks
-- Direct-route and return-navigation tests
-- Mobile/tablet/desktop viewport matrix
-- Real Android phone regression confirmation
+- Student denial of adult-only screens
+- Direct-screen and return-to-Home tests
+- Desktop, tablet, and Pixel 7 viewport matrix
+- Preserve demo persistence, hero stability, dock stability, accessibility, privacy, and Cloudflare deployment
 
 ## v10.35 — Versioned Data Adapter
 

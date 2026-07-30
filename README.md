@@ -4,21 +4,24 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 
 ## Current baseline
 
-- Application: v10.33.1
+- Application: v10.34
 - Public identities: Jordan, Avery, Guest Student, and Demo Family
 - Demo behavior: deterministic Load Demo Family and Reset Demo Data controls
 - Hero/title behavior: one authoritative owner with legacy version writers made idempotent
+- Route/role behavior: exact student route coverage and explicit Parent/Teacher/Director/Admin access-boundary checks
 - Deployment target: Cloudflare Workers Static Assets demo
-- Automated flow: integrity/privacy checks, Playwright desktop/mobile coverage, hero stability, dock stability, visual capture, and axe-core
+- Automated flow: integrity/privacy checks, Playwright desktop/tablet/mobile coverage, route and role coverage, hero stability, dock stability, visual capture, and axe-core
 
 ## Repository model
 
 - `source/releases/v10.32/`: immutable sanitized baseline
 - `source/releases/v10.33/release.json`: v10.33 demo-foundation contract
-- `source/releases/v10.33.1/release.json`: current hero-stability patch contract
+- `source/releases/v10.33.1/release.json`: hero-stability patch contract
+- `source/releases/v10.34/release.json`: current route/role regression contract
 - `source/current-release.json`: current release pointer
 - `scripts/build-v10.33.mjs`: deterministic v10.33 transformation
 - `scripts/build-v10.33.1.mjs`: deterministic hero/title stabilization patch
+- `scripts/build-v10.34.mjs`: deterministic v10.34 route-contract release
 - `modules/`: controlled extraction boundaries for later physical modularization
 - `fixtures/`: synthetic test and demo scenarios
 - `tests/`: Playwright browser checks
