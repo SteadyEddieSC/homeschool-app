@@ -1,0 +1,20 @@
+{
+  "release": "v10.36",
+  "base": "source/releases/v10.32/beaufort_learning_harbor_v10_32.html",
+  "builder": "scripts/build-v10.36.mjs",
+  "output": "site/index.html",
+  "downloadName": "beaufort_learning_harbor_v10_36.html",
+  "sha256": "0c495ca46fbc2cf43762b33f5b89895adeee48d9db323542d1284e2285e49725",
+  "bytes": 5331042,
+  "title": "Beaufort Learning Harbor v10.36",
+  "dockOwner": "BLHMobileDock@v10.36",
+  "heroOwner": "BLHHero@v10.36",
+  "routeContract": "v10.36",
+  "destinationStability": "v10.36",
+  "dataAdapter": "v10.36",
+  "dataSchema": 1,
+  "knowledgeCheckBuilder": "v10.36",
+  "knowledgeCheckBankSchema": 1,
+  "demoBuild": "synthetic",
+  "notes": "Adds an adult-only Knowledge Check Builder for recitations, discussions, notebooks, projects, oral tell-backs, and mastery proof with student-safe preview and deterministic fail-closed prompt-bank import/export. Subjective work remains adult-reviewed and is never auto-graded."
+}
