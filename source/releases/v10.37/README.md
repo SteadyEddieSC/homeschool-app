@@ -15,7 +15,7 @@ The editor supports:
 - deterministic lesson-pack package export/import;
 - non-destructive migration from existing Curriculum Studio draft stores.
 
-Parent, Teacher, and Admin can author. Director receives a read-only readiness rollup. Student mode receives no authoring, import/export, migration, or adult-note controls.
+Parent, Teacher, and Admin can author. Director receives a read-only readiness rollup. Student mode receives no authoring, import/export, migration, or adult-note controls. The editor appears in Parent Support and in the Teacher, Director, and Admin build/operations navigation groups.
 
 ## Package safety
 
@@ -37,8 +37,8 @@ Import validates the complete package before application state changes and rejec
 ## Release contract
 
 - Artifact: `beaufort_learning_harbor_v10_37.html`
-- Bytes: `5,380,395`
-- SHA-256: `2e653ccffd0558761c24af5664cb76c064602ef5358ecf038fc8bcb379348d36`
+- Bytes: `5,380,725`
+- SHA-256: `daf8a3a970116ed8a1dd79a610d2e37cb345b8a2519c4742e4564d848f7170f5`
 - Application data schema: `1`
 - Knowledge-check bank schema: `1`
 - Lesson-pack package schema: `1`
