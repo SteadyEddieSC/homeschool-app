@@ -8,26 +8,135 @@ export const BLH_DATA_KINDS = Object.freeze({
   DEMO_FIXTURE: 'demo-fixture'
 });
 
+// This allowlist is derived from the live v10.34.1 standalone application state,
+// including current defaults, normalization paths, and storage-compaction paths.
 export const BLH_STATE_KEYS = Object.freeze([
-  'language',
-  'contentPrefs',
-  'household',
-  'pathways',
-  'plans',
-  'lessonAssignments',
-  'portfolio',
-  'rubricFeedback',
-  'standardsLedger',
-  'tasks',
+  'activeStudentId',
   'activity',
-  'attendance',
-  'notifications',
-  'quizzes',
-  'meetings',
-  'audits',
-  'expenses',
-  'assets',
-  'localFiles'
+  'activityLog',
+  'adaptiveSettings',
+  'adventureCampaigns',
+  'adventureMaps',
+  'adventureNpcs',
+  'adventureQuests',
+  'adventureSettings',
+  'adventureTileActions',
+  'ancientCompanion',
+  'appVersion',
+  'assessments',
+  'assignmentApprovals',
+  'assignments',
+  'authSettings',
+  'backups',
+  'battleEvents',
+  'battleLogs',
+  'battleMoveLibrary',
+  'binderSettings',
+  'biologyCompanion',
+  'botanyCompanion',
+  'challenges',
+  'classicalSettings',
+  'contentPackSettings',
+  'contentPacks',
+  'craftingRecipes',
+  'creatureBondQuests',
+  'creatureCampSettings',
+  'creatureCampTasks',
+  'creatureCareSettings',
+  'creatureDex',
+  'creatureExpeditions',
+  'creatureItems',
+  'creatureRewardBalanceSettings',
+  'creatureTournaments',
+  'creatureTraitLibrary',
+  'creatureTypeChart',
+  'currentClassDate',
+  'currentCoachSubjectId',
+  'currentExpeditionId',
+  'currentGuildId',
+  'currentHabitDate',
+  'currentMatchupPreviewEventId',
+  'currentStudyLevelId',
+  'currentWeekId',
+  'curriculum',
+  'curriculumBooklists',
+  'curriculumCoverageGaps',
+  'curriculumCoverageSettings',
+  'customFlashcards',
+  'customResources',
+  'cycleName',
+  'cyclePlan',
+  'expeditionBiomes',
+  'expeditionSettings',
+  'familyAnnouncements',
+  'flashcardProgress',
+  'geographyAtlas',
+  'guildMissions',
+  'habitRubrics',
+  'historyTimeline',
+  'insightFollowUps',
+  'insightSettings',
+  'latinCompanion',
+  'latinDeck',
+  'learnerProfiles',
+  'learningLevels',
+  'lessonPlans',
+  'lessonPlayerSettings',
+  'lessonSessions',
+  'literatureCompanion',
+  'logicCompanion',
+  'masteryArenaSettings',
+  'mathLadders',
+  'missionBlueprints',
+  'missionPlannerSettings',
+  'mockTrialCompanion',
+  'navigationShellSettings',
+  'pacingSettings',
+  'packAudit',
+  'parentControlSettings',
+  'partySettings',
+  'portfolioArtifacts',
+  'portfolioSettings',
+  'practicalCompanion',
+  'practicalSettings',
+  'practicalView',
+  'presentationQueue',
+  'programName',
+  'progress',
+  'publicDomainBible',
+  'questJournal',
+  'questionSettings',
+  'questionTypes',
+  'recordsSettings',
+  'resources',
+  'rewardPolicy',
+  'romanNumerals',
+  'rubricReviews',
+  'rubricStudioSettings',
+  'rubricTemplates',
+  'schedule',
+  'scriptureMemory',
+  'sessionLogs',
+  'skillDomains',
+  'skillEvidence',
+  'skillGoals',
+  'spanishCompanion',
+  'students',
+  'studyApprovalSettings',
+  'studyApprovals',
+  'studyLibraryModules',
+  'subjectGuilds',
+  'syllabusPlan',
+  'teams',
+  'ui',
+  'uiOverhaulSettings',
+  'v10122QuizRecords',
+  'v108AssessmentSubmissions',
+  'v108Math',
+  'worldEncounters',
+  'worldSettings',
+  'worldZones',
+  'writingCompanion'
 ]);
 
 const FIXTURE_KEYS = Object.freeze([
@@ -38,6 +147,8 @@ const FIXTURE_KEYS = Object.freeze([
   'students',
   'progress'
 ]);
+
+const DANGEROUS_KEYS = new Set(['__proto__', 'constructor', 'prototype']);
 
 export class BLHDataError extends Error {
   constructor(code, message, details = undefined) {
@@ -62,12 +173,20 @@ function cloneJsonValue(value, path = '$') {
     }
     return value;
   }
-  if (Array.isArray(value)) return value.map((item, index) => cloneJsonValue(item, `${path}[${index}]`));
+  if (value instanceof Date) return value.toISOString();
+  if (Array.isArray(value)) {
+    return value.map((item, index) => {
+      if (item === undefined || typeof item === 'function' || typeof item === 'symbol') return null;
+      return cloneJsonValue(item, `${path}[${index}]`);
+    });
+  }
   if (isPlainObject(value)) {
     const output = {};
     for (const key of Object.keys(value).sort()) {
-      if (key === '__proto__' || key === 'constructor' || key === 'prototype') continue;
-      output[key] = cloneJsonValue(value[key], `${path}.${key}`);
+      if (DANGEROUS_KEYS.has(key)) continue;
+      const child = value[key];
+      if (child === undefined || typeof child === 'function' || typeof child === 'symbol') continue;
+      output[key] = cloneJsonValue(child, `${path}.${key}`);
     }
     return output;
   }
@@ -81,7 +200,9 @@ function pickAllowed(source, keys, path) {
   const output = {};
   for (const key of keys) {
     if (Object.prototype.hasOwnProperty.call(source, key)) {
-      output[key] = cloneJsonValue(source[key], `${path}.${key}`);
+      const child = source[key];
+      if (child === undefined || typeof child === 'function' || typeof child === 'symbol') continue;
+      output[key] = cloneJsonValue(child, `${path}.${key}`);
     }
   }
   return output;
@@ -95,20 +216,90 @@ function stableSort(value) {
   return output;
 }
 
+function requireString(value, path) {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new BLHDataError('INVALID_STATE', `${path} must be a non-empty string`);
+  }
+}
+
+function validateStudent(student, index) {
+  if (!isPlainObject(student)) {
+    throw new BLHDataError('INVALID_STATE', `Application state student ${index} must be an object`);
+  }
+  requireString(student.id, `$.state.students[${index}].id`);
+  requireString(student.name, `$.state.students[${index}].name`);
+}
+
 function validateApplicationState(state) {
   if (!isPlainObject(state)) {
     throw new BLHDataError('INVALID_STATE', 'Application state must be an object');
   }
-  if (!Object.keys(state).some(key => BLH_STATE_KEYS.includes(key))) {
-    throw new BLHDataError('INVALID_STATE', 'Application state does not contain a recognized state field');
+  if (!Array.isArray(state.students)) {
+    throw new BLHDataError('INVALID_STATE', 'Application state students must be an array');
   }
-  if (Object.prototype.hasOwnProperty.call(state, 'language') && typeof state.language !== 'string') {
-    throw new BLHDataError('INVALID_STATE', 'Application state language must be a string');
+  state.students.forEach(validateStudent);
+  if (!isPlainObject(state.curriculum) || !Array.isArray(state.curriculum.weeks)) {
+    throw new BLHDataError('INVALID_STATE', 'Application state curriculum.weeks must be an array');
   }
-  if (Object.prototype.hasOwnProperty.call(state, 'household') && !isPlainObject(state.household)) {
-    throw new BLHDataError('INVALID_STATE', 'Application state household must be an object');
+  if (Object.prototype.hasOwnProperty.call(state, 'progress') && !isPlainObject(state.progress)) {
+    throw new BLHDataError('INVALID_STATE', 'Application state progress must be an object');
+  }
+  if (Object.prototype.hasOwnProperty.call(state, 'authSettings') && !isPlainObject(state.authSettings)) {
+    throw new BLHDataError('INVALID_STATE', 'Application state authSettings must be an object');
+  }
+  if (Object.prototype.hasOwnProperty.call(state, 'backups') && !Array.isArray(state.backups)) {
+    throw new BLHDataError('INVALID_STATE', 'Application state backups must be an array');
+  }
+  if (Object.prototype.hasOwnProperty.call(state, 'appVersion') && typeof state.appVersion !== 'string') {
+    throw new BLHDataError('INVALID_STATE', 'Application state appVersion must be a string');
+  }
+  if (Object.prototype.hasOwnProperty.call(state, 'programName') && typeof state.programName !== 'string') {
+    throw new BLHDataError('INVALID_STATE', 'Application state programName must be a string');
   }
   return state;
+}
+
+function sanitizeAuthSettings(authSettings, portable) {
+  const output = cloneJsonValue(authSettings, '$.state.authSettings');
+  // An unlock session is never portable and should not survive an import.
+  if (Object.prototype.hasOwnProperty.call(output, 'adultUnlockExpiresAt')) {
+    output.adultUnlockExpiresAt = '';
+  }
+  if (portable) {
+    if (Object.prototype.hasOwnProperty.call(output, 'adultPinHash')) output.adultPinHash = '';
+    if (Object.prototype.hasOwnProperty.call(output, 'pinHint')) output.pinHint = '';
+    if (Object.prototype.hasOwnProperty.call(output, 'auditLog')) output.auditLog = [];
+  }
+  return output;
+}
+
+function portableBackupMetadata(backup, index) {
+  if (!isPlainObject(backup)) {
+    throw new BLHDataError('INVALID_STATE', `Application state backup ${index} must be an object`);
+  }
+  const output = {};
+  for (const key of ['id', 'label', 'createdAt', 'hash', 'bytes', 'note']) {
+    if (!Object.prototype.hasOwnProperty.call(backup, key)) continue;
+    const value = backup[key];
+    if (value === undefined || typeof value === 'function' || typeof value === 'symbol') continue;
+    output[key] = cloneJsonValue(value, `$.state.backups[${index}].${key}`);
+  }
+  output.payloadOmitted = true;
+  return output;
+}
+
+function sanitizeApplicationState(source, options = {}) {
+  const portable = options.portable === true;
+  const state = pickAllowed(source, BLH_STATE_KEYS, '$.state');
+  validateApplicationState(state);
+
+  if (Object.prototype.hasOwnProperty.call(state, 'authSettings')) {
+    state.authSettings = sanitizeAuthSettings(state.authSettings, portable);
+  }
+  if (portable && Object.prototype.hasOwnProperty.call(state, 'backups')) {
+    state.backups = state.backups.map(portableBackupMetadata);
+  }
+  return stableSort(state);
 }
 
 function validateDemoFixture(state) {
@@ -130,9 +321,9 @@ function validateDemoFixture(state) {
   return state;
 }
 
-export function sanitizeState(state, kind = BLH_DATA_KINDS.APPLICATION_STATE) {
+export function sanitizeState(state, kind = BLH_DATA_KINDS.APPLICATION_STATE, options = {}) {
   if (kind === BLH_DATA_KINDS.APPLICATION_STATE) {
-    return validateApplicationState(pickAllowed(state, BLH_STATE_KEYS, '$.state'));
+    return sanitizeApplicationState(state, options);
   }
   if (kind === BLH_DATA_KINDS.DEMO_FIXTURE) {
     return validateDemoFixture(pickAllowed(state, FIXTURE_KEYS, '$.state'));
@@ -143,6 +334,7 @@ export function sanitizeState(state, kind = BLH_DATA_KINDS.APPLICATION_STATE) {
 export function createEnvelope(state, options = {}) {
   const kind = options.kind || BLH_DATA_KINDS.APPLICATION_STATE;
   const productVersion = options.productVersion || BLH_PRODUCT_VERSION;
+  const portable = options.portable !== false;
   if (typeof productVersion !== 'string' || !productVersion.trim()) {
     throw new BLHDataError('INVALID_ENVELOPE', 'Product version must be a non-empty string');
   }
@@ -151,7 +343,7 @@ export function createEnvelope(state, options = {}) {
     kind,
     productVersion,
     schemaVersion: BLH_SCHEMA_VERSION,
-    state: sanitizeState(state, kind)
+    state: sanitizeState(state, kind, { portable })
   };
   if (options.metadata !== undefined) {
     if (!isPlainObject(options.metadata)) {
@@ -163,11 +355,11 @@ export function createEnvelope(state, options = {}) {
 }
 
 function migrateLegacyFixture(value) {
-  return createEnvelope(value, { kind: BLH_DATA_KINDS.DEMO_FIXTURE });
+  return createEnvelope(value, { kind: BLH_DATA_KINDS.DEMO_FIXTURE, portable: false });
 }
 
 function migrateLegacyApplicationState(value) {
-  return createEnvelope(value, { kind: BLH_DATA_KINDS.APPLICATION_STATE });
+  return createEnvelope(value, { kind: BLH_DATA_KINDS.APPLICATION_STATE, portable: false });
 }
 
 export function migrateToCurrent(value) {
@@ -193,7 +385,8 @@ export function migrateToCurrent(value) {
     return createEnvelope(value.state, {
       kind: value.kind,
       productVersion: value.productVersion,
-      metadata: value.metadata
+      metadata: value.metadata,
+      portable: false
     });
   }
 
@@ -218,12 +411,20 @@ export function parseImport(input) {
 
 export function serializeEnvelope(envelope, options = {}) {
   const normalized = migrateToCurrent(envelope);
+  const portable = options.portable !== false;
+  const serializedEnvelope = createEnvelope(normalized.state, {
+    kind: normalized.kind,
+    productVersion: normalized.productVersion,
+    metadata: normalized.metadata,
+    portable
+  });
   const space = options.pretty === false ? 0 : 2;
-  return `${JSON.stringify(stableSort(normalized), null, space)}\n`;
+  return `${JSON.stringify(stableSort(serializedEnvelope), null, space)}\n`;
 }
 
 export function exportState(state, options = {}) {
-  return serializeEnvelope(createEnvelope(state, options), options);
+  const envelope = createEnvelope(state, { ...options, portable: true });
+  return serializeEnvelope(envelope, { ...options, portable: true });
 }
 
 export function readStoredState(storage, options = {}) {
