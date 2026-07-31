@@ -223,14 +223,29 @@ test('demo fixtures cannot be committed as application browser state', async () 
   assert.equal(storage.snapshot()[BLH_LEGACY_STORAGE_KEY], undefined);
 });
 
-test('dangerous object keys and unsupported top-level fields are removed', () => {
-  const input = JSON.parse(JSON.stringify(sampleState()));
-  Object.assign(input, JSON.parse('{"__proto__":{"polluted":true},"secrets":"drop"}'));
-  input.curriculum.weeks[0] = JSON.parse('{"id":"week_demo_1","title":"Synthetic","__proto__":{"nestedPollution":true}}');
+test('objects with polluted prototypes are rejected', () => {
+  const input = sampleState();
+  Object.setPrototypeOf(input, { polluted: true });
+  expectDataError(() => createEnvelope(input), 'INVALID_STATE');
+  assert.equal(Object.prototype.polluted, undefined);
+});
+
+test('dangerous own keys and unsupported top-level fields are removed', () => {
+  const input = sampleState();
+  Object.defineProperty(input, '__proto__', {
+    value: { polluted: true },
+    enumerable: true,
+    configurable: true
+  });
+  Object.defineProperty(input.curriculum.weeks[0], 'constructor', {
+    value: { nestedPollution: true },
+    enumerable: true,
+    configurable: true
+  });
   const envelope = createEnvelope(input);
   assert.equal(Object.prototype.polluted, undefined);
   assert.equal(Object.prototype.nestedPollution, undefined);
-  assert.equal(envelope.state.secrets, undefined);
+  assert.equal(envelope.state.ignoredTopLevelField, undefined);
   assert.equal(Object.prototype.hasOwnProperty.call(envelope.state, '__proto__'), false);
-  assert.equal(Object.prototype.hasOwnProperty.call(envelope.state.curriculum.weeks[0], '__proto__'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(envelope.state.curriculum.weeks[0], 'constructor'), false);
 });
