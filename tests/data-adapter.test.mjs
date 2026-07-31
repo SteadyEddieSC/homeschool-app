@@ -19,16 +19,50 @@ import {
 
 function sampleState() {
   return {
-    language: 'en',
-    household: {
-      family: { id: 'family_demo', name: 'Demo Family' },
-      students: [
-        { id: 'stu_jordan', name: 'Jordan' },
-        { id: 'stu_avery', name: 'Avery' }
+    appVersion: '10.34.1',
+    programName: 'Beaufort Learning Harbor',
+    currentWeekId: 'week_demo_1',
+    activeStudentId: 'stu_jordan',
+    students: [
+      { id: 'stu_jordan', name: 'Jordan', levelId: 'upper' },
+      { id: 'stu_avery', name: 'Avery', levelId: 'lower' }
+    ],
+    curriculum: {
+      weeks: [
+        {
+          id: 'week_demo_1',
+          title: 'Synthetic week',
+          lessons: [{ id: 'lesson_demo_1', title: 'Read chapter one' }]
+        }
       ]
     },
-    tasks: [{ id: 'task_demo', title: 'Read chapter one' }],
-    notifications: [],
+    progress: {
+      stu_jordan: { lesson_demo_1: { status: 'complete' } },
+      stu_avery: {}
+    },
+    contentPacks: [{ id: 'pack_demo', title: 'Synthetic pack' }],
+    biologyCompanion: { enabled: true },
+    portfolioArtifacts: [{ id: 'artifact_demo', studentId: 'stu_jordan' }],
+    authSettings: {
+      adultPinHash: 'synthetic-pin-hash',
+      pinHint: 'synthetic hint',
+      adultUnlockExpiresAt: '2099-01-01T00:00:00.000Z',
+      auditLog: [{ id: 'audit_demo', action: 'synthetic action' }],
+      adultGateEnabled: true
+    },
+    backups: [
+      {
+        id: 'backup_demo',
+        label: 'Synthetic backup',
+        createdAt: '2026-07-31T00:00:00.000Z',
+        hash: 'synthetic-hash',
+        bytes: 1234,
+        note: 'Synthetic metadata',
+        snapshot: {
+          students: [{ id: 'private_nested_copy', name: 'Nested payload omitted' }]
+        }
+      }
+    ],
     ignoredTopLevelField: 'must not export'
   };
 }
@@ -65,6 +99,33 @@ test('creates a schema-versioned envelope independent of product version', () =>
   assert.equal(envelope.state.ignoredTopLevelField, undefined);
 });
 
+test('portable export preserves live application collections', () => {
+  const envelope = parseImport(exportState(sampleState()));
+  assert.deepEqual(envelope.state.students.map(student => student.name), ['Jordan', 'Avery']);
+  assert.equal(envelope.state.curriculum.weeks[0].id, 'week_demo_1');
+  assert.equal(envelope.state.contentPacks[0].id, 'pack_demo');
+  assert.equal(envelope.state.biologyCompanion.enabled, true);
+  assert.equal(envelope.state.portfolioArtifacts[0].id, 'artifact_demo');
+});
+
+test('portable export clears local adult secrets and unlock sessions', () => {
+  const envelope = parseImport(exportState(sampleState()));
+  assert.equal(envelope.state.authSettings.adultPinHash, '');
+  assert.equal(envelope.state.authSettings.pinHint, '');
+  assert.equal(envelope.state.authSettings.adultUnlockExpiresAt, '');
+  assert.deepEqual(envelope.state.authSettings.auditLog, []);
+  assert.equal(envelope.state.authSettings.adultGateEnabled, true);
+});
+
+test('portable export replaces nested backup payloads with deterministic metadata', () => {
+  const envelope = parseImport(exportState(sampleState()));
+  assert.equal(envelope.state.backups.length, 1);
+  assert.equal(envelope.state.backups[0].id, 'backup_demo');
+  assert.equal(envelope.state.backups[0].bytes, 1234);
+  assert.equal(envelope.state.backups[0].payloadOmitted, true);
+  assert.equal(envelope.state.backups[0].snapshot, undefined);
+});
+
 test('application-state round trip is deterministic and byte stable', () => {
   const first = exportState(sampleState());
   const second = serializeEnvelope(parseImport(first));
@@ -81,25 +142,38 @@ test('product version is informational while schema version controls compatibili
   assert.equal(migrated.schemaVersion, 1);
 });
 
-test('legacy raw application state migrates without changing the stored value', () => {
+test('legacy raw browser state migrates without rewriting localStorage', () => {
   const raw = JSON.stringify(sampleState());
   const storage = memoryStorage({ [BLH_LEGACY_STORAGE_KEY]: raw });
   const envelope = readStoredState(storage);
   assert.equal(envelope.kind, BLH_DATA_KINDS.APPLICATION_STATE);
+  assert.equal(envelope.state.authSettings.adultPinHash, 'synthetic-pin-hash');
+  assert.equal(envelope.state.authSettings.adultUnlockExpiresAt, '');
+  assert.ok(envelope.state.backups[0].snapshot);
   assert.equal(storage.snapshot()[BLH_LEGACY_STORAGE_KEY], raw);
 });
 
+test('legacy raw import preserves supported state while dropping unknown fields', () => {
+  const envelope = parseImport(sampleState());
+  assert.equal(envelope.state.authSettings.adultPinHash, 'synthetic-pin-hash');
+  assert.equal(envelope.state.backups[0].snapshot.students[0].id, 'private_nested_copy');
+  assert.equal(envelope.state.ignoredTopLevelField, undefined);
+});
+
 test('valid imported application state commits only after validation', () => {
-  const storage = memoryStorage({ [BLH_LEGACY_STORAGE_KEY]: '{"language":"fr"}' });
+  const original = JSON.stringify({ students: [], curriculum: { weeks: [] } });
+  const storage = memoryStorage({ [BLH_LEGACY_STORAGE_KEY]: original });
   const envelope = commitImportedState(storage, exportState(sampleState()));
-  assert.equal(envelope.state.language, 'en');
+  assert.equal(envelope.state.activeStudentId, 'stu_jordan');
   const committed = JSON.parse(storage.snapshot()[BLH_LEGACY_STORAGE_KEY]);
-  assert.equal(committed.language, 'en');
+  assert.equal(committed.students[0].name, 'Jordan');
+  assert.equal(committed.authSettings.adultPinHash, '');
+  assert.equal(committed.backups[0].snapshot, undefined);
   assert.equal(committed.ignoredTopLevelField, undefined);
 });
 
 test('invalid import fails closed and does not modify storage', () => {
-  const original = '{"language":"fr"}';
+  const original = JSON.stringify({ students: [], curriculum: { weeks: [] } });
   const storage = memoryStorage({ [BLH_LEGACY_STORAGE_KEY]: original });
   expectDataError(() => commitImportedState(storage, '{bad json'), 'MALFORMED_JSON');
   assert.equal(storage.snapshot()[BLH_LEGACY_STORAGE_KEY], original);
@@ -123,6 +197,16 @@ test('partial unknown objects are rejected instead of treated as state', () => {
   expectDataError(() => parseImport({ unrelated: true }), 'INVALID_STATE');
 });
 
+test('curriculum-only packages are not accepted as full application state', () => {
+  expectDataError(() => parseImport({ weeks: [] }), 'INVALID_STATE');
+});
+
+test('missing students or curriculum weeks are rejected', () => {
+  expectDataError(() => parseImport({ curriculum: { weeks: [] } }), 'INVALID_STATE');
+  expectDataError(() => parseImport({ students: [] }), 'INVALID_STATE');
+  expectDataError(() => parseImport({ students: [], curriculum: {} }), 'INVALID_STATE');
+});
+
 test('current synthetic fixture packages migrate as demo fixtures', async () => {
   const fixtureText = await readFile(new URL('../fixtures/demo-family-active.json', import.meta.url), 'utf8');
   const envelope = parseImport(fixtureText);
@@ -140,9 +224,13 @@ test('demo fixtures cannot be committed as application browser state', async () 
 });
 
 test('dangerous object keys and unsupported top-level fields are removed', () => {
-  const input = JSON.parse('{"language":"en","household":{},"__proto__":{"polluted":true},"secrets":"drop"}');
+  const input = JSON.parse(JSON.stringify(sampleState()));
+  Object.assign(input, JSON.parse('{"__proto__":{"polluted":true},"secrets":"drop"}'));
+  input.curriculum.weeks[0] = JSON.parse('{"id":"week_demo_1","title":"Synthetic","__proto__":{"nestedPollution":true}}');
   const envelope = createEnvelope(input);
   assert.equal(Object.prototype.polluted, undefined);
+  assert.equal(Object.prototype.nestedPollution, undefined);
   assert.equal(envelope.state.secrets, undefined);
   assert.equal(Object.prototype.hasOwnProperty.call(envelope.state, '__proto__'), false);
+  assert.equal(Object.prototype.hasOwnProperty.call(envelope.state.curriculum.weeks[0], '__proto__'), false);
 });
