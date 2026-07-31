@@ -18,6 +18,7 @@ async function setAdminRole(page) {
     state.ui.role = 'admin';
     state.ui.adultUnlocked = true;
     state.authSettings.lastAdultRole = 'admin';
+    state.authSettings.requireConfirmForSensitive = false;
     state.authSettings.adultPinHash = 'synthetic-browser-pin-hash';
     state.authSettings.pinHint = 'synthetic browser hint';
     state.authSettings.auditLog = [{ id: 'audit_browser_demo', action: 'synthetic browser action' }];
