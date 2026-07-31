@@ -8,6 +8,7 @@ const output = await readFile(manifest.output);
 const text = output.toString('utf8');
 const failures = [];
 const digest = createHash('sha256').update(output).digest('hex');
+const productVersion = manifest.release.replace(/^v/, '');
 
 if (digest !== manifest.sha256) failures.push(`sha256 mismatch: ${digest}`);
 if (output.length !== manifest.bytes) failures.push(`byte mismatch: ${output.length}`);
@@ -25,11 +26,23 @@ if (manifest.destinationStability && text.includes("atlas.querySelector('.blh-so
 if (manifest.destinationStability && text.includes("screen.querySelector('.blh-visual-model')?.remove();")) failures.push('visual-model rebuild loop remains active');
 if (manifest.dataAdapter) {
   if (!text.includes('window.BLHDataAdapter = Object.freeze')) failures.push('browser data adapter global missing');
-  if (!text.includes("window.BLHDataAdapter.exportState(state, { productVersion: '10.35' })")) failures.push('versioned full export path missing');
+  if (!text.includes(`window.BLHDataAdapter.exportState(state, { productVersion: '${productVersion}' })`)) failures.push('versioned full export path missing');
   if (!text.includes('window.BLHDataAdapter.parseImport(raw)')) failures.push('validated full import path missing');
   if (text.includes("downloadJson('homeschool-quest-lab-full-data.json', state)")) failures.push('legacy raw full-state export remains active');
   if (text.includes('state = normalize(seedProgress(imported));')) failures.push('legacy direct full-state import remains active');
   if (!text.includes('Download sanitized app data')) failures.push('sanitized export user guidance missing');
+}
+if (manifest.knowledgeCheckBuilder) {
+  if (!text.includes(`data-knowledge-check-builder="${manifest.knowledgeCheckBuilder}"`)) failures.push('knowledge-check builder contract missing');
+  if (!text.includes(`data-knowledge-check-schema="${manifest.knowledgeCheckBankSchema}"`)) failures.push('knowledge-check bank schema marker missing');
+  if (!text.includes(`data-blh-knowledge-check-bank="${manifest.knowledgeCheckBuilder}"`)) failures.push('knowledge-check browser bank module marker missing');
+  if (!text.includes('window.BLHKnowledgeChecks = Object.freeze')) failures.push('knowledge-check bank global missing');
+  if (!text.includes('window.BLHKnowledgeCheckUI = Object.freeze')) failures.push('knowledge-check UI global missing');
+  if (!text.includes('id="screen-knowledge"')) failures.push('knowledge-check screen missing');
+  if (!text.includes("{id:'knowledge', label:'Knowledge Checks'")) failures.push('knowledge-check navigation entry missing');
+  if (!text.includes("roles:['parent','teacher','director','admin']")) failures.push('knowledge-check adult role boundary missing');
+  if (!text.includes('beaufort-learning-harbor-knowledge-check-bank')) failures.push('knowledge-check portable format missing');
+  if (!text.includes('not auto-graded')) failures.push('subjective-work auto-grading boundary missing');
 }
 for (const route of ['learn','practice','quiz','proof','feedback']) {
   if (!new RegExp(`route\\s*:\\s*['"]${route}['"]`).test(text)) failures.push(`dock route missing: ${route}`);

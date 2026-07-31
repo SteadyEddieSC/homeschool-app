@@ -1,6 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 
+const current = JSON.parse(await readFile(new URL('../source/current-release.json', import.meta.url), 'utf8'));
+const manifest = JSON.parse(await readFile(new URL(`../${current.manifest}`, import.meta.url), 'utf8'));
+const productVersion = manifest.release.replace(/^v/, '');
 const stateKey = 'beaufortLearningHarbor.v10.19.state';
 
 async function loadDemo(page) {
@@ -45,21 +48,21 @@ async function openDataScreen(page) {
   await expect(page.locator('#exportStateBtn')).toBeVisible();
 }
 
-test('sanitized browser export uses the v10.35 schema envelope', async ({ page }) => {
+test('sanitized browser export uses the active schema envelope', async ({ page }) => {
   test.setTimeout(60000);
   await loadDemo(page);
   await setAdminRole(page);
   await openDataScreen(page);
 
-  await expect(page.locator('html')).toHaveAttribute('data-data-adapter', 'v10.35');
-  await expect(page.locator('html')).toHaveAttribute('data-data-schema', '1');
+  await expect(page.locator('html')).toHaveAttribute('data-data-adapter', manifest.dataAdapter);
+  await expect(page.locator('html')).toHaveAttribute('data-data-schema', String(manifest.dataSchema));
   await expect(page.locator('#exportStateBtn')).toHaveText('Download sanitized app data');
 
   const [download] = await Promise.all([
     page.waitForEvent('download'),
     page.locator('#exportStateBtn').click()
   ]);
-  expect(download.suggestedFilename()).toBe('beaufort-learning-harbor-v10.35-data.json');
+  expect(download.suggestedFilename()).toBe(`beaufort-learning-harbor-v${productVersion}-data.json`);
   const downloadPath = await download.path();
   expect(downloadPath).toBeTruthy();
   const text = await readFile(downloadPath, 'utf8');
@@ -69,8 +72,8 @@ test('sanitized browser export uses the v10.35 schema envelope', async ({ page }
   expect(envelope).toMatchObject({
     format: 'beaufort-learning-harbor-data',
     kind: 'application-state',
-    productVersion: '10.35',
-    schemaVersion: 1
+    productVersion,
+    schemaVersion: manifest.dataSchema
   });
   expect(envelope.state.students.map(student => student.name)).toEqual(expect.arrayContaining(['Jordan', 'Avery']));
   expect(Array.isArray(envelope.state.curriculum.weeks)).toBe(true);
@@ -98,7 +101,7 @@ test('unsupported schema fails closed and versioned import then succeeds', async
   const unsupported = JSON.stringify({
     format: 'beaufort-learning-harbor-data',
     kind: 'application-state',
-    productVersion: '10.35',
+    productVersion,
     schemaVersion: 999,
     state: currentState
   });
@@ -111,13 +114,13 @@ test('unsupported schema fails closed and versioned import then succeeds', async
   const afterInvalid = await page.evaluate(key => localStorage.getItem(key), stateKey);
   expect(afterInvalid).toBe(beforeInvalid);
 
-  const versionedPayload = await page.evaluate(key => {
+  const versionedPayload = await page.evaluate(({ key, version }) => {
     const state = JSON.parse(localStorage.getItem(key));
     state.programName = 'Imported Synthetic Harbor';
-    return window.BLHDataAdapter.exportState(state, { productVersion: '10.35' });
-  }, stateKey);
+    return window.BLHDataAdapter.exportState(state, { productVersion: version });
+  }, { key: stateKey, version: productVersion });
   await page.locator('#importFile').setInputFiles({
-    name: 'beaufort-learning-harbor-v10.35-data.json',
+    name: `beaufort-learning-harbor-v${productVersion}-data.json`,
     mimeType: 'application/json',
     buffer: Buffer.from(versionedPayload)
   });

@@ -40,10 +40,15 @@ const files = new Set([
   current.manifest,
   'package.json',
   'modules/data-adapter.mjs',
+  'modules/knowledge-check-bank.mjs',
+  'modules/knowledge-check-ui.js',
   'scripts/build-v10.35.mjs',
+  'scripts/build-v10.36.mjs',
   'tests/data-adapter.test.mjs',
   'tests/data-adapter-demo.test.mjs',
-  'tests/data-workflow.spec.mjs'
+  'tests/data-workflow.spec.mjs',
+  'tests/knowledge-check-bank.test.mjs',
+  'tests/knowledge-check-builder.spec.mjs'
 ]);
 
 await addIfFile(files, manifest.output);
