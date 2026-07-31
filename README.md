@@ -4,30 +4,30 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 
 ## Current baseline
 
-- Application: v10.34.1
+- Application: v10.37
 - Public identities: Jordan, Avery, Guest Student, and Demo Family
 - Demo behavior: deterministic Load Demo Family and Reset Demo Data controls
 - Hero/title behavior: one authoritative owner with legacy version writers made idempotent
-- Route/role behavior: exact student route coverage and explicit Parent/Teacher/Director/Admin access-boundary checks
+- Student routes: stable Learn, Practice, Quiz/Test, Proof, and Feedback actions
+- Role boundaries: explicit Parent/Teacher/Director/Admin access checks and Student denial of adult-only tools
+- Data contract: schema-1 sanitized application-state export/import with deterministic migration
+- Subjective proof: adult-only Knowledge Check Builder with student-safe preview and deterministic prompt-bank packages
+- Curriculum drafting: adult-only Lesson Pack Editor with ordered sections, practice/lab prompts, media needs, no-equipment paths, before/after preview, and no live apply
 - Destination stability: source-media galleries and visual models render once instead of rebuilding through their own MutationObserver
 - Deployment target: Cloudflare Workers Static Assets demo
-- Automated flow: integrity/privacy checks, Playwright desktop/tablet/mobile coverage, route and role coverage, destination stability, hero stability, dock stability, visual capture, and axe-core
+- Automated flow: integrity/privacy checks, Node contract tests, Playwright desktop/tablet/mobile coverage, route and role coverage, destination stability, hero stability, dock stability, visual capture, and axe-core
 
 ## Repository model
 
 - `source/releases/v10.32/`: immutable sanitized baseline
-- `source/releases/v10.33/release.json`: v10.33 demo-foundation contract
-- `source/releases/v10.33.1/release.json`: hero-stability patch contract
-- `source/releases/v10.34/release.json`: route/role regression contract
-- `source/releases/v10.34.1/release.json`: current mobile destination-stability contract
+- `source/releases/v10.33/` through `source/releases/v10.37/`: deterministic release contracts
 - `source/current-release.json`: current release pointer
-- `scripts/build-v10.33.mjs`: deterministic v10.33 transformation
-- `scripts/build-v10.33.1.mjs`: deterministic hero/title stabilization patch
-- `scripts/build-v10.34.mjs`: deterministic v10.34 route-contract release
-- `scripts/build-v10.34.1.mjs`: deterministic mobile destination-stability patch
-- `modules/`: controlled extraction boundaries for later physical modularization
+- `scripts/build-v10.33.mjs` through `scripts/build-v10.37.mjs`: layered deterministic transformations
+- `modules/data-adapter.mjs`: schema-1 application-data boundary
+- `modules/knowledge-check-bank.mjs` and `modules/knowledge-check-ui.js`: subjective-proof authoring boundary
+- `modules/lesson-pack.mjs` and `modules/lesson-pack-ui.js`: structured curriculum-draft boundary
 - `fixtures/`: synthetic test and demo scenarios
-- `tests/`: Playwright browser checks
+- `tests/`: Node contract tests and Playwright browser checks
 - `docs/`: architecture, privacy, releases, roadmap, and testing guidance
 - `.github/`: CI, issue forms, and pull-request standards
 
@@ -40,7 +40,7 @@ npx playwright install chromium
 npm test
 ```
 
-Playwright and axe are pinned exactly in `package.json`. The lockfile is intentionally omitted while npm's newly published Playwright tarball URLs are inconsistent under `npm ci`; clean pinned installs are exercised independently in both CI jobs.
+Playwright and axe are pinned exactly in `package.json`. The lockfile is intentionally omitted while npm's newly published Playwright tarball URLs are inconsistent under `npm ci`; clean pinned installs are exercised independently in CI.
 
 The validated single-file output is generated at `site/index.html`. GitHub Actions also publishes it as a downloadable workflow artifact.
 
@@ -62,9 +62,11 @@ Wrangler serves the generated `site` directory as static assets with single-page
 
 The default `workers.dev` address is public when enabled and includes the account-level subdomain. For a public-facing link, attach a neutral custom domain and disable the old `workers.dev` route after the custom hostname is verified.
 
-## Privacy
+## Privacy and content boundaries
 
 Only synthetic demo data belongs in this public repository. Real family exports, screenshots, backups, and local data must remain outside Git.
+
+Lesson packs and tests use original synthetic examples. Do not commit copied proprietary curriculum text. Media planning should prefer reputable free/OER/public-domain/nonprofit/government sources and record license/source review before controlled apply.
 
 ## License
 
