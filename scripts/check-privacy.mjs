@@ -1,17 +1,75 @@
-import { readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
+import path from 'node:path';
 
-const manifest = JSON.parse(await readFile('source/releases/v10.32/release.json', 'utf8'));
-const text = await readFile(manifest.source, 'utf8');
 const failures = [];
-for (const student of manifest.students) {
-  if (!text.includes(student.id)) failures.push(`synthetic id missing: ${student.id}`);
-  if (!text.includes(student.name)) failures.push(`synthetic name missing: ${student.name}`);
+const privateTerms = (process.env.BLH_PRIVATE_TERMS || '')
+  .split(',')
+  .map(value => value.trim())
+  .filter(Boolean);
+
+const secretPatterns = [
+  /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/,
+  /gh[pousr]_[A-Za-z0-9_]{20,}/,
+  /AKIA[0-9A-Z]{16}/
+];
+
+async function walk(directory) {
+  const entries = await readdir(directory, { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const fullPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) files.push(...await walk(fullPath));
+    else if (entry.isFile()) files.push(fullPath);
+  }
+  return files;
 }
-for (const term of (process.env.BLH_PRIVATE_TERMS || '').split(',').map(v => v.trim()).filter(Boolean)) {
-  if (text.toLowerCase().includes(term.toLowerCase())) failures.push(`private term found: ${term}`);
+
+async function addIfFile(files, candidate) {
+  try {
+    if ((await stat(candidate)).isFile()) files.add(candidate);
+  } catch (error) {
+    if (error.code !== 'ENOENT') throw error;
+  }
 }
-for (const pattern of [/-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/, /gh[pousr]_[A-Za-z0-9_]{20,}/, /AKIA[0-9A-Z]{16}/]) {
-  if (pattern.test(text)) failures.push(`possible secret matched ${pattern}`);
+
+const currentManifest = JSON.parse(await readFile('source/current-release.json', 'utf8'));
+const files = new Set([
+  'source/current-release.json',
+  'package.json',
+  'modules/data-adapter.mjs',
+  'tests/data-adapter.test.mjs'
+]);
+
+await addIfFile(files, currentManifest.output);
+await addIfFile(files, currentManifest.source);
+for (const directory of ['fixtures', 'source/releases']) {
+  for (const file of await walk(directory)) {
+    if (/\.(?:json|html|txt|md)$/i.test(file)) files.add(file);
+  }
 }
-if (failures.length) { console.error(failures.join('\n')); process.exit(1); }
-console.log('Privacy and secret scan passed.');
+
+for (const file of [...files].sort()) {
+  const text = await readFile(file, 'utf8');
+  const lower = text.toLowerCase();
+  for (const term of privateTerms) {
+    if (lower.includes(term.toLowerCase())) failures.push(`${file}: private term found: ${term}`);
+  }
+  for (const pattern of secretPatterns) {
+    if (pattern.test(text)) failures.push(`${file}: possible secret matched ${pattern}`);
+  }
+}
+
+for (const fixturePath of ['fixtures/demo-family-active.json', 'fixtures/demo-family-fresh.json']) {
+  const fixture = JSON.parse(await readFile(fixturePath, 'utf8'));
+  if (fixture.family?.name !== 'Demo Family') failures.push(`${fixturePath}: family must remain Demo Family`);
+  const names = Array.isArray(fixture.students) ? fixture.students.map(student => student.name) : [];
+  for (const requiredName of ['Jordan', 'Avery']) {
+    if (!names.includes(requiredName)) failures.push(`${fixturePath}: synthetic student missing: ${requiredName}`);
+  }
+}
+
+if (failures.length) {
+  console.error(failures.join('\n'));
+  process.exit(1);
+}
+console.log(`Privacy and secret scan passed across ${files.size} current data surfaces.`);
