@@ -68,6 +68,15 @@ const LESSON_PACK_STYLES = `<style id="blh-v1037-lesson-pack-styles">
   @media(max-width:650px){.lp-heading,.lp-bank-panel,.lp-main-panel{padding:13px;border-radius:18px}.lp-heading-actions,.lp-actions{display:grid;grid-template-columns:1fr 1fr;width:100%}.lp-heading-actions .btn,.lp-actions .btn{width:100%}.lp-form-grid,.lp-check-grid{grid-template-columns:1fr}.lp-span-2{grid-column:auto}.lp-stat-grid{grid-template-columns:1fr 1fr}.lp-block-heading,.lp-section-head,.lp-preview-heading{display:grid}.lp-mini-actions{justify-content:start}.lp-before-card,.lp-after-card{padding:13px}}
 </style>`;
 
+const LESSON_PACK_NAV_ADAPTER = `  const v1037BaseNavGroupForScreen = v84NavGroupForScreen;
+  v84NavGroupForScreen = function(screen, role=activeRole()){
+    const id = typeof screen === 'string' ? screen : (screen?.id || '');
+    if (id === 'lessonpacks') return role === 'parent' ? 'manage' : 'teach';
+    return v1037BaseNavGroupForScreen(screen, role);
+  };
+
+`;
+
 export function transformV1037(source, moduleSource, uiSource) {
   let text = source.split('10.36').join('10.37');
   text = text
@@ -114,7 +123,7 @@ export function transformV1037(source, moduleSource, uiSource) {
   text = replaceOnce(
     text,
     savedThemeAnchor,
-    `${uiSource.trimEnd()}\n\n${savedThemeAnchor}`,
+    `${LESSON_PACK_NAV_ADAPTER}${uiSource.trimEnd()}\n\n${savedThemeAnchor}`,
     'lesson-pack workspace injection'
   );
   return text;
