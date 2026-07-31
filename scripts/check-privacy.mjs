@@ -33,16 +33,21 @@ async function addIfFile(files, candidate) {
   }
 }
 
-const currentManifest = JSON.parse(await readFile('source/current-release.json', 'utf8'));
+const current = JSON.parse(await readFile('source/current-release.json', 'utf8'));
+const manifest = JSON.parse(await readFile(current.manifest, 'utf8'));
 const files = new Set([
   'source/current-release.json',
+  current.manifest,
   'package.json',
   'modules/data-adapter.mjs',
-  'tests/data-adapter.test.mjs'
+  'scripts/build-v10.35.mjs',
+  'tests/data-adapter.test.mjs',
+  'tests/data-workflow.spec.mjs'
 ]);
 
-await addIfFile(files, currentManifest.output);
-await addIfFile(files, currentManifest.source);
+await addIfFile(files, manifest.output);
+await addIfFile(files, manifest.base);
+await addIfFile(files, manifest.builder);
 for (const directory of ['fixtures', 'source/releases']) {
   for (const file of await walk(directory)) {
     if (/\.(?:json|html|txt|md)$/i.test(file)) files.add(file);
