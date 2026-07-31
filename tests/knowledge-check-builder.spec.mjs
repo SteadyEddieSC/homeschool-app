@@ -1,5 +1,9 @@
+import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 
+const current = JSON.parse(await readFile(new URL('../source/current-release.json', import.meta.url), 'utf8'));
+const manifest = JSON.parse(await readFile(new URL(`../${current.manifest}`, import.meta.url), 'utf8'));
+const productVersion = manifest.release.replace(/^v/, '');
 const stateKey = 'beaufortLearningHarbor.v10.19.state';
 
 async function loadDemo(page) {
@@ -74,7 +78,7 @@ test('adult builder creates, previews, exports, imports, and persists a subjecti
   const downloadPromise = page.waitForEvent('download');
   await page.getByTestId('knowledge-export').click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('beaufort-learning-harbor-knowledge-checks-v10.36.json');
+  expect(download.suggestedFilename()).toBe(`beaufort-learning-harbor-knowledge-checks-v${productVersion}.json`);
   const exportedPath = await download.path();
   expect(exportedPath).toBeTruthy();
 
@@ -104,7 +108,24 @@ test('malformed and dangerous imports fail closed without changing local state',
   });
   await expect.poll(async () => JSON.stringify(await savedPrompts(page))).toBe(before);
 
-  const dangerous = '{"format":"beaufort-learning-harbor-knowledge-check-bank","schemaVersion":1,"kind":"knowledge-check-bank","productVersion":"10.36","prompts":[{"id":"kc_bad","title":"Bad","type":"recitation","subject":"History","track":"All learners","status":"draft","studentDirections":"Explain.","evidenceExpectations":"Show evidence.","criteria":["Clear"],"__proto__":{"polluted":true}}]}';
+  const dangerous = JSON.stringify({
+    format: 'beaufort-learning-harbor-knowledge-check-bank',
+    schemaVersion: 1,
+    kind: 'knowledge-check-bank',
+    productVersion,
+    prompts: [{
+      id: 'kc_bad',
+      title: 'Bad',
+      type: 'recitation',
+      subject: 'History',
+      track: 'All learners',
+      status: 'draft',
+      studentDirections: 'Explain.',
+      evidenceExpectations: 'Show evidence.',
+      criteria: ['Clear'],
+      __proto__: { polluted: true }
+    }]
+  }).replace('"prompts":[{', '"prompts":[{"__proto__":{"polluted":true},');
   await page.getByTestId('knowledge-import-file').setInputFiles({
     name: 'dangerous.json',
     mimeType: 'application/json',
