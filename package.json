@@ -1,6 +1,6 @@
 {
   "name": "beaufort-learning-harbor",
-  "version": "10.34.1",
+  "version": "10.35.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,10 +8,12 @@
     "check:foundation": "node scripts/check-foundation.mjs",
     "check:release": "node scripts/check-release.mjs",
     "check:privacy": "node scripts/check-privacy.mjs",
-    "verify": "npm run check:foundation",
+    "verify": "npm run check:foundation && npm run test:data-adapter",
     "verify:release": "npm run build && npm run check:release && npm run check:privacy",
     "serve": "node scripts/serve.mjs",
     "test": "playwright test",
+    "test:data-adapter": "node --test tests/data-adapter.test.mjs tests/data-adapter-demo.test.mjs",
+    "test:data-workflow": "playwright test tests/data-workflow.spec.mjs",
     "test:smoke": "playwright test tests/smoke.spec.mjs",
     "test:mobile": "playwright test tests/mobile-dock.spec.mjs",
     "test:demo": "playwright test tests/demo-state.spec.mjs",
