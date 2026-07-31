@@ -42,6 +42,7 @@ const files = new Set([
   'modules/data-adapter.mjs',
   'scripts/build-v10.35.mjs',
   'tests/data-adapter.test.mjs',
+  'tests/data-adapter-demo.test.mjs',
   'tests/data-workflow.spec.mjs'
 ]);
 
