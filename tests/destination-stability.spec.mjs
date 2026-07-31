@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { releaseManifest } from './release-contract.mjs';
 
 const stateKey = 'beaufortLearningHarbor.v10.19.state';
 const routes = [
@@ -38,7 +39,7 @@ test('Pixel 7 destinations retain stable nodes and widths after routing', async 
 
   const dock = page.locator('#blh-mobile-dock');
   await expect(dock).toBeVisible();
-  await dock.evaluate(node => { node.dataset.destinationStabilityIdentity = 'v10.34.1'; });
+  await dock.evaluate((node, identity) => { node.dataset.destinationStabilityIdentity = identity; }, releaseManifest.destinationStability);
 
   for (const item of routes) {
     const control = dock.locator(`[data-blh26-route="${item.route}"]`);
@@ -93,7 +94,7 @@ test('Pixel 7 destinations retain stable nodes and widths after routing', async 
     expect(result.stillActive).toBeTruthy();
     expect(result.widthSpread).toBeLessThanOrEqual(1);
     if (item.visual) expect(result.childMutations).toBe(0);
-    await expect(page.locator('#blh-mobile-dock[data-destination-stability-identity="v10.34.1"]')).toHaveCount(1);
+    await expect(page.locator(`#blh-mobile-dock[data-destination-stability-identity="${releaseManifest.destinationStability}"]`)).toHaveCount(1);
     await returnHome(page);
   }
 });
