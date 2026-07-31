@@ -73,6 +73,11 @@ test('sanitized browser export uses the v10.35 schema envelope', async ({ page }
   });
   expect(envelope.state.students.map(student => student.name)).toEqual(expect.arrayContaining(['Jordan', 'Avery']));
   expect(Array.isArray(envelope.state.curriculum.weeks)).toBe(true);
+  expect(envelope.state.demoProfile).toMatchObject({
+    synthetic: true,
+    familyName: 'Demo Family',
+    scenario: 'active'
+  });
   expect(envelope.state.authSettings.adultPinHash).toBe('');
   expect(envelope.state.authSettings.pinHint).toBe('');
   expect(envelope.state.authSettings.adultUnlockExpiresAt).toBe('');
@@ -81,36 +86,20 @@ test('sanitized browser export uses the v10.35 schema envelope', async ({ page }
   expect(envelope.state.backups[0].snapshot).toBeUndefined();
 });
 
-test('versioned import succeeds and unsupported schema import fails without changing state', async ({ page }) => {
+test('unsupported schema fails closed and versioned import then succeeds', async ({ page }) => {
   test.setTimeout(60000);
   await loadDemo(page);
   await setAdminRole(page);
   await openDataScreen(page);
 
-  const versionedPayload = await page.evaluate(key => {
-    const state = JSON.parse(localStorage.getItem(key));
-    state.programName = 'Imported Synthetic Harbor';
-    return window.BLHDataAdapter.exportState(state, { productVersion: '10.35' });
-  }, stateKey);
-
-  await page.locator('#importFile').setInputFiles({
-    name: 'beaufort-learning-harbor-v10.35-data.json',
-    mimeType: 'application/json',
-    buffer: Buffer.from(versionedPayload)
-  });
-  await expect(page.locator('#toast')).toContainText('Versioned app data imported');
-  const imported = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), stateKey);
-  expect(imported.programName).toBe('Imported Synthetic Harbor');
-  expect(imported.authSettings.adultPinHash).toBe('');
-  expect(imported.authSettings.adultUnlockExpiresAt).toBe('');
-
   const beforeInvalid = await page.evaluate(key => localStorage.getItem(key), stateKey);
+  const currentState = JSON.parse(beforeInvalid);
   const unsupported = JSON.stringify({
     format: 'beaufort-learning-harbor-data',
     kind: 'application-state',
     productVersion: '10.35',
     schemaVersion: 999,
-    state: imported
+    state: currentState
   });
   await page.locator('#importFile').setInputFiles({
     name: 'unsupported-schema.json',
@@ -120,4 +109,21 @@ test('versioned import succeeds and unsupported schema import fails without chan
   await expect(page.locator('#toast')).toContainText('UNSUPPORTED_SCHEMA');
   const afterInvalid = await page.evaluate(key => localStorage.getItem(key), stateKey);
   expect(afterInvalid).toBe(beforeInvalid);
+
+  const versionedPayload = await page.evaluate(key => {
+    const state = JSON.parse(localStorage.getItem(key));
+    state.programName = 'Imported Synthetic Harbor';
+    return window.BLHDataAdapter.exportState(state, { productVersion: '10.35' });
+  }, stateKey);
+  await page.locator('#importFile').setInputFiles({
+    name: 'beaufort-learning-harbor-v10.35-data.json',
+    mimeType: 'application/json',
+    buffer: Buffer.from(versionedPayload)
+  });
+  await expect(page.locator('#toast')).toContainText('Versioned app data imported');
+  const imported = await page.evaluate(key => JSON.parse(localStorage.getItem(key)), stateKey);
+  expect(imported.programName).toBe('Imported Synthetic Harbor');
+  expect(imported.demoProfile).toMatchObject({ familyName: 'Demo Family', scenario: 'active' });
+  expect(imported.authSettings.adultPinHash).toBe('');
+  expect(imported.authSettings.adultUnlockExpiresAt).toBe('');
 });
