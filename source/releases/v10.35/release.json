@@ -1,0 +1,18 @@
+{
+  "release": "v10.35",
+  "base": "source/releases/v10.32/beaufort_learning_harbor_v10_32.html",
+  "builder": "scripts/build-v10.35.mjs",
+  "output": "site/index.html",
+  "downloadName": "beaufort_learning_harbor_v10_35.html",
+  "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+  "bytes": 0,
+  "title": "Beaufort Learning Harbor v10.35",
+  "dockOwner": "BLHMobileDock@v10.35",
+  "heroOwner": "BLHHero@v10.35",
+  "routeContract": "v10.35",
+  "destinationStability": "v10.35",
+  "dataAdapter": "v10.35",
+  "dataSchema": 1,
+  "demoBuild": "synthetic",
+  "notes": "Adds a versioned schema-1 application-data envelope, deterministic migrations, sanitized portable exports, fail-closed imports, and privacy-safe backup metadata while preserving offline browser-local operation."
+}
