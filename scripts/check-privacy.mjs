@@ -25,6 +25,7 @@ async function walk(directory) {
 }
 
 async function addIfFile(files, candidate) {
+  if (typeof candidate !== 'string' || !candidate.trim()) return;
   try {
     if ((await stat(candidate)).isFile()) files.add(candidate);
   } catch (error) {
