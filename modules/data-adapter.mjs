@@ -9,7 +9,8 @@ export const BLH_DATA_KINDS = Object.freeze({
 });
 
 // This allowlist is derived from the live v10.34.1 standalone application state,
-// including current defaults, normalization paths, and storage-compaction paths.
+// including current defaults, normalization paths, storage compaction, and the
+// deterministic public-demo layer injected after the immutable v10.32 baseline.
 export const BLH_STATE_KEYS = Object.freeze([
   'activeStudentId',
   'activity',
@@ -66,6 +67,7 @@ export const BLH_STATE_KEYS = Object.freeze([
   'customResources',
   'cycleName',
   'cyclePlan',
+  'demoProfile',
   'expeditionBiomes',
   'expeditionSettings',
   'familyAnnouncements',
