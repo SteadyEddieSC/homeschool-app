@@ -2,140 +2,78 @@
 
 ## Completed release foundation
 
-### v10.32 — Mobile Dock Stabilization
+### v10.32–v10.34.1 — Repository, demo, route, role, and mobile stability
 
-Completed: one authoritative student mobile dock with stable Learn, Practice, Quiz/Test, Proof, and Feedback actions; legacy competing dock creators neutralized; role visibility preserved.
-
-### v10.33 — Repository and Demo Foundation
-
-Completed:
-
-- Sanitized immutable v10.32 baseline and reproducible release builder
-- Full Playwright, mobile-dock, visual-capture, and axe-core CI
-- Deterministic Load Demo Family and Reset Demo Data behavior
-- Persistent public-demo privacy explanation and browser-local scenario status
-- Versioned current-release manifest and downloadable CI artifact
-- GitHub issue/PR release workflow
-
-### v10.33.1 — Hero and Home Stability Patch
-
-Completed:
-
-- One authoritative hero/title owner
-- Idempotent recurring title and hero writes
-- Automated multi-second mutation watch
-- Stable five-action mobile dock and demo controls
-- Cloudflare Workers Static Assets deployment
-
-### v10.34 — Route and Role Regression Coverage
-
-Completed:
-
-- Student navigation coverage for Learn, Practice, Quiz/Test, Proof, and Feedback
-- Upper- and lower-learner route targets
-- Parent/Teacher/Director/Admin role-boundary checks
-- Student denial of adult-only screens
-- Direct-screen and return-to-Home tests
-- Desktop, tablet, and Pixel 7 viewport matrix
-
-### v10.34.1 — Mobile Destination Stability Patch
-
-Completed:
-
-- Stopped source-media gallery and visual-model self-rebuild loops
-- Preserved destination-screen, visual-model, and mobile-dock node identity after routing
-- Added Pixel 7 destination width and mutation stability checks
+Completed: immutable sanitized baseline, deterministic builds, synthetic demo controls, one authoritative hero and mobile dock, student-route coverage, five-role boundaries, and destination-node stability.
 
 ### v10.35 — Versioned Data Adapter
 
-Completed:
-
-- Schema-1 application-data envelope independent from product version
-- Deterministic normalization, migration, and round trips
-- Sanitized full-state export and fail-closed import
-- Legacy raw-state and demo-fixture migration coverage
-- Expanded privacy validation
+Completed: schema-1 sanitized application-data export/import, deterministic migration, fail-closed validation, and expanded privacy gates.
 
 ### v10.36 — Knowledge Check Builder v1
 
-Completed:
-
-- Adult-only recitation, discussion, notebook, project, oral tell-back, and mastery-proof authoring
-- Student-safe preview without adult notes or approval language
-- Deterministic prompt-bank export/import
-- Parent/Teacher/Admin editing, Director rollup, and Student denial
-- No auto-grading for subjective work
+Completed: adult-only subjective-proof authoring, student-safe preview, deterministic prompt-bank packages, role boundaries, and no auto-grading.
 
 ### v10.37 — Lesson Pack Editor v1
 
-Completed:
-
-- Ordered lesson-section editor
-- Separate practice and lab/project prompts
-- Subject, learner-track, week, and destination targeting
-- Media-needs and source/license checklist
-- Before/after preview without live apply
-- Complete no-equipment path fields
-- Deterministic lesson-pack draft export/import
-- Non-destructive migration from existing Curriculum Studio draft stores
-- Parent/Teacher/Admin editing, Director rollup, and Student denial
+Completed: ordered lesson drafts, separate practice/lab prompts, media and license review, no-equipment paths, before/after preview, deterministic packages, and no live apply.
 
 ### v10.38 — Family/Co-op Planner v1
 
-Completed:
-
-- Monday-Friday weekly planning board
-- Learner, learner-track, day, type, and status filters
-- Standard, catch-up, flex, co-op-heavy, and break/light modes
-- Optional co-op event, location, responsibility, materials, arrival, and follow-up fields
-- Safe source seeding from Assignments and Lesson Packs
-- Linked, non-destructive carryover
-- Shortcuts into Schedule, Pacing, Mission Planner, Assignments, Lesson Packs, Year Plan, and Insights
-- Deterministic planner package export/import
-- Parent/Teacher/Admin editing, Director rollup, and Student denial
-
-## Current release
+Completed: Monday–Friday board, learner/track filters, flex/catch-up modes, optional co-op logistics, source-safe seeding, linked carryover, deterministic packages, and strict reward/record boundaries.
 
 ### v10.39 — Modularization and Offline Regression Foundation
 
+Completed: reusable offline request boundary, external fetch/XHR/beacon blocking, browser-local ledger, network-disabled workflow checks, and repeat-render visual comparisons.
+
+### v10.39.1 — Console and Observer Stability Hotfix
+
+Completed: missing legacy version binding restored, nine obsolete observers and fifteen startup polls retired, retained media class writes made idempotent, and console/page-error plus bounded-mutation gates added.
+
+## Current release
+
+### v10.40 — App Shell and Role Policy Module
+
 Current scope:
 
-- Reusable offline/runtime request-classification and ledger module
-- External fetch, XHR, and beacon blocking before dispatch
-- Browser-local offline-readiness status
-- Explicit post-load network-disabled learner and adult workflow tests
-- Repeat-render screenshot comparison baselines for high-risk learner and role routes
-- Deterministic single-file release preserved
-- No product redesign or role/reward/source behavior changes
+- Reusable schema-1 app-shell role-policy module
+- One normalized source for role metadata and screen catalog membership
+- Fail-closed static route authorization
+- Module-owned role defaults and navigation-group definitions
+- Read-only browser policy/runtime snapshots
+- Node validation and desktop/tablet/Pixel 7 parity tests
+- Dynamic Student permissions and existing role outcomes preserved
+- Preliminary 4th–6th booklist documented without generating final pacing
 
 Boundaries:
 
-- No cloud account, database, API, telemetry, service worker, or external calendar dependency
-- No feature removals or broad visual redesign
-- No automatic completion, XP, attendance, mastery, portfolio approval, or destructive source rewrite
+- No broad visual redesign or intended role change
+- No automatic completion, XP, attendance, mastery, portfolio approval, or source rewrite
+- No live pacing from unconfirmed curriculum input
+- No cloud account, API, database, telemetry, service worker, or external calendar dependency
 - No cross-project infrastructure changes
 
 ## Next planned release
 
-### v10.40 — App Shell and Role Policy Module
+### v10.41 — Learner Route and Assignment Resolver
 
 Planned:
 
-- Extract screen catalog, role visibility, route authorization, and navigation-group policy
-- Replace duplicated role deny lists with one authoritative tested source
-- Add role-policy parity tests across Student, Parent, Teacher, Director, and Admin
-- Preserve the existing navigation design and public role behavior
+- Extract learner-track routing and assignment-to-destination resolution
+- Add deterministic fallbacks for incomplete learner, assignment, and destination mappings
+- Expand upper/lower learner route matrices
+- Preserve current public identities and role-policy outcomes
 
 ## Maintained 10-release roadmap
 
-See `docs/roadmap-v10.39-v10.48.md` for the bounded sequence through:
+See `docs/roadmap-v10.40-v10.49.md` for the bounded sequence through:
 
-- App-shell and role-policy extraction
 - Learner-route resolution
 - Family Planner v2
 - Controlled Lesson Pack apply
 - Knowledge Check delivery and evidence queues
 - Portfolio and records reconciliation
 - Accessibility and multi-browser expansion
-- Content and media quality controls
-- Deployment, recovery, and release hardening
+- Curriculum-source and media quality controls
+- Deployment and recovery hardening
+- School-year rollover and family operations
