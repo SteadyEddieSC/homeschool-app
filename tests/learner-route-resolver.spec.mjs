@@ -126,13 +126,18 @@ test('direct assignment resolution cannot widen work to the wrong learner and Ro
   await loadDemo(page);
   const direct = await page.evaluate(() => ({
     jordan: window.BLHLearnerRouteRuntime.resolveAssignment('proof-upper-latin-recitation', { id:'stu_jordan', levelId:'upper' }),
-    avery: window.BLHLearnerRouteRuntime.resolveAssignment('proof-upper-latin-recitation', { id:'stu_avery', levelId:'lower' })
+    avery: window.BLHLearnerRouteRuntime.resolveAssignment('proof-upper-latin-recitation', { id:'stu_avery', levelId:'lower' }),
+    averyProof: window.BLHLearnerRouteRuntime.resolve('proof', { id:'stu_avery', levelId:'lower' })
   }));
   expect(direct.jordan.assignment.id).toBe('proof-upper-latin-recitation');
   expect(direct.jordan.screen).toBe('assignments');
   expect(direct.avery.assignment).toBeNull();
   expect(direct.avery.screen).toBe('home');
   expect(direct.avery.reasonCode).toBe('ASSIGNMENT_NOT_FOUND_OR_NOT_APPLICABLE');
+  expect(direct.averyProof.assignment).toBeNull();
+  expect(direct.averyProof.screen).toBe('assignments');
+  expect(direct.averyProof.usedFallback).toBe(true);
+  expect(direct.averyProof.reasonCode).toBe('NO_MATCHING_ASSIGNMENT');
 
   await page.evaluate(key => {
     const state = JSON.parse(localStorage.getItem(key));
@@ -144,5 +149,5 @@ test('direct assignment resolution cannot widen work to the wrong learner and Ro
   await page.locator('[data-blh26-open-qa]').first().dispatchEvent('click');
   await expect(page.locator('#screen-blh26-route-qa')).toHaveClass(/\bactive\b/);
   await expect(page.locator('#screen-blh26-route-qa')).toContainText('Resolver:');
-  await expect(page.locator('#screen-blh26-route-qa')).toContainText('Safe fallback');
+  await expect(page.locator('#screen-blh26-route-qa')).toContainText('Exact target');
 });
