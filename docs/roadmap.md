@@ -30,45 +30,52 @@ Completed: reusable offline request boundary, external fetch/XHR/beacon blocking
 
 Completed: missing legacy version binding restored, nine obsolete observers and fifteen startup polls retired, retained media class writes made idempotent, and console/page-error plus bounded-mutation gates added.
 
+### v10.40 — App Shell and Role Policy Module
+
+Completed: schema-1 role metadata, screen-catalog membership, static authorization, role defaults, navigation groups, fail-closed validation, and full role-policy parity coverage.
+
 ## Current release
 
-### v10.40 — App Shell and Role Policy Module
+### v10.41 — Learner Route and Assignment Resolver
 
 Current scope:
 
-- Reusable schema-1 app-shell role-policy module
-- One normalized source for role metadata and screen catalog membership
-- Fail-closed static route authorization
-- Module-owned role defaults and navigation-group definitions
-- Read-only browser policy/runtime snapshots
-- Node validation and desktop/tablet/Pixel 7 parity tests
-- Dynamic Student permissions and existing role outcomes preserved
-- Preliminary 4th–6th booklist documented without generating final pacing
+- Reusable schema-1 learner-route resolver
+- Learner identity and track normalization
+- Existing all/lower/upper/exact learner target support
+- Completion-aware first-unfinished assignment selection
+- Direct assignment destination resolution
+- Safe route fallbacks for missing assignments and destinations
+- Deterministic malformed/duplicate assignment diagnostics
+- Read-only browser resolver/runtime snapshots
+- Upper/lower desktop, touch-tablet, and Pixel 7 coverage
 
 Boundaries:
 
-- No broad visual redesign or intended role change
-- No automatic completion, XP, attendance, mastery, portfolio approval, or source rewrite
+- No broad visual redesign or intended route outcome change
+- No route-only XP, coins, grades, automatic completion, attendance, mastery, portfolio approval, or source rewrite
+- Formal quizzes/tests remain separate from adult-reviewed proof
 - No live pacing from unconfirmed curriculum input
 - No cloud account, API, database, telemetry, service worker, or external calendar dependency
 - No cross-project infrastructure changes
 
 ## Next planned release
 
-### v10.41 — Learner Route and Assignment Resolver
+### v10.42 — Family Planner v2
 
 Planned:
 
-- Extract learner-track routing and assignment-to-destination resolution
-- Add deterministic fallbacks for incomplete learner, assignment, and destination mappings
-- Expand upper/lower learner route matrices
-- Preserve current public identities and role-policy outcomes
+- Reusable week templates
+- Duplicate-week and roll-forward actions
+- Workload balance and conflict warnings
+- Clearer responsibility gaps
+- Optional print/export views with binder work remaining optional
+- Non-destructive source links and no automatic completion/rewards
 
 ## Maintained 10-release roadmap
 
-See `docs/roadmap-v10.40-v10.49.md` for the bounded sequence through:
+See `docs/roadmap-v10.41-v10.50.md` for the bounded sequence through:
 
-- Learner-route resolution
 - Family Planner v2
 - Controlled Lesson Pack apply
 - Knowledge Check delivery and evidence queues
@@ -77,3 +84,4 @@ See `docs/roadmap-v10.40-v10.49.md` for the bounded sequence through:
 - Curriculum-source and media quality controls
 - Deployment and recovery hardening
 - School-year rollover and family operations
+- Reviewed curriculum intake to a proposed year plan

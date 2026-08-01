@@ -16,7 +16,7 @@ const required = [
   'return window.BLHAppShellPolicy.navGroupsForRole(role, screen => v84NavGroupForScreen(screen, role));',
   'if (!window.BLHAppShellPolicy.roleCanAccessStatic(screen, role)) return false;',
   "return window.BLHAppShellPolicy.defaultScreen(role) || 'home';",
-  'v10.40 App Shell + Role Policy Module'
+  `${manifest.appShellRolePolicy} App Shell + Role Policy Module`
 ];
 for (const marker of required) if (!text.includes(marker)) failures.push(`missing app-shell role-policy marker: ${marker}`);
 
@@ -28,7 +28,7 @@ const retired = [
 ];
 for (const marker of retired) if (text.includes(marker)) failures.push(`legacy duplicated role-policy path remains active: ${marker}`);
 
-if (manifest.appShellRolePolicy !== 'v10.40') failures.push(`unexpected role-policy version: ${manifest.appShellRolePolicy}`);
+if (manifest.appShellRolePolicy !== manifest.release) failures.push(`role-policy version must match active release: ${manifest.appShellRolePolicy}`);
 if (manifest.appShellRolePolicySchema !== 1) failures.push(`unexpected role-policy schema: ${manifest.appShellRolePolicySchema}`);
 if (!text.includes("roleIds: Object.freeze([...BLH_ROLE_IDS])")) failures.push('read-only role id surface missing');
 if (!text.includes("unknown") && !text.includes('roleCanAccessStatic')) failures.push('fail-closed role policy surface missing');
