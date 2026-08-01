@@ -1,6 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 
+const current = JSON.parse(await readFile(new URL('../source/current-release.json', import.meta.url), 'utf8'));
+const manifest = JSON.parse(await readFile(new URL(`../${current.manifest}`, import.meta.url), 'utf8'));
+const productVersion = manifest.release.replace(/^v/, '');
 const stateKey = 'beaufortLearningHarbor.v10.19.state';
 const legacyKey = 'blh20.curriculumDrafts.v1';
 
@@ -95,14 +98,14 @@ test('adult builds, previews, exports, imports, and persists a reversible lesson
   const downloadPromise = page.waitForEvent('download');
   await page.getByTestId('lesson-pack-export').click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toContain('beaufort-learning-harbor-lesson-pack-synthetic_harbor_ecology_lesson-v10.37.json');
+  expect(download.suggestedFilename()).toContain(`beaufort-learning-harbor-lesson-pack-synthetic_harbor_ecology_lesson-v${productVersion}.json`);
   const exportedPath = await download.path();
   expect(exportedPath).toBeTruthy();
   const exported = JSON.parse(await readFile(exportedPath, 'utf8'));
   expect(exported).toMatchObject({
     format: 'beaufort-learning-harbor-lesson-pack',
     kind: 'lesson-pack-draft',
-    productVersion: '10.37',
+    productVersion,
     schemaVersion: 1
   });
   expect(exported.pack.adultNotes).toBe('Adult-only planning marker.');
@@ -161,7 +164,7 @@ test('malformed package fails closed and legacy migration preserves source store
   });
   await expect.poll(async () => JSON.stringify(await savedLessonPacks(page))).toBe(beforeInvalid);
 
-  const dangerous = '{"format":"beaufort-learning-harbor-lesson-pack","schemaVersion":1,"kind":"lesson-pack-draft","productVersion":"10.37","pack":{"id":"lp_bad","title":"Bad","subject":"Science","track":"All","targetScreen":"biology","targetWeekId":"","status":"draft","objective":"Explain.","sections":[{"id":"section_bad","title":"Learn","body":"Original."}],"practicePrompts":[],"labPrompts":[],"mediaNeeds":{},"noEquipmentPath":{"enabled":false},"__proto__":{"polluted":true}}}';
+  const dangerous = `{"format":"beaufort-learning-harbor-lesson-pack","schemaVersion":1,"kind":"lesson-pack-draft","productVersion":"${productVersion}","pack":{"id":"lp_bad","title":"Bad","subject":"Science","track":"All","targetScreen":"biology","targetWeekId":"","status":"draft","objective":"Explain.","sections":[{"id":"section_bad","title":"Learn","body":"Original."}],"practicePrompts":[],"labPrompts":[],"mediaNeeds":{},"noEquipmentPath":{"enabled":false},"__proto__":{"polluted":true}}}`;
   await page.getByTestId('lesson-pack-import-file').setInputFiles({
     name: 'dangerous.json',
     mimeType: 'application/json',
