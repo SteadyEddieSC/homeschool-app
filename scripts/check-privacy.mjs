@@ -44,16 +44,23 @@ const files = new Set([
   'modules/knowledge-check-ui.js',
   'modules/lesson-pack.mjs',
   'modules/lesson-pack-ui.js',
+  'modules/family-planner.mjs',
+  'modules/family-planner-ui-core.js',
+  'modules/family-planner-ui-workspace.js',
+  'modules/family-planner-ui-actions.js',
   'scripts/build-v10.35.mjs',
   'scripts/build-v10.36.mjs',
   'scripts/build-v10.37.mjs',
+  'scripts/build-v10.38.mjs',
   'tests/data-adapter.test.mjs',
   'tests/data-adapter-demo.test.mjs',
   'tests/data-workflow.spec.mjs',
   'tests/knowledge-check-bank.test.mjs',
   'tests/knowledge-check-builder.spec.mjs',
   'tests/lesson-pack.test.mjs',
-  'tests/lesson-pack-editor.spec.mjs'
+  'tests/lesson-pack-editor.spec.mjs',
+  'tests/family-planner.test.mjs',
+  'tests/family-planner.spec.mjs'
 ]);
 
 await addIfFile(files, manifest.output);

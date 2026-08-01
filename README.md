@@ -4,7 +4,7 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 
 ## Current baseline
 
-- Application: v10.37
+- Application: v10.38
 - Public identities: Jordan, Avery, Guest Student, and Demo Family
 - Demo behavior: deterministic Load Demo Family and Reset Demo Data controls
 - Hero/title behavior: one authoritative owner with legacy version writers made idempotent
@@ -13,6 +13,7 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 - Data contract: schema-1 sanitized application-state export/import with deterministic migration
 - Subjective proof: adult-only Knowledge Check Builder with student-safe preview and deterministic prompt-bank packages
 - Curriculum drafting: adult-only Lesson Pack Editor with ordered sections, practice/lab prompts, media needs, no-equipment paths, before/after preview, and no live apply
+- Weekly coordination: adult-only Family/Co-op Planner with learner filters, flex/catch-up modes, optional co-op responsibilities, safe source seeding, linked carryover, and deterministic planner packages
 - Destination stability: source-media galleries and visual models render once instead of rebuilding through their own MutationObserver
 - Deployment target: Cloudflare Workers Static Assets demo
 - Automated flow: integrity/privacy checks, Node contract tests, Playwright desktop/tablet/mobile coverage, route and role coverage, destination stability, hero stability, dock stability, visual capture, and axe-core
@@ -20,12 +21,13 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 ## Repository model
 
 - `source/releases/v10.32/`: immutable sanitized baseline
-- `source/releases/v10.33/` through `source/releases/v10.37/`: deterministic release contracts
+- `source/releases/v10.33/` through `source/releases/v10.38/`: deterministic release contracts
 - `source/current-release.json`: current release pointer
-- `scripts/build-v10.33.mjs` through `scripts/build-v10.37.mjs`: layered deterministic transformations
+- `scripts/build-v10.33.mjs` through `scripts/build-v10.38.mjs`: layered deterministic transformations
 - `modules/data-adapter.mjs`: schema-1 application-data boundary
 - `modules/knowledge-check-bank.mjs` and `modules/knowledge-check-ui.js`: subjective-proof authoring boundary
 - `modules/lesson-pack.mjs` and `modules/lesson-pack-ui.js`: structured curriculum-draft boundary
+- `modules/family-planner.mjs` and `modules/family-planner-ui-*.js`: weekly family/co-op coordination boundary
 - `fixtures/`: synthetic test and demo scenarios
 - `tests/`: Node contract tests and Playwright browser checks
 - `docs/`: architecture, privacy, releases, roadmap, and testing guidance
@@ -67,6 +69,8 @@ The default `workers.dev` address is public when enabled and includes the accoun
 Only synthetic demo data belongs in this public repository. Real family exports, screenshots, backups, and local data must remain outside Git.
 
 Lesson packs and tests use original synthetic examples. Do not commit copied proprietary curriculum text. Media planning should prefer reputable free/OER/public-domain/nonprofit/government sources and record license/source review before controlled apply.
+
+Planner examples are synthetic and browser-local. Planner actions must not silently complete assignments, grant rewards, record attendance, approve mastery, or rewrite source learning records.
 
 ## License
 

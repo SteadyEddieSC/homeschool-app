@@ -53,10 +53,25 @@ if (manifest.lessonPackEditor) {
   if (!text.includes('id="screen-lessonpacks"')) failures.push('lesson-pack screen missing');
   if (!text.includes("{id:'lessonpacks', label:'Lesson Pack Editor'")) failures.push('lesson-pack navigation entry missing');
   if (!text.includes('beaufort-learning-harbor-lesson-pack')) failures.push('lesson-pack portable format missing');
-  if (!text.includes('No live apply occurs in v10.37')) failures.push('lesson-pack no-live-apply boundary missing');
+  if (!text.includes('No live apply occurs')) failures.push('lesson-pack no-live-apply boundary missing');
   if (!text.includes('Do not paste copyrighted curriculum text')) failures.push('lesson-pack copyright boundary missing');
   if (!text.includes('Import legacy Studio drafts')) failures.push('lesson-pack legacy migration control missing');
   if (!text.includes('Before / after preview')) failures.push('lesson-pack before/after preview missing');
+}
+if (manifest.familyPlanner) {
+  if (!text.includes(`data-family-planner="${manifest.familyPlanner}"`)) failures.push('family-planner contract missing');
+  if (!text.includes(`data-family-planner-schema="${manifest.familyPlannerSchema}"`)) failures.push('family-planner schema marker missing');
+  if (!text.includes(`data-blh-family-planner="${manifest.familyPlanner}"`)) failures.push('family-planner browser module marker missing');
+  if (!text.includes('window.BLHFamilyPlanner = Object.freeze')) failures.push('family-planner package global missing');
+  if (!text.includes('window.BLHFamilyPlannerUI = Object.freeze')) failures.push('family-planner UI global missing');
+  if (!text.includes('id="screen-familyplanner"')) failures.push('family-planner screen missing');
+  if (!text.includes("{id:'familyplanner', label:'Family / Co-op Planner'")) failures.push('family-planner navigation entry missing');
+  if (!text.includes('beaufort-learning-harbor-family-planner')) failures.push('family-planner portable format missing');
+  if (!text.includes('do not complete assignments or change XP, coins, attendance, mastery, portfolio approval, or lesson-pack status')) failures.push('family-planner record/reward boundary missing');
+  if (!text.includes('Seed current sources')) failures.push('family-planner source seeding control missing');
+  if (!text.includes('Create linked carryover')) failures.push('family-planner carryover control missing');
+  if (!text.includes('Open weekly planner')) failures.push('family-planner workflow entry links missing');
+  if (!text.includes('No external calendar sync')) failures.push('family-planner no-calendar-sync boundary missing');
 }
 for (const route of ['learn','practice','quiz','proof','feedback']) {
   if (!new RegExp(`route\\s*:\\s*['"]${route}['"]`).test(text)) failures.push(`dock route missing: ${route}`);
