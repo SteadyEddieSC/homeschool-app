@@ -44,12 +44,36 @@ async function plannerState(page) {
 async function protectedSlices(page) {
   return page.evaluate(key => {
     const state = JSON.parse(localStorage.getItem(key));
+    const progress = Object.fromEntries(Object.entries(state.progress || {}).map(([studentId, value]) => {
+      const record = value || {};
+      const meaningfulPortfolioFlags = Object.fromEntries(Object.entries(record.portfolioFlags || {}).filter(([, flags]) =>
+        !!(flags?.approved || flags?.hidden || flags?.showcase)
+      ));
+      return [studentId, {
+        xp: Number(record.xp || 0),
+        teamPoints: Number(record.teamPoints || 0),
+        streak: Number(record.streak || 0),
+        assignments: record.assignments || {},
+        attendance: record.attendance || {},
+        assessments: record.assessments || {},
+        rewardLedger: record.rewardLedger || {},
+        rewardAudit: record.rewardAudit || [],
+        rubricReviews: record.rubricReviews || {},
+        portfolioFlags: meaningfulPortfolioFlags,
+        portfolioReflections: record.portfolioReflections || [],
+        masteryArena: {
+          notes: record.masteryArena?.notes || [],
+          tierPreference: record.masteryArena?.tierPreference || 'auto',
+          viewed: record.masteryArena?.viewed || {}
+        }
+      }];
+    }));
     return {
-      progress: state.progress,
-      assignments: state.assignments,
+      progress,
+      assignments: state.assignments || [],
       lessonPacks: state.ui?.lessonPackEditor?.drafts || [],
-      attendance: state.sessionLogs,
-      portfolio: state.portfolioArtifacts
+      attendance: state.sessionLogs || [],
+      portfolio: state.portfolioArtifacts || []
     };
   }, stateKey);
 }
