@@ -15,7 +15,7 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 - Curriculum drafting: adult-only Lesson Pack Editor with ordered sections, practice/lab prompts, media needs, no-equipment paths, before/after preview, and no live apply
 - Weekly coordination: adult-only Family/Co-op Planner with learner filters, flex/catch-up modes, optional co-op responsibilities, safe source seeding, linked carryover, and deterministic planner packages
 - Offline runtime: reusable same-origin/embedded request contract with external fetch/XHR/beacon blocking and a browser-local ledger
-- Console stability: legacy learning-path version binding restored and nine obsolete body-wide observers retired after initial render
+- Console/runtime stability: legacy learning-path version binding restored, nine obsolete body-wide observers and fifteen startup polling loops retired after initial render, and retained media class cleanup made idempotent
 - Visual regression: repeat-render screenshot comparison baselines for high-risk learner and adult-role routes
 - Destination stability: source-media galleries and visual models render once instead of rebuilding through their own MutationObserver
 - Deployment target: Cloudflare Workers Static Assets demo
