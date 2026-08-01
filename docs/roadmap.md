@@ -82,7 +82,7 @@ Completed:
 
 ### v10.38 — Family/Co-op Planner v1
 
-Current release scope:
+Completed:
 
 - Monday-Friday weekly planning board
 - Learner, learner-track, day, type, and status filters
@@ -94,33 +94,48 @@ Current release scope:
 - Deterministic planner package export/import
 - Parent/Teacher/Admin editing, Director rollup, and Student denial
 
-Boundaries:
-
-- No external calendar sync
-- No silent completion, XP, coins, attendance, mastery, portfolio, or source-record changes
-- No required printable/offline binder work
-- Student Home and mobile dock remain uncluttered
-
-## Next planned release
+## Current release
 
 ### v10.39 — Modularization and Offline Regression Foundation
 
-Planned:
+Current scope:
 
-- Extract one controlled application module at a time behind existing regression contracts
-- Add screenshot comparison baselines for high-risk role and learner routes
-- Add explicit offline/network-blocked browser checks
-- Preserve deterministic single-file release output throughout extraction
-- Keep feature behavior stable while reducing release-builder coupling
+- Reusable offline/runtime request-classification and ledger module
+- External fetch, XHR, and beacon blocking before dispatch
+- Browser-local offline-readiness status
+- Explicit post-load network-disabled learner and adult workflow tests
+- Repeat-render screenshot comparison baselines for high-risk learner and role routes
+- Deterministic single-file release preserved
+- No product redesign or role/reward/source behavior changes
 
 Boundaries:
 
-- No broad visual redesign during extraction
-- No feature removals or role-contract changes
-- No cloud dependency introduced by modularization
+- No cloud account, database, API, telemetry, service worker, or external calendar dependency
+- No feature removals or broad visual redesign
+- No automatic completion, XP, attendance, mastery, portfolio approval, or destructive source rewrite
 - No cross-project infrastructure changes
 
-## Later releases
+## Next planned release
 
-- Firefox and WebKit coverage
-- Neutral custom production domain and optional protected preview
+### v10.40 — App Shell and Role Policy Module
+
+Planned:
+
+- Extract screen catalog, role visibility, route authorization, and navigation-group policy
+- Replace duplicated role deny lists with one authoritative tested source
+- Add role-policy parity tests across Student, Parent, Teacher, Director, and Admin
+- Preserve the existing navigation design and public role behavior
+
+## Maintained 10-release roadmap
+
+See `docs/roadmap-v10.39-v10.48.md` for the bounded sequence through:
+
+- App-shell and role-policy extraction
+- Learner-route resolution
+- Family Planner v2
+- Controlled Lesson Pack apply
+- Knowledge Check delivery and evidence queues
+- Portfolio and records reconciliation
+- Accessibility and multi-browser expansion
+- Content and media quality controls
+- Deployment, recovery, and release hardening
