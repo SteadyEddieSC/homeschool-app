@@ -1,0 +1,22 @@
+{
+  "release": "v10.37",
+  "base": "source/releases/v10.32/beaufort_learning_harbor_v10_32.html",
+  "builder": "scripts/build-v10.37.mjs",
+  "output": "site/index.html",
+  "downloadName": "beaufort_learning_harbor_v10_37.html",
+  "sha256": "daf8a3a970116ed8a1dd79a610d2e37cb345b8a2519c4742e4564d848f7170f5",
+  "bytes": 5380725,
+  "title": "Beaufort Learning Harbor v10.37",
+  "dockOwner": "BLHMobileDock@v10.37",
+  "heroOwner": "BLHHero@v10.37",
+  "routeContract": "v10.37",
+  "destinationStability": "v10.37",
+  "dataAdapter": "v10.37",
+  "dataSchema": 1,
+  "knowledgeCheckBuilder": "v10.37",
+  "knowledgeCheckBankSchema": 1,
+  "lessonPackEditor": "v10.37",
+  "lessonPackSchema": 1,
+  "demoBuild": "synthetic",
+  "notes": "Adds an adult-only Lesson Pack Editor with ordered lesson sections, separate practice and lab prompts, media-needs checks, no-equipment paths, before/after preview, deterministic fail-closed draft-package import/export, and non-destructive legacy Curriculum Studio migration. Parent navigation maps the editor to Support while Teacher, Director, and Admin use their build/operations groups. No live curriculum apply occurs in this release."
+}

@@ -42,13 +42,18 @@ const files = new Set([
   'modules/data-adapter.mjs',
   'modules/knowledge-check-bank.mjs',
   'modules/knowledge-check-ui.js',
+  'modules/lesson-pack.mjs',
+  'modules/lesson-pack-ui.js',
   'scripts/build-v10.35.mjs',
   'scripts/build-v10.36.mjs',
+  'scripts/build-v10.37.mjs',
   'tests/data-adapter.test.mjs',
   'tests/data-adapter-demo.test.mjs',
   'tests/data-workflow.spec.mjs',
   'tests/knowledge-check-bank.test.mjs',
-  'tests/knowledge-check-builder.spec.mjs'
+  'tests/knowledge-check-builder.spec.mjs',
+  'tests/lesson-pack.test.mjs',
+  'tests/lesson-pack-editor.spec.mjs'
 ]);
 
 await addIfFile(files, manifest.output);

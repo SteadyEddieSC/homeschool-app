@@ -44,6 +44,20 @@ if (manifest.knowledgeCheckBuilder) {
   if (!text.includes('beaufort-learning-harbor-knowledge-check-bank')) failures.push('knowledge-check portable format missing');
   if (!text.includes('not auto-graded')) failures.push('subjective-work auto-grading boundary missing');
 }
+if (manifest.lessonPackEditor) {
+  if (!text.includes(`data-lesson-pack-editor="${manifest.lessonPackEditor}"`)) failures.push('lesson-pack editor contract missing');
+  if (!text.includes(`data-lesson-pack-schema="${manifest.lessonPackSchema}"`)) failures.push('lesson-pack schema marker missing');
+  if (!text.includes(`data-blh-lesson-pack="${manifest.lessonPackEditor}"`)) failures.push('lesson-pack browser module marker missing');
+  if (!text.includes('window.BLHLessonPacks = Object.freeze')) failures.push('lesson-pack package global missing');
+  if (!text.includes('window.BLHLessonPackUI = Object.freeze')) failures.push('lesson-pack UI global missing');
+  if (!text.includes('id="screen-lessonpacks"')) failures.push('lesson-pack screen missing');
+  if (!text.includes("{id:'lessonpacks', label:'Lesson Pack Editor'")) failures.push('lesson-pack navigation entry missing');
+  if (!text.includes('beaufort-learning-harbor-lesson-pack')) failures.push('lesson-pack portable format missing');
+  if (!text.includes('No live apply occurs in v10.37')) failures.push('lesson-pack no-live-apply boundary missing');
+  if (!text.includes('Do not paste copyrighted curriculum text')) failures.push('lesson-pack copyright boundary missing');
+  if (!text.includes('Import legacy Studio drafts')) failures.push('lesson-pack legacy migration control missing');
+  if (!text.includes('Before / after preview')) failures.push('lesson-pack before/after preview missing');
+}
 for (const route of ['learn','practice','quiz','proof','feedback']) {
   if (!new RegExp(`route\\s*:\\s*['"]${route}['"]`).test(text)) failures.push(`dock route missing: ${route}`);
 }
