@@ -4,11 +4,12 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 
 ## Current baseline
 
-- Application: v10.40
+- Application: v10.41
 - Public identities: Jordan, Avery, Guest Student, and Demo Family
 - Demo behavior: deterministic Load Demo Family and Reset Demo Data controls
 - Hero/title behavior: one authoritative owner with legacy version writers made idempotent
 - Student routes: stable Learn, Practice, Quiz/Test, Proof, and Feedback actions
+- Learner route resolver: one schema-1 module owns learner/track normalization, assignment applicability, completion-aware next-item selection, direct assignment destinations, and safe route fallbacks
 - App-shell role policy: one schema-1 module owns normalized role metadata, screen catalog membership, static route authorization, role defaults, and navigation-group definitions
 - Role boundaries: explicit Parent/Teacher/Director/Admin access checks, Student denial of adult-only tools, and dynamic learner permission checks preserved
 - Data contract: schema-1 sanitized application-state export/import with deterministic migration
@@ -21,20 +22,21 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 - Visual regression: repeat-render screenshot comparison baselines for high-risk learner and adult-role routes
 - Destination stability: source-media galleries and visual models render once instead of rebuilding through their own MutationObserver
 - Deployment target: Cloudflare Workers Static Assets demo
-- Automated flow: integrity/privacy checks, Node contract tests, explicit offline checks, app-shell policy parity, console/page-error and mutation-stability checks, visual comparisons, Playwright desktop/tablet/mobile coverage, route and role coverage, destination stability, hero stability, dock stability, and axe-core
+- Automated flow: integrity/privacy checks, Node contract tests, explicit offline checks, app-shell policy parity, learner-route parity and fallback checks, console/page-error and mutation-stability checks, visual comparisons, Playwright desktop/tablet/mobile coverage, route and role coverage, destination stability, hero stability, dock stability, and axe-core
 
 ## Repository model
 
 - `source/releases/v10.32/`: immutable sanitized baseline
-- `source/releases/v10.33/` through `source/releases/v10.40/`: deterministic release contracts
+- `source/releases/v10.33/` through `source/releases/v10.41/`: deterministic release contracts
 - `source/current-release.json`: current release pointer
-- `scripts/build-v10.33.mjs` through `scripts/build-v10.40.mjs`: layered deterministic transformations
+- `scripts/build-v10.33.mjs` through `scripts/build-v10.41.mjs`: layered deterministic transformations
 - `modules/data-adapter.mjs`: schema-1 application-data boundary
 - `modules/knowledge-check-bank.mjs` and `modules/knowledge-check-ui.js`: subjective-proof authoring boundary
 - `modules/lesson-pack.mjs` and `modules/lesson-pack-ui.js`: structured curriculum-draft boundary
 - `modules/family-planner.mjs` and `modules/family-planner-ui-*.js`: weekly family/co-op coordination boundary
 - `modules/offline-runtime.mjs` and `modules/offline-runtime-ui.js`: reusable offline/runtime request boundary
 - `modules/app-shell-role-policy.mjs`: app-shell catalog and static role-policy boundary
+- `modules/learner-route-resolver.mjs`: learner, assignment, completion-aware route, and destination boundary
 - `docs/curriculum/`: preliminary and confirmed curriculum-source documentation
 - `fixtures/`: synthetic test and demo scenarios
 - `tests/`: Node contract tests and Playwright browser checks
@@ -82,9 +84,11 @@ Family-provided booklists may be documented without identifying data, but prelim
 
 Planner examples are synthetic and browser-local. Planner actions must not silently complete assignments, grant rewards, record attendance, approve mastery, or rewrite source learning records.
 
+Learner-route resolution is advisory. Route selection and local completion markers must not award XP, coins, grades, attendance, mastery, portfolio approval, or rewrite learning records.
+
 The offline runtime contract blocks programmatic external requests but does not remove intentional adult-visible links to reputable learning sources. No network service is required for the loaded application to continue operating.
 
-See `docs/roadmap-v10.40-v10.49.md` for the maintained 10-release roadmap.
+See `docs/roadmap-v10.41-v10.50.md` for the maintained 10-release roadmap.
 
 ## License
 

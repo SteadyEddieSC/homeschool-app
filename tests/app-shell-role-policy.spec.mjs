@@ -10,6 +10,12 @@ async function loadDemo(page) {
   await expect(page.getByTestId('demo-scenario-status')).toHaveText('Active sample progress');
 }
 
+async function activeRelease(page) {
+  const release = await page.locator('html').getAttribute('data-release');
+  expect(release).toMatch(/^v\d+\.\d+(?:\.\d+)?$/);
+  return release;
+}
+
 async function setRole(page, role) {
   await page.evaluate(({ key, role }) => {
     const state = JSON.parse(localStorage.getItem(key));
@@ -26,9 +32,10 @@ async function setRole(page, role) {
   await page.reload();
 }
 
-test('v10.40 exposes one read-only app-shell role-policy contract', async ({ page }) => {
+test('active release exposes one read-only app-shell role-policy contract', async ({ page }) => {
   await loadDemo(page);
-  await expect(page.locator('html')).toHaveAttribute('data-app-shell-role-policy', 'v10.40');
+  const release = await activeRelease(page);
+  await expect(page.locator('html')).toHaveAttribute('data-app-shell-role-policy', release);
   await expect(page.locator('html')).toHaveAttribute('data-app-shell-role-policy-schema', '1');
 
   const result = await page.evaluate(() => {
@@ -50,9 +57,9 @@ test('v10.40 exposes one read-only app-shell role-policy contract', async ({ pag
     };
   });
 
-  expect(result.policyVersion).toBe('v10.40');
+  expect(result.policyVersion).toBe(release);
   expect(result.policySchema).toBe(1);
-  expect(result.runtimeVersion).toBe('v10.40');
+  expect(result.runtimeVersion).toBe(release);
   expect(result.runtimeSchema).toBe(1);
   expect(result.roleIds).toEqual(roles);
   expect(result.roleOptions.map(role => role.id)).toEqual(roles);
@@ -64,7 +71,7 @@ test('v10.40 exposes one read-only app-shell role-policy contract', async ({ pag
 });
 
 for (const role of roles) {
-  test(`${role} runtime remains parity-clean with the v10.40 static policy`, async ({ page }) => {
+  test(`${role} runtime remains parity-clean with the active static policy`, async ({ page }) => {
     test.setTimeout(60000);
     await loadDemo(page);
     await setRole(page, role);
