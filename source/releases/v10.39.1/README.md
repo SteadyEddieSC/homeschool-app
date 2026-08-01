@@ -6,6 +6,7 @@ v10.39.1 is a narrowly scoped production-stability hotfix for the merged v10.39 
 
 - Restores the missing `VERSION` binding in the retained learning-path title updater.
 - Stops the repeated `ReferenceError: VERSION is not defined` console failure.
+- Reconciles all portable export product versions to `10.39.1`.
 - Retires nine obsolete pre-v10.24 MutationObserver loops after their initial render pass.
 - Adds a browser regression that fails on uncaught page errors, recurring legacy apply warnings, or excessive post-load DOM mutations.
 
@@ -20,5 +21,5 @@ v10.39.1 is a narrowly scoped production-stability hotfix for the merged v10.39 
 ## Exact artifact
 
 - File: `beaufort_learning_harbor_v10_39_1.html`
-- Bytes: `5,459,759`
-- SHA-256: `f0531ae4c414e30b7aca15061f619c4e4dcd10f333a3e466d60c6bcfc4f87772`
+- Bytes: `5,459,765`
+- SHA-256: `af4f523498135afeebec98474a0095930397eb243ee7e084137ba21854c22343`
