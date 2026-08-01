@@ -31,6 +31,9 @@ function retireLegacyObserverLoops(text) {
 export function transformV10391(source) {
   let text = source.split('v10.39').join('__BLH_V10391__');
   text = replaceOnce(text, "appVersion: '10.39'", "appVersion: '10.39.1'", 'core app version');
+  const portableVersionCount = text.split("productVersion: '10.39'").length - 1;
+  if (portableVersionCount !== 3) throw new Error(`v10.39.1 expected 3 portable product-version anchors, found ${portableVersionCount}`);
+  text = text.split("productVersion: '10.39'").join("productVersion: '10.39.1'");
   text = text.split('__BLH_V10391__').join('v10.39.1');
 
   const htmlAnchor = '<html lang="en" data-demo-build="synthetic" data-release="v10.39.1" data-route-contract="v10.39.1" data-destination-stability="v10.39.1" data-data-adapter="v10.39.1" data-data-schema="1" data-knowledge-check-builder="v10.39.1" data-knowledge-check-schema="1" data-lesson-pack-editor="v10.39.1" data-lesson-pack-schema="1" data-family-planner="v10.39.1" data-family-planner-schema="1" data-offline-runtime="v10.39.1" data-offline-runtime-schema="1" data-offline-policy="same-origin-and-embedded" data-visual-baselines="v10.39.1">';
