@@ -18,6 +18,7 @@ test.describe('v10.39.1 console and observer stability', () => {
     await expect(page.locator('html')).toHaveAttribute('data-console-stability', 'v10.39.1');
     await expect(page.locator('html')).toHaveAttribute('data-legacy-observers-retired', '9');
     await expect(page.locator('html')).toHaveAttribute('data-legacy-polls-retired', '15');
+    await expect(page.locator('html')).toHaveAttribute('data-media-class-stability', 'v10.39.1');
     await expect(page).toHaveTitle('Beaufort Learning Harbor v10.39.1');
 
     await page.waitForTimeout(1000);
