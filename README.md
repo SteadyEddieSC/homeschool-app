@@ -4,7 +4,7 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 
 ## Current baseline
 
-- Application: v10.38
+- Application: v10.39
 - Public identities: Jordan, Avery, Guest Student, and Demo Family
 - Demo behavior: deterministic Load Demo Family and Reset Demo Data controls
 - Hero/title behavior: one authoritative owner with legacy version writers made idempotent
@@ -14,23 +14,26 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 - Subjective proof: adult-only Knowledge Check Builder with student-safe preview and deterministic prompt-bank packages
 - Curriculum drafting: adult-only Lesson Pack Editor with ordered sections, practice/lab prompts, media needs, no-equipment paths, before/after preview, and no live apply
 - Weekly coordination: adult-only Family/Co-op Planner with learner filters, flex/catch-up modes, optional co-op responsibilities, safe source seeding, linked carryover, and deterministic planner packages
+- Offline runtime: reusable same-origin/embedded request contract with external fetch/XHR/beacon blocking and a browser-local ledger
+- Visual regression: repeat-render screenshot comparison baselines for high-risk learner and adult-role routes
 - Destination stability: source-media galleries and visual models render once instead of rebuilding through their own MutationObserver
 - Deployment target: Cloudflare Workers Static Assets demo
-- Automated flow: integrity/privacy checks, Node contract tests, Playwright desktop/tablet/mobile coverage, route and role coverage, destination stability, hero stability, dock stability, visual capture, and axe-core
+- Automated flow: integrity/privacy checks, Node contract tests, explicit offline checks, visual comparisons, Playwright desktop/tablet/mobile coverage, route and role coverage, destination stability, hero stability, dock stability, and axe-core
 
 ## Repository model
 
 - `source/releases/v10.32/`: immutable sanitized baseline
-- `source/releases/v10.33/` through `source/releases/v10.38/`: deterministic release contracts
+- `source/releases/v10.33/` through `source/releases/v10.39/`: deterministic release contracts
 - `source/current-release.json`: current release pointer
-- `scripts/build-v10.33.mjs` through `scripts/build-v10.38.mjs`: layered deterministic transformations
+- `scripts/build-v10.33.mjs` through `scripts/build-v10.39.mjs`: layered deterministic transformations
 - `modules/data-adapter.mjs`: schema-1 application-data boundary
 - `modules/knowledge-check-bank.mjs` and `modules/knowledge-check-ui.js`: subjective-proof authoring boundary
 - `modules/lesson-pack.mjs` and `modules/lesson-pack-ui.js`: structured curriculum-draft boundary
 - `modules/family-planner.mjs` and `modules/family-planner-ui-*.js`: weekly family/co-op coordination boundary
+- `modules/offline-runtime.mjs` and `modules/offline-runtime-ui.js`: reusable offline/runtime request boundary
 - `fixtures/`: synthetic test and demo scenarios
 - `tests/`: Node contract tests and Playwright browser checks
-- `docs/`: architecture, privacy, releases, roadmap, and testing guidance
+- `docs/`: architecture, privacy, release scopes, roadmap, and testing guidance
 - `.github/`: CI, issue forms, and pull-request standards
 
 ## Local workflow
@@ -42,7 +45,7 @@ npx playwright install chromium
 npm test
 ```
 
-Playwright and axe are pinned exactly in `package.json`. The lockfile is intentionally omitted while npm's newly published Playwright tarball URLs are inconsistent under `npm ci`; clean pinned installs are exercised independently in CI.
+Playwright, axe, and PNG parsing are pinned exactly in `package.json`. The lockfile is intentionally omitted while npm's newly published Playwright tarball URLs are inconsistent under `npm ci`; clean pinned installs are exercised independently in CI.
 
 The validated single-file output is generated at `site/index.html`. GitHub Actions also publishes it as a downloadable workflow artifact.
 
@@ -71,6 +74,10 @@ Only synthetic demo data belongs in this public repository. Real family exports,
 Lesson packs and tests use original synthetic examples. Do not commit copied proprietary curriculum text. Media planning should prefer reputable free/OER/public-domain/nonprofit/government sources and record license/source review before controlled apply.
 
 Planner examples are synthetic and browser-local. Planner actions must not silently complete assignments, grant rewards, record attendance, approve mastery, or rewrite source learning records.
+
+The offline runtime contract blocks programmatic external requests but does not remove intentional adult-visible links to reputable learning sources. No network service is required for the loaded application to continue operating.
+
+See `docs/roadmap-v10.39-v10.48.md` for the maintained 10-release roadmap.
 
 ## License
 
