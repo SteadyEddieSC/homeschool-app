@@ -72,11 +72,24 @@ export function transformV10391(source) {
     'historical offline-runtime release-note title'
   );
 
+  text = replaceOnce(
+    text,
+    "if((img.getAttribute('src')||'').startsWith('data:image/')) img.classList.add('blh29-clickable');",
+    "if((img.getAttribute('src')||'').startsWith('data:image/')&&!img.classList.contains('blh29-clickable')) img.classList.add('blh29-clickable');",
+    'idempotent legacy media image class'
+  );
+  text = replaceOnce(
+    text,
+    "$$('#screen-blh29-media-manager,#screen-blh29-roadmap,.blh29-nav,.blh29-launch').forEach(x=>x.classList.add('blh29-hidden'));",
+    "$$('#screen-blh29-media-manager,#screen-blh29-roadmap,.blh29-nav,.blh29-launch').forEach(x=>{if(!x.classList.contains('blh29-hidden')) x.classList.add('blh29-hidden');});",
+    'idempotent legacy media hidden class'
+  );
+
   const htmlAnchor = '<html lang="en" data-demo-build="synthetic" data-release="v10.39.1" data-route-contract="v10.39.1" data-destination-stability="v10.39.1" data-data-adapter="v10.39.1" data-data-schema="1" data-knowledge-check-builder="v10.39.1" data-knowledge-check-schema="1" data-lesson-pack-editor="v10.39.1" data-lesson-pack-schema="1" data-family-planner="v10.39.1" data-family-planner-schema="1" data-offline-runtime="v10.39.1" data-offline-runtime-schema="1" data-offline-policy="same-origin-and-embedded" data-visual-baselines="v10.39.1">';
   text = replaceOnce(
     text,
     htmlAnchor,
-    '<html lang="en" data-demo-build="synthetic" data-release="v10.39.1" data-route-contract="v10.39.1" data-destination-stability="v10.39.1" data-data-adapter="v10.39.1" data-data-schema="1" data-knowledge-check-builder="v10.39.1" data-knowledge-check-schema="1" data-lesson-pack-editor="v10.39.1" data-lesson-pack-schema="1" data-family-planner="v10.39.1" data-family-planner-schema="1" data-offline-runtime="v10.39.1" data-offline-runtime-schema="1" data-offline-policy="same-origin-and-embedded" data-visual-baselines="v10.39.1" data-console-stability="v10.39.1" data-legacy-observers-retired="9" data-legacy-polls-retired="15">',
+    '<html lang="en" data-demo-build="synthetic" data-release="v10.39.1" data-route-contract="v10.39.1" data-destination-stability="v10.39.1" data-data-adapter="v10.39.1" data-data-schema="1" data-knowledge-check-builder="v10.39.1" data-knowledge-check-schema="1" data-lesson-pack-editor="v10.39.1" data-lesson-pack-schema="1" data-family-planner="v10.39.1" data-family-planner-schema="1" data-offline-runtime="v10.39.1" data-offline-runtime-schema="1" data-offline-policy="same-origin-and-embedded" data-visual-baselines="v10.39.1" data-console-stability="v10.39.1" data-legacy-observers-retired="9" data-legacy-polls-retired="15" data-media-class-stability="v10.39.1">',
     'console stability release marker'
   );
 
