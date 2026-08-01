@@ -4,8 +4,8 @@
   "builder": "scripts/build-v10.39.1.mjs",
   "output": "site/index.html",
   "downloadName": "beaufort_learning_harbor_v10_39_1.html",
-  "sha256": "af4f523498135afeebec98474a0095930397eb243ee7e084137ba21854c22343",
-  "bytes": 5459765,
+  "sha256": "8a9e30e6f148a620e6e61538d025738a2e722f7354fde8c3f7a87d48ac2bdc60",
+  "bytes": 5459759,
   "title": "Beaufort Learning Harbor v10.39.1",
   "dockOwner": "BLHMobileDock@v10.39.1",
   "heroOwner": "BLHHero@v10.39.1",
@@ -26,5 +26,5 @@
   "consoleStability": "v10.39.1",
   "legacyObserversRetired": 9,
   "demoBuild": "synthetic",
-  "notes": "Hotfixes the retained learning-path title updater by restoring its VERSION binding, reconciles all portable export product versions, and retires nine obsolete pre-v10.24 MutationObserver loops after their initial render pass. Adds browser gates for uncaught page errors, recurring legacy apply warnings, and bounded post-load DOM mutation activity without changing current role, route, data schema, reward, completion, attendance, mastery, portfolio, source-record, offline-runtime, or visual behavior."
+  "notes": "Hotfixes the retained learning-path title updater by restoring its VERSION binding, reconciles all portable export product versions, preserves the historical v10.39 offline-runtime release-note identity, and retires nine obsolete pre-v10.24 MutationObserver loops after their initial render pass. Adds browser gates for uncaught page errors, recurring legacy apply warnings, and bounded post-load DOM mutation activity without changing current role, route, data schema, reward, completion, attendance, mastery, portfolio, source-record, offline-runtime, or visual behavior."
 }
