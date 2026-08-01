@@ -68,7 +68,7 @@ Completed:
 
 ### v10.37 — Lesson Pack Editor v1
 
-Current release scope:
+Completed:
 
 - Ordered lesson-section editor
 - Separate practice and lab/project prompts
@@ -80,38 +80,47 @@ Current release scope:
 - Non-destructive migration from existing Curriculum Studio draft stores
 - Parent/Teacher/Admin editing, Director rollup, and Student denial
 
-Boundaries:
-
-- No live curriculum apply or destructive rewrite
-- Existing controlled overlay/apply remains reversible and separately governed
-- No copyrighted curriculum copying
-- No route-only XP or authoring rewards
-- Printable/offline binder packs remain optional support only
-
-## Next planned release
-
 ### v10.38 — Family/Co-op Planner v1
 
-Planned:
+Current release scope:
 
-- Weekly planning board
-- Student and learner-track filters
-- Optional co-op coordination and role notes
-- Catch-up and flex-week planning
-- Exportable planner package
-- Links from roadmap, assignments, lesson packs, and adult action queues
+- Monday-Friday weekly planning board
+- Learner, learner-track, day, type, and status filters
+- Standard, catch-up, flex, co-op-heavy, and break/light modes
+- Optional co-op event, location, responsibility, materials, arrival, and follow-up fields
+- Safe source seeding from Assignments and Lesson Packs
+- Linked, non-destructive carryover
+- Shortcuts into Schedule, Pacing, Mission Planner, Assignments, Lesson Packs, Year Plan, and Insights
+- Deterministic planner package export/import
+- Parent/Teacher/Admin editing, Director rollup, and Student denial
 
 Boundaries:
 
 - No external calendar sync
+- No silent completion, XP, coins, attendance, mastery, portfolio, or source-record changes
 - No required printable/offline binder work
-- Student dashboard remains uncluttered
-- Planning does not silently grant completion or rewards
+- Student Home and mobile dock remain uncluttered
+
+## Next planned release
+
+### v10.39 — Modularization and Offline Regression Foundation
+
+Planned:
+
+- Extract one controlled application module at a time behind existing regression contracts
+- Add screenshot comparison baselines for high-risk role and learner routes
+- Add explicit offline/network-blocked browser checks
+- Preserve deterministic single-file release output throughout extraction
+- Keep feature behavior stable while reducing release-builder coupling
+
+Boundaries:
+
+- No broad visual redesign during extraction
+- No feature removals or role-contract changes
+- No cloud dependency introduced by modularization
+- No cross-project infrastructure changes
 
 ## Later releases
 
-- Controlled module extraction behind regression coverage
-- Screenshot comparison baselines
-- Offline/network-blocked tests
 - Firefox and WebKit coverage
 - Neutral custom production domain and optional protected preview
