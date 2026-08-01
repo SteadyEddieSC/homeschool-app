@@ -7,6 +7,12 @@ function replaceOnce(text, oldValue, newValue, label) {
   return text.slice(0, index) + newValue + text.slice(index + oldValue.length);
 }
 
+function replaceExactCount(text, oldValue, newValue, expected, label) {
+  const count = text.split(oldValue).length - 1;
+  if (count !== expected) throw new Error(`v10.39.1 expected ${expected} ${label} anchors, found ${count}`);
+  return text.split(oldValue).join(newValue);
+}
+
 function retireLegacyObserverLoops(text) {
   let observerScriptIndex = 0;
   let retired = 0;
@@ -31,10 +37,22 @@ function retireLegacyObserverLoops(text) {
 export function transformV10391(source) {
   let text = source.split('v10.39').join('__BLH_V10391__');
   text = replaceOnce(text, "appVersion: '10.39'", "appVersion: '10.39.1'", 'core app version');
-  const portableVersionCount = text.split("productVersion: '10.39'").length - 1;
-  if (portableVersionCount !== 3) throw new Error(`v10.39.1 expected 3 portable product-version anchors, found ${portableVersionCount}`);
-  text = text.split("productVersion: '10.39'").join("productVersion: '10.39.1'");
+  text = replaceExactCount(text, "productVersion: '10.39'", "productVersion: '10.39.1'", 3, 'portable product-version');
   text = text.split('__BLH_V10391__').join('v10.39.1');
+
+  text = replaceExactCount(
+    text,
+    'v10.39.1-offline-runtime',
+    'v10.39-offline-runtime',
+    2,
+    'historical offline-runtime release-note id'
+  );
+  text = replaceOnce(
+    text,
+    '<b>v10.39.1 Modularization + Offline Regression Foundation</b>',
+    '<b>v10.39 Modularization + Offline Regression Foundation</b>',
+    'historical offline-runtime release-note title'
+  );
 
   const htmlAnchor = '<html lang="en" data-demo-build="synthetic" data-release="v10.39.1" data-route-contract="v10.39.1" data-destination-stability="v10.39.1" data-data-adapter="v10.39.1" data-data-schema="1" data-knowledge-check-builder="v10.39.1" data-knowledge-check-schema="1" data-lesson-pack-editor="v10.39.1" data-lesson-pack-schema="1" data-family-planner="v10.39.1" data-family-planner-schema="1" data-offline-runtime="v10.39.1" data-offline-runtime-schema="1" data-offline-policy="same-origin-and-embedded" data-visual-baselines="v10.39.1">';
   text = replaceOnce(
