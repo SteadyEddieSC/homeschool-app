@@ -1,6 +1,9 @@
 import { readFile } from 'node:fs/promises';
 import { test, expect } from '@playwright/test';
 
+const current = JSON.parse(await readFile(new URL('../source/current-release.json', import.meta.url), 'utf8'));
+const manifest = JSON.parse(await readFile(new URL(`../${current.manifest}`, import.meta.url), 'utf8'));
+const productVersion = manifest.release.replace(/^v/, '');
 const stateKey = 'beaufortLearningHarbor.v10.19.state';
 
 async function loadDemo(page) {
@@ -130,14 +133,14 @@ test('adult creates, filters, carries over, exports, imports, and persists a wee
   const downloadPromise = page.waitForEvent('download');
   await page.getByTestId('family-planner-export').click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toBe('beaufort-learning-harbor-family-planner-v10.38.json');
+  expect(download.suggestedFilename()).toBe(`beaufort-learning-harbor-family-planner-v${productVersion}.json`);
   const exportedPath = await download.path();
   expect(exportedPath).toBeTruthy();
   const exported = JSON.parse(await readFile(exportedPath, 'utf8'));
   expect(exported).toMatchObject({
     format:'beaufort-learning-harbor-family-planner',
     kind:'family-planner-workspace',
-    productVersion:'10.38',
+    productVersion,
     schemaVersion:1
   });
   expect(exported.planner.weeks.flatMap(week => week.items)).toHaveLength(2);
@@ -193,15 +196,15 @@ test('source seeding is idempotent, source-safe, and linked from existing adult 
 
   await page.getByTestId('family-planner-seed').click();
   const first = await plannerState(page);
-  const current = first.weeks.find(week => week.weekId === first.activeWeekId);
-  const sourceKeys = current.items.map(item => `${item.sourceScreen}:${item.sourceId}`);
+  const currentWeek = first.weeks.find(week => week.weekId === first.activeWeekId);
+  const sourceKeys = currentWeek.items.map(item => `${item.sourceScreen}:${item.sourceId}`);
   expect(sourceKeys).toContain('lessonpacks:lp_seed_synthetic');
   expect(sourceKeys.some(key => key.startsWith('assignments:'))).toBe(true);
   expect(new Set(sourceKeys).size).toBe(sourceKeys.length);
 
   await page.getByTestId('family-planner-seed').click();
   const second = await plannerState(page);
-  expect(second.weeks.find(week => week.weekId === second.activeWeekId).items).toHaveLength(current.items.length);
+  expect(second.weeks.find(week => week.weekId === second.activeWeekId).items).toHaveLength(currentWeek.items.length);
   expect(await protectedSlices(page)).toEqual(protectedBefore);
 });
 
@@ -220,7 +223,7 @@ test('malformed and dangerous planner packages fail closed; student is denied an
   });
   await expect.poll(async () => JSON.stringify(await plannerState(page))).toBe(before);
 
-  const dangerous = '{"format":"beaufort-learning-harbor-family-planner","schemaVersion":1,"kind":"family-planner-workspace","productVersion":"10.38","planner":{"activeWeekId":"week_1","weeks":[{"weekId":"week_1","mode":"standard","familyNotes":"","coOpNotes":"","items":[{"id":"fp_bad","title":"Bad","day":"Monday","startTime":"","endTime":"","targetKind":"all","targetId":"","subject":"","itemType":"lesson","status":"planned","location":"Home","sourceScreen":"","sourceId":"","coOp":{"enabled":false},"studentDirections":"Explain.","adultNotes":"","order":0,"__proto__":{"polluted":true}}]}]}}';
+  const dangerous = `{"format":"beaufort-learning-harbor-family-planner","schemaVersion":1,"kind":"family-planner-workspace","productVersion":"${productVersion}","planner":{"activeWeekId":"week_1","weeks":[{"weekId":"week_1","mode":"standard","familyNotes":"","coOpNotes":"","items":[{"id":"fp_bad","title":"Bad","day":"Monday","startTime":"","endTime":"","targetKind":"all","targetId":"","subject":"","itemType":"lesson","status":"planned","location":"Home","sourceScreen":"","sourceId":"","coOp":{"enabled":false},"studentDirections":"Explain.","adultNotes":"","order":0,"__proto__":{"polluted":true}}]}]}}`;
   await page.getByTestId('family-planner-import-file').setInputFiles({
     name:'dangerous.json',
     mimeType:'application/json',
