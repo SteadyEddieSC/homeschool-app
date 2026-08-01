@@ -9,6 +9,7 @@ if (!manifest.consoleStability) failures.push('console stability manifest contra
 if (!text.includes(`data-console-stability="${manifest.consoleStability}"`)) failures.push('console stability document marker missing');
 if (!text.includes(`data-legacy-observers-retired="${manifest.legacyObserversRetired}"`)) failures.push('retired legacy observer document marker missing');
 if (!text.includes(`data-legacy-polls-retired="${manifest.legacyPollsRetired}"`)) failures.push('retired legacy poll document marker missing');
+if (!text.includes(`data-media-class-stability="${manifest.mediaClassStability}"`)) failures.push('media class stability document marker missing');
 
 const binding = new RegExp(
   `const\\s+TITLE=['"]Beaufort Learning Harbor ${manifest.release.replaceAll('.', '\\.')}['"];\\s*` +
@@ -29,6 +30,11 @@ const retiredPollCount = text.split(retiredPollMarker).length - 1;
 if (retiredPollCount !== manifest.legacyPollsRetired) {
   failures.push(`retired legacy poll count mismatch: ${retiredPollCount}`);
 }
+
+const mediaImageGuard = "startsWith('data:image/')&&!img.classList.contains('blh29-clickable')";
+if (!text.includes(mediaImageGuard)) failures.push('idempotent legacy media image class guard missing');
+const mediaHiddenGuard = "if(!x.classList.contains('blh29-hidden')) x.classList.add('blh29-hidden')";
+if (!text.includes(mediaHiddenGuard)) failures.push('idempotent legacy media hidden class guard missing');
 
 const observerScripts = [...text.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi)]
   .map(match => match[1])
@@ -57,5 +63,5 @@ if (failures.length) {
   process.exit(1);
 }
 console.log(
-  `Console stability OK: ${manifest.release} · ${manifest.legacyObserversRetired} legacy observers and ${manifest.legacyPollsRetired} legacy polls retired`
+  `Console stability OK: ${manifest.release} · ${manifest.legacyObserversRetired} legacy observers, ${manifest.legacyPollsRetired} legacy polls, and media class guards verified`
 );
