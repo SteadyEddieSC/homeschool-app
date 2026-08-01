@@ -2,6 +2,7 @@ import { test, expect } from '@playwright/test';
 import { PNG } from 'pngjs';
 
 const stateKey = 'beaufortLearningHarbor.v10.19.state';
+const desktopOnly = testInfo => test.skip(testInfo.project.name !== 'chromium-desktop', 'Visual baselines are Linux desktop Chromium contracts.');
 
 async function loadDemo(page) {
   await page.goto('/');
@@ -62,9 +63,8 @@ function expectVisualMatch(baselineBuffer, actualBuffer, name, maxDiffRatio) {
 }
 
 test.describe('v10.39 repeat-render visual baselines', () => {
-  test.skip(({ browserName }, testInfo) => browserName !== 'chromium' || testInfo.project.name !== 'chromium-desktop', 'Visual baselines are Linux desktop Chromium contracts.');
-
-  test('upper learner home path survives a route cycle without visual drift', async ({ page }) => {
+  test('upper learner home path survives a route cycle without visual drift', async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
     await loadDemo(page);
     const homePath = page.locator('#screen-home .blh26-student-path').first();
     const baseline = await visualBuffer(homePath);
@@ -75,7 +75,8 @@ test.describe('v10.39 repeat-render visual baselines', () => {
     expectVisualMatch(baseline, actual, 'student-jordan-home-path', 0.01);
   });
 
-  test('lower learner target banner survives return and reopen without visual drift', async ({ page }) => {
+  test('lower learner target banner survives return and reopen without visual drift', async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
     await loadDemo(page);
     await page.evaluate(key => { const state=JSON.parse(localStorage.getItem(key)); state.activeStudentId='stu_avery'; localStorage.setItem(key, JSON.stringify(state)); }, stateKey);
     await page.reload();
@@ -92,7 +93,8 @@ test.describe('v10.39 repeat-render visual baselines', () => {
     expectVisualMatch(baseline, actual, 'student-avery-botany-target', 0.01);
   });
 
-  test('parent planner and director rollup survive route cycles without visual drift', async ({ page }) => {
+  test('parent planner and director rollup survive route cycles without visual drift', async ({ page }, testInfo) => {
+    desktopOnly(testInfo);
     await loadDemo(page);
     await setRole(page, 'parent');
     await openScreen(page, 'familyplanner');
