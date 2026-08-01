@@ -42,4 +42,5 @@ Import validates the complete package before application state changes and rejec
 - Application data schema: `1`
 - Knowledge-check bank schema: `1`
 - Lesson-pack package schema: `1`
+- All 22 inline scripts parse successfully in the independently recovered Actions artifact.
 - Desktop, touch-tablet, Pixel 7/mobile, route, role, hero, dock, destination-stability, privacy, accessibility, data, knowledge-check, and Cloudflare branch-deployment gates remain required.
