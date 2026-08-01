@@ -1,6 +1,10 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 
-test.describe('v10.39.1 console and observer stability', () => {
+const current = JSON.parse(await readFile('source/current-release.json', 'utf8'));
+const manifest = JSON.parse(await readFile(current.manifest, 'utf8'));
+
+test.describe(`${manifest.release} console and observer stability`, () => {
   test('settles without legacy page errors or a mutation storm', async ({ page }) => {
     const pageErrors = [];
     const legacyConsoleFailures = [];
@@ -15,11 +19,11 @@ test.describe('v10.39.1 console and observer stability', () => {
     });
 
     await page.goto('/');
-    await expect(page.locator('html')).toHaveAttribute('data-console-stability', 'v10.39.1');
-    await expect(page.locator('html')).toHaveAttribute('data-legacy-observers-retired', '9');
-    await expect(page.locator('html')).toHaveAttribute('data-legacy-polls-retired', '15');
-    await expect(page.locator('html')).toHaveAttribute('data-media-class-stability', 'v10.39.1');
-    await expect(page).toHaveTitle('Beaufort Learning Harbor v10.39.1');
+    await expect(page.locator('html')).toHaveAttribute('data-console-stability', manifest.consoleStability);
+    await expect(page.locator('html')).toHaveAttribute('data-legacy-observers-retired', String(manifest.legacyObserversRetired));
+    await expect(page.locator('html')).toHaveAttribute('data-legacy-polls-retired', String(manifest.legacyPollsRetired));
+    await expect(page.locator('html')).toHaveAttribute('data-media-class-stability', manifest.mediaClassStability);
+    await expect(page).toHaveTitle(manifest.title);
 
     await page.waitForTimeout(1000);
     const mutationResult = await page.evaluate(async () => {

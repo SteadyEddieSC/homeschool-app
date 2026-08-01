@@ -63,7 +63,7 @@ export const BLH_ROLE_NAV_GROUPS = Object.freeze({
 });
 
 const DANGEROUS_KEYS = new Set(['__proto__', 'prototype', 'constructor']);
-const SCREEN_ID = /^[a-z][a-z0-9-]*$/;
+const SCREEN_ID = /^[a-z][a-z0-9_-]*$/;
 const GROUP_ID = /^[a-z][a-z0-9-]*$/;
 
 export class BLHAppShellPolicyError extends Error {

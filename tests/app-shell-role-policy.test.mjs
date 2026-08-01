@@ -10,6 +10,7 @@ import {
 
 const catalog = [
   { id:'home', label:'Home', icon:'🏡', group:'core', roles:[...BLH_ROLE_IDS], note:'Role dashboard' },
+  { id:'life-lib-savings_interest', label:'Savings Interest', icon:'💵', group:'learn-library', roles:['student','parent','teacher','admin'], note:'Existing underscore-bearing route' },
   { id:'study', label:'Study', icon:'📚', group:'learn-library', roles:['student','parent','teacher','admin'], note:'Learning work' },
   { id:'questions', label:'Question Lab', icon:'❓', group:'teach', roles:['teacher','admin'], note:'Authoring' },
   { id:'director', label:'Director Report', icon:'📊', group:'director', roles:['director','admin'], note:'Rollup' },
@@ -33,6 +34,7 @@ test('creates deterministic role and screen snapshots', () => {
 test('fails closed for unknown roles and screens', () => {
   const appShell = policy();
   assert.equal(appShell.roleCanAccessStatic('study', 'student'), true);
+  assert.equal(appShell.roleCanAccessStatic('life-lib-savings_interest', 'student'), true);
   assert.equal(appShell.roleCanAccessStatic('questions', 'student'), false);
   assert.equal(appShell.roleCanAccessStatic('missing', 'admin'), false);
   assert.equal(appShell.roleCanAccessStatic('home', 'owner'), false);

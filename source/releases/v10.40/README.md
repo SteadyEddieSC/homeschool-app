@@ -28,5 +28,5 @@ v10.40 centralizes the app shell and static role policy while preserving the cur
 ## Exact artifact
 
 - File: `beaufort_learning_harbor_v10_40.html`
-- Bytes: `5,469,644`
-- SHA-256: `c541f03ccf227b315f0b25f2e15d1045ec70044b1f50661c67601ba6c6ee72ed`
+- Bytes: `5,469,645`
+- SHA-256: `ac477adcfe0a76eaa4f6585ecbf23e12e029d9029666c2b4632630b984e71cfa`
