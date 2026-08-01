@@ -6,11 +6,12 @@ v10.39.1 is a narrowly scoped production-stability hotfix for the merged v10.39 
 
 - Restores the missing `VERSION` binding in the retained learning-path title updater.
 - Stops the repeated `ReferenceError: VERSION is not defined` console failure.
-- Reconciles all portable export product versions to `10.39.1`.
+- Reconciles all portable export product versions to `10.39.1`, including Family Planner.
 - Preserves the historical v10.39 offline-runtime release-note identity.
 - Retires nine obsolete pre-v10.24 MutationObserver loops after their initial render pass.
 - Retires fifteen legacy startup polling loops after their initial render pass while preserving event handlers and current observers.
-- Adds a browser regression that fails on uncaught page errors, recurring legacy apply warnings, or excessive post-load DOM mutations.
+- Makes retained v10.29 media-manager class cleanup idempotent so already-tagged images and hidden tools are not rewritten continuously.
+- Adds browser regression coverage that fails on uncaught page errors, recurring legacy apply warnings, or excessive post-load DOM mutations and reports the highest-volume mutation targets.
 
 ## Preserved boundaries
 
@@ -23,5 +24,5 @@ v10.39.1 is a narrowly scoped production-stability hotfix for the merged v10.39 
 ## Exact artifact
 
 - File: `beaufort_learning_harbor_v10_39_1.html`
-- Bytes: `5,458,813`
-- SHA-256: `ccff18b6249b4b9942f1f07bde331d7895ccd4de38238589154a8a54e3a90a85`
+- Bytes: `5,458,940`
+- SHA-256: `7c2e4496ac7da0fdb3e5d8a581a5b2693a6f2d95eb72bbd66347fb587ec1b5f4`
