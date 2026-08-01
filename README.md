@@ -4,7 +4,7 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 
 ## Current baseline
 
-- Application: v10.39
+- Application: v10.39.1
 - Public identities: Jordan, Avery, Guest Student, and Demo Family
 - Demo behavior: deterministic Load Demo Family and Reset Demo Data controls
 - Hero/title behavior: one authoritative owner with legacy version writers made idempotent
@@ -15,17 +15,18 @@ Beaufort Learning Harbor is an offline-first homeschool and co-op learning appli
 - Curriculum drafting: adult-only Lesson Pack Editor with ordered sections, practice/lab prompts, media needs, no-equipment paths, before/after preview, and no live apply
 - Weekly coordination: adult-only Family/Co-op Planner with learner filters, flex/catch-up modes, optional co-op responsibilities, safe source seeding, linked carryover, and deterministic planner packages
 - Offline runtime: reusable same-origin/embedded request contract with external fetch/XHR/beacon blocking and a browser-local ledger
+- Console stability: legacy learning-path version binding restored and nine obsolete body-wide observers retired after initial render
 - Visual regression: repeat-render screenshot comparison baselines for high-risk learner and adult-role routes
 - Destination stability: source-media galleries and visual models render once instead of rebuilding through their own MutationObserver
 - Deployment target: Cloudflare Workers Static Assets demo
-- Automated flow: integrity/privacy checks, Node contract tests, explicit offline checks, visual comparisons, Playwright desktop/tablet/mobile coverage, route and role coverage, destination stability, hero stability, dock stability, and axe-core
+- Automated flow: integrity/privacy checks, Node contract tests, explicit offline checks, console/page-error and mutation-stability checks, visual comparisons, Playwright desktop/tablet/mobile coverage, route and role coverage, destination stability, hero stability, dock stability, and axe-core
 
 ## Repository model
 
 - `source/releases/v10.32/`: immutable sanitized baseline
-- `source/releases/v10.33/` through `source/releases/v10.39/`: deterministic release contracts
+- `source/releases/v10.33/` through `source/releases/v10.39.1/`: deterministic release contracts
 - `source/current-release.json`: current release pointer
-- `scripts/build-v10.33.mjs` through `scripts/build-v10.39.mjs`: layered deterministic transformations
+- `scripts/build-v10.33.mjs` through `scripts/build-v10.39.1.mjs`: layered deterministic transformations
 - `modules/data-adapter.mjs`: schema-1 application-data boundary
 - `modules/knowledge-check-bank.mjs` and `modules/knowledge-check-ui.js`: subjective-proof authoring boundary
 - `modules/lesson-pack.mjs` and `modules/lesson-pack-ui.js`: structured curriculum-draft boundary
