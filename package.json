@@ -7,7 +7,7 @@
     "build": "node scripts/build.mjs",
     "check:foundation": "node scripts/check-foundation.mjs",
     "check:release": "node scripts/check-release.mjs",
-    "check:privacy": "node scripts/check-privacy.mjs && node scripts/check-v10.39-privacy.mjs",
+    "check:privacy": "node scripts/check-privacy.mjs && node scripts/check-v10.39-privacy.mjs && node scripts/check-v10.39.1-privacy.mjs",
     "check:offline-runtime": "node scripts/check-offline-runtime.mjs",
     "check:console-stability": "node scripts/check-console-stability.mjs",
     "verify": "npm run check:foundation && npm run test:data-adapter && npm run test:knowledge-check && npm run test:lesson-pack && npm run test:family-planner && npm run test:offline-runtime",
