@@ -78,14 +78,35 @@ const READ_ONLY_DRAFT_CACHE = `  function lessonPackApplyDraft(pack){
     return draft;
   }`;
 
+const UNBOUND_SHOW_SCREEN_WRAPPER = `  const BLH_LPA_BASE_SHOW_SCREEN = showScreen;
+  showScreen = function(id){
+    const result = BLH_LPA_BASE_SHOW_SCREEN.apply(this, arguments);
+    renderLessonPackDestinationOverlays(id);
+    if (id === 'lessonpacks') enhanceLessonPackControlledApply();
+    if (id === 'director') enhanceLessonPackDirectorRollup();
+    return result;
+  };`;
+
+const NAVIGATION_EVENT_ENHANCER = `  document.addEventListener('click', event => {
+    const control = event.target.closest('[data-screen]');
+    if (!control) return;
+    const id = control.dataset.screen || '';
+    requestAnimationFrame(() => {
+      renderLessonPackDestinationOverlays(id);
+      if (id === 'lessonpacks') enhanceLessonPackControlledApply();
+      if (id === 'director') enhanceLessonPackDirectorRollup();
+    });
+  });`;
+
 export async function buildRelease(manifest) {
   await buildV1043(manifest);
   let text = await readFile(manifest.output, 'utf8');
   text = replaceOnce(text, MUTATING_WORKSPACE_READER, READ_ONLY_WORKSPACE_READER, 'mutating workspace reader');
   text = replaceOnce(text, MUTATING_DRAFT_CACHE, READ_ONLY_DRAFT_CACHE, 'mutating draft cache');
+  text = replaceOnce(text, UNBOUND_SHOW_SCREEN_WRAPPER, NAVIGATION_EVENT_ENHANCER, 'unbound showScreen wrapper');
   const callCount = text.split('ensureLessonPackApplyState()').length - 1;
   if (callCount !== 4) throw new Error(`v10.43 runtime-fix expected four workspace reader calls, found ${callCount}`);
   text = text.replaceAll('ensureLessonPackApplyState()', 'readLessonPackApplyWorkspace()');
   await writeFile(manifest.output, text, 'utf8');
-  console.log(`Applied v10.43 read-only render-state correction to ${manifest.output}`);
+  console.log(`Applied v10.43 read-only render-state and navigation corrections to ${manifest.output}`);
 }
