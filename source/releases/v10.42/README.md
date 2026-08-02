@@ -29,7 +29,7 @@ This release extends the existing adult-only Family/Co-op Planner with reusable,
 ### Artifact contract
 
 - File: `beaufort_learning_harbor_v10_42.html`
-- Bytes: `5,528,874`
-- SHA-256: `6030a18d69e49b1c2b864f9e4b7f07fc98db8fe1e0d1925b43bf763e9fd81be9`
+- Bytes: `5,528,816`
+- SHA-256: `82a3c5cf3a2eaee855c2e4eb63f1b9def9242480c55a2214fee13c239b95e405`
 - Family Planner schema: `1`
 - Family Planner v2 operations schema: `1`
