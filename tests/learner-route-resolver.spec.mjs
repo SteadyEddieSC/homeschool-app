@@ -26,7 +26,7 @@ const expectedMatrices = {
   }
 };
 
-test('v10.41 exposes one read-only learner route resolver and preserves both demo route matrices', async ({ page }) => {
+test('active release exposes one read-only learner route resolver and preserves both demo route matrices', async ({ page }) => {
   await loadDemo(page);
   const result = await page.evaluate(() => {
     const resolver = window.BLHLearnerRouteResolver;
@@ -36,6 +36,7 @@ test('v10.41 exposes one read-only learner route resolver and preserves both dem
       { id:'stu_avery', name:'Avery', levelId:'lower' }
     ];
     return {
+      activeRelease:document.documentElement.dataset.release,
       resolver: {
         version: resolver?.version,
         schema: resolver?.schema,
@@ -47,12 +48,13 @@ test('v10.41 exposes one read-only learner route resolver and preserves both dem
     };
   });
 
+  expect(result.activeRelease).toMatch(/^v\d+\.\d+(?:\.\d+)?$/);
   expect(result.resolver).toEqual({
-    version:'v10.41', schema:1,
+    version:result.activeRelease, schema:1,
     kinds:['learn','practice','quiz','proof','feedback'],
     frozen:true
   });
-  expect(result.runtime).toEqual({ version:'v10.41', schema:1, frozen:true });
+  expect(result.runtime).toEqual({ version:result.activeRelease, schema:1, frozen:true });
 
   for (const [learnerId, routes] of Object.entries(expectedMatrices)) {
     for (const [kind, [assignmentId, screen, exactDestination]] of Object.entries(routes)) {
