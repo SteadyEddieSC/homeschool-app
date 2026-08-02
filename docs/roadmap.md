@@ -34,47 +34,52 @@ Completed: missing legacy version binding restored, nine obsolete observers and 
 
 Completed: schema-1 role metadata, screen-catalog membership, static authorization, role defaults, navigation groups, fail-closed validation, and full role-policy parity coverage.
 
-## Current release
-
 ### v10.41 — Learner Route and Assignment Resolver
 
-Current scope:
+Completed: learner/track normalization, assignment applicability, completion-aware next-item selection, direct assignment destination resolution, safe fallbacks, and desktop/tablet/Pixel 7 parity coverage.
 
-- Reusable schema-1 learner-route resolver
-- Learner identity and track normalization
-- Existing all/lower/upper/exact learner target support
-- Completion-aware first-unfinished assignment selection
-- Direct assignment destination resolution
-- Safe route fallbacks for missing assignments and destinations
-- Deterministic malformed/duplicate assignment diagnostics
-- Read-only browser resolver/runtime snapshots
-- Upper/lower desktop, touch-tablet, and Pixel 7 coverage
-
-Boundaries:
-
-- No broad visual redesign or intended route outcome change
-- No route-only XP, coins, grades, automatic completion, attendance, mastery, portfolio approval, or source rewrite
-- Formal quizzes/tests remain separate from adult-reviewed proof
-- No live pacing from unconfirmed curriculum input
-- No cloud account, API, database, telemetry, service worker, or external calendar dependency
-- No cross-project infrastructure changes
-
-## Next planned release
+## Current release
 
 ### v10.42 — Family Planner v2
 
+Current scope:
+
+- Reusable browser-local week templates
+- Additive, duplicate-safe template application
+- Duplicate-week and roll-forward operations
+- Source-week and existing target-plan preservation
+- Workload analysis by day and learner/track target
+- Target-aware time-conflict warnings
+- Co-op role and follow-up responsibility gaps
+- Optional learner-safe print preview and CSV export
+- Adult-only note exclusion from learner-safe output
+- Parent/Teacher/Admin editing, Director rollup, and Student denial preserved
+
+Boundaries:
+
+- No automatic completion, XP, coins, grades, attendance, mastery, portfolio approval, or source rewrite
+- No automatic calendar synchronization or network dependency
+- No silent overwrite of target weeks
+- Print and binder output remains optional support material only
+- No live pacing from unconfirmed curriculum input
+- No cloud account, API, database, telemetry, service worker, or cross-project infrastructure changes
+
+## Next planned release
+
+### v10.43 — Lesson Pack Controlled Apply v1
+
 Planned:
 
-- Reusable week templates
-- Duplicate-week and roll-forward actions
-- Workload balance and conflict warnings
-- Clearer responsibility gaps
-- Optional print/export views with binder work remaining optional
-- Non-destructive source links and no automatic completion/rewards
+- Reviewed draft-to-live overlays
+- Before/after comparison and selective approval
+- Reversible apply and rollback
+- Audit notes and preserved source content
+- Media provenance, license review, and no-equipment alternatives
+- No copied proprietary curriculum text
 
 ## Maintained 10-release roadmap
 
-See `docs/roadmap-v10.41-v10.50.md` for the bounded sequence through:
+See `docs/roadmap-v10.42-v10.51.md` for the bounded sequence through:
 
 - Family Planner v2
 - Controlled Lesson Pack apply
@@ -85,3 +90,4 @@ See `docs/roadmap-v10.41-v10.50.md` for the bounded sequence through:
 - Deployment and recovery hardening
 - School-year rollover and family operations
 - Reviewed curriculum intake to a proposed year plan
+- Cohesive household workflow and maintenance baseline
