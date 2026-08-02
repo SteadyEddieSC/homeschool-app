@@ -38,8 +38,22 @@ async function plannerState(page) {
 async function protectedSlices(page) {
   return page.evaluate(key => {
     const state = JSON.parse(localStorage.getItem(key));
+    const protectedProgress = Object.fromEntries(Object.entries(state.progress || {}).map(([studentId, progress]) => [studentId, {
+      xp:progress.xp ?? 0,
+      teamPoints:progress.teamPoints ?? 0,
+      streak:progress.streak ?? 0,
+      assignments:progress.assignments || {},
+      attendance:progress.attendance || {},
+      assessments:progress.assessments || {},
+      rewardLedger:progress.rewardLedger || {},
+      rewardAudit:progress.rewardAudit || [],
+      projects:progress.projects || {},
+      presentations:progress.presentations || {},
+      reflections:progress.reflections || {},
+      studied:progress.studied || {}
+    }]));
     return {
-      progress:state.progress || {},
+      progress:protectedProgress,
       assignments:state.assignments || [],
       lessonPacks:state.ui?.lessonPackEditor?.drafts || [],
       attendance:state.sessionLogs || [],
