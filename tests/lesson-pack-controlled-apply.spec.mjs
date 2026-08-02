@@ -134,14 +134,18 @@ test('reviewed Lesson Pack apply is selective, student-safe, duplicate-safe, rol
 
   await setRole(page, 'director');
   await openScreen(page, 'lessonpacks');
-  await expect(page.getByTestId('lesson-pack-apply-director-rollup')).toContainText('Read-only overlay rollup');
+  await expect(page.locator('#screen-lessonpacks').getByTestId('lesson-pack-apply-director-rollup')).toContainText('Read-only overlay rollup');
   await expect(page.getByTestId('lesson-pack-confirm-apply')).toHaveCount(0);
   await expect(page.getByTestId('lesson-pack-rollback')).toHaveCount(0);
 
   await setRole(page, 'parent');
   await openScreen(page, 'lessonpacks');
-  await page.getByTestId('lesson-pack-controlled-apply').locator('[data-lpa-rollback-note]').fill('Return to the prior destination state after review.');
-  await page.getByTestId('lesson-pack-rollback').click();
+  const parentPanel = page.locator('#screen-lessonpacks').getByTestId('lesson-pack-controlled-apply');
+  await expect(parentPanel).toBeVisible();
+  await parentPanel.locator('[data-lpa-rollback-note]').fill('Return to the prior destination state after review.');
+  const rollbackButton = parentPanel.getByTestId('lesson-pack-rollback');
+  await expect(rollbackButton).toBeVisible();
+  await rollbackButton.click();
   await expect.poll(async () => (await applyWorkspace(page)).overlays?.[0]?.status).toBe('rolled-back');
   workspace = await applyWorkspace(page);
   expect(workspace.audit.at(-1).action).toBe('rollback');
