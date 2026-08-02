@@ -12,6 +12,7 @@ This release adds an explicit, reversible bridge from a reviewed Lesson Pack dra
 - Separate media license and provenance checks when a media plan is selected.
 - Deterministic overlay fingerprints and duplicate-active prevention.
 - Browser-local overlay and capped audit history.
+- Render-only review selections remain in memory and do not mutate saved application state before explicit apply.
 - Student-safe destination rendering that excludes adult notes, reviewer role, rights attestations, audit details, fingerprints, and rollback controls.
 - Parent/Teacher/Admin management, Director read-only rollups, and Student denial of authoring/apply controls.
 - Audited rollback with restoration of the prior active overlay state.
@@ -29,7 +30,7 @@ This release adds an explicit, reversible bridge from a reviewed Lesson Pack dra
 ### Artifact contract
 
 - File: `beaufort_learning_harbor_v10_43.html`
-- Bytes: `5,584,808`
-- SHA-256: `73c6ca2898fd9f9647df8ffab4441be78ad24eb73729bdbf5806f9e331fd6107`
+- Bytes: `5,584,435`
+- SHA-256: `7cb5d8395ba06bb6c8c4150c75a7d134d3e2aa809fba47dc5e60c96eebc4c7f5`
 - Lesson Pack schema: `1`
 - Controlled Apply operations schema: `1`
