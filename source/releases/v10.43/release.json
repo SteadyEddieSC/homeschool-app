@@ -4,8 +4,8 @@
   "builder": "scripts/build-v10.43-runtime-fix.mjs",
   "output": "site/index.html",
   "downloadName": "beaufort_learning_harbor_v10_43.html",
-  "sha256": "7cb5d8395ba06bb6c8c4150c75a7d134d3e2aa809fba47dc5e60c96eebc4c7f5",
-  "bytes": 5584435,
+  "sha256": "PENDING",
+  "bytes": 0,
   "title": "Beaufort Learning Harbor v10.43",
   "dockOwner": "BLHMobileDock@v10.43",
   "heroOwner": "BLHHero@v10.43",
@@ -35,5 +35,5 @@
   "learnerRouteResolver": "v10.43",
   "learnerRouteResolverSchema": 1,
   "demoBuild": "synthetic",
-  "notes": "Adds reviewed, reversible Lesson Pack overlays with selective component approval, explicit content-rights and media provenance/license gates, deterministic fingerprints, browser-local audit history, student-safe destination rendering, Director read-only rollups, duplicate-active prevention, and rollback that restores the prior active destination state. Preserves source drafts, destination source content, assignments, progress, rewards, grades, attendance, mastery, portfolio state, offline behavior, and all existing privacy and role boundaries. Render-only review state remains in memory and does not mutate saved application state before explicit apply."
+  "notes": "Adds reviewed, reversible Lesson Pack overlays with selective component approval, explicit content-rights and media provenance/license gates, deterministic fingerprints, browser-local audit history, student-safe destination rendering, Director read-only rollups, duplicate-active prevention, and rollback that restores the prior active destination state. Preserves source drafts, destination source content, assignments, progress, rewards, grades, attendance, mastery, portfolio state, offline behavior, and all existing privacy and role boundaries. Render-only review state remains in memory and navigation enhancement uses event-bound rendering without replacing the app's screen controller."
 }
