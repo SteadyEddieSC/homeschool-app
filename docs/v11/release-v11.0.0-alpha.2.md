@@ -33,13 +33,35 @@ Alpha 2 turns the cloud-ready foundation into a reproducible identity and deploy
 - The Cloudflare deployment requires an explicit `DEPLOY_V11_PREVIEW` confirmation and protected environment credentials.
 - No service-role key is required by the browser or committed workflow.
 
-## Validation
+## Final validation evidence
 
-- Strict TypeScript and exact dependency checks.
-- Cloudflare Worker and Vite production build.
-- Local Supabase startup, database reset, migrations, and pgTAP tests.
-- Desktop, touch-tablet, and Pixel 7 membership, support, privacy, and overflow workflows.
-- Existing v10.43 release integrity and browser suites.
+Validated at release-branch head `44def6fedcfd4b6c7dd8cfe1511f44ea774e48fe`.
+
+### v11
+
+- Strict TypeScript, exact dependency, architecture, privacy, secret, identity, invitation, and deployment-boundary checks passed.
+- Cloudflare Worker and Vite production build passed.
+- Local Supabase started and rebuilt from migrations `001` through `004` on an empty Postgres database.
+- All 19 pgTAP identity and Row-Level Security assertions passed.
+- Chromium desktop, touch-tablet, and Pixel 7/mobile workflows passed.
+- Validated preview artifact published as `beaufort-learning-harbor-v11.0.0-alpha.2-preview`.
+- Artifact ZIP size: 554,309 bytes.
+- Artifact ZIP SHA-256: `da99c5a42a8629160d7a4020a7289f3631dce546b04ceb347a9c8c562c4f4b80`.
+
+### v10.43 regression
+
+- Existing foundation, release-integrity, privacy, offline, role, route, planner, console, and controlled-apply validation passed unchanged.
+- Existing Chromium desktop, tablet, and mobile workflows passed.
+- Existing validated v10.43 single-file artifact was generated successfully.
+
+## Validation corrections
+
+The database gate exposed and verified several fail-closed details during implementation:
+
+1. The simulated authenticated test role received access only to its transaction-scoped temporary token fixture.
+2. `pgcrypto` calls were schema-qualified because Supabase installs the extension in `extensions` while security-definer functions retain a restricted search path.
+3. Invitation redemption uses the named membership primary-key constraint to avoid output-parameter ambiguity.
+4. The private invitation-ledger assertion runs as the Group Administrator; the invited Teacher correctly cannot view that ledger through Row-Level Security.
 
 ## Not included
 
