@@ -122,7 +122,7 @@ begin
 
   insert into public.organization_memberships (organization_id, user_id, role, status)
   values (invitation.organization_id, auth.uid(), invitation.role, 'active')
-  on conflict (organization_id, user_id) do update
+  on conflict on constraint organization_memberships_pkey do update
     set role = excluded.role,
         status = 'active',
         updated_at = now()
