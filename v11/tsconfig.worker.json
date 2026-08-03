@@ -14,5 +14,5 @@
     "noUncheckedIndexedAccess": true,
     "noEmit": true
   },
-  "include": ["worker", "vite.config.ts"]
+  "include": ["worker"]
 }
