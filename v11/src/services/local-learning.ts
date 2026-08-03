@@ -155,8 +155,10 @@ export class LocalLearningRepository implements LearningRepository {
       item.completedAt = timestamp;
     } else {
       if (item.status !== 'ready-for-review') throw new Error('Only work awaiting review can be returned.');
+      const feedback = normalizeNote(input.reviewFeedback);
+      if (!feedback) throw new Error('Feedback is required when returning work.');
       item.status = 'returned';
-      item.reviewFeedback = normalizeNote(input.reviewFeedback);
+      item.reviewFeedback = feedback;
       item.reviewedBy = 'preview-household-manager';
       item.completedAt = null;
     }
