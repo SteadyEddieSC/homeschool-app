@@ -130,7 +130,7 @@ export class SupabaseSupportRepository implements SupportRepository {
         subject: normalizeTicketText(input.subject, 'Subject', 160),
         description: normalizeTicketText(input.description, 'Description', 4000),
         route: input.route.slice(0, 240),
-        app_version: '11.0.0-alpha.1',
+        app_version: '11.0.0-alpha.2',
         diagnostics_consent: input.diagnosticsConsent
       })
       .select(ticketSelection)
