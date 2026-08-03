@@ -9,7 +9,7 @@ import {
   type TicketStatus
 } from '../domain/support';
 
-const STORAGE_KEY = 'beaufortLearningHarbor.v11.alpha1.supportTickets';
+const STORAGE_KEY = 'beaufortLearningHarbor.v11.alpha2.supportTickets';
 const MAX_TICKETS = 100;
 
 function cloneTicket(ticket: SupportTicket): SupportTicket {
@@ -77,7 +77,7 @@ export class LocalSupportRepository implements SupportRepository {
       subject: normalizeTicketText(input.subject, 'Subject', 160),
       description: normalizeTicketText(input.description, 'Description', 4000),
       route: input.route.slice(0, 240),
-      appVersion: '11.0.0-alpha.1',
+      appVersion: '11.0.0-alpha.2',
       diagnosticsConsent: input.diagnosticsConsent,
       createdAt: now,
       updatedAt: now,
