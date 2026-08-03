@@ -1,0 +1,91 @@
+name: Deploy v11 Preview
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type the exact deployment confirmation phrase
+        required: true
+        type: choice
+        default: CANCEL
+        options:
+          - CANCEL
+          - DEPLOY_V11_PREVIEW
+
+concurrency:
+  group: deploy-v11-preview
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    if: ${{ inputs.confirmation == 'DEPLOY_V11_PREVIEW' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: v11-preview
+    defaults:
+      run:
+        working-directory: v11
+    env:
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      VITE_APP_ENV: preview
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      V11_PREVIEW_URL: ${{ vars.V11_PREVIEW_URL }}
+      EXPECTED_WORKER_NAME: beaufort-learning-harbor-v11-preview
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install exact preview dependencies
+        run: npm install --no-package-lock
+      - name: Validate source and production build
+        run: npm run verify
+      - name: Validate protected deployment configuration
+        run: npm run check:deploy-readiness
+      - name: Deploy isolated v11 preview Worker
+        run: npx wrangler deploy --config wrangler.jsonc
+      - name: Verify deployed health boundary
+        run: |
+          curl --fail --silent --show-error --retry 8 --retry-delay 5 \
+            "${V11_PREVIEW_URL%/}/api/health" \
+            --output deployment-health.json
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const health = JSON.parse(await readFile('deployment-health.json', 'utf8'));
+          if (health.ok !== true) throw new Error('Preview health endpoint did not return ok=true');
+          if (health.release !== '11.0.0-alpha.2') throw new Error(`Unexpected deployed release: ${health.release}`);
+          if (health.service !== process.env.EXPECTED_WORKER_NAME) throw new Error(`Unexpected Worker service: ${health.service}`);
+          console.log('Deployed preview health verified.');
+          NODE
+      - name: Create deployment receipt
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises';
+          const health = JSON.parse(await readFile('deployment-health.json', 'utf8'));
+          const receipt = {
+            schema: 'beaufort-learning-harbor-v11-preview-deployment-receipt-v1',
+            release: '11.0.0-alpha.2',
+            worker: process.env.EXPECTED_WORKER_NAME,
+            previewUrl: process.env.V11_PREVIEW_URL,
+            commit: process.env.GITHUB_SHA,
+            runId: process.env.GITHUB_RUN_ID,
+            runAttempt: process.env.GITHUB_RUN_ATTEMPT,
+            deployedAt: new Date().toISOString(),
+            health
+          };
+          await writeFile('deployment-receipt.json', `${JSON.stringify(receipt, null, 2)}\n`);
+          NODE
+      - name: Upload deployment receipt
+        uses: actions/upload-artifact@v4
+        with:
+          name: beaufort-learning-harbor-v11.0.0-alpha.2-deployment-receipt
+          path: |
+            v11/deployment-health.json
+            v11/deployment-receipt.json
+          if-no-files-found: error
+          retention-days: 90
