@@ -38,50 +38,52 @@ Completed: schema-1 role metadata, screen-catalog membership, static authorizati
 
 Completed: learner/track normalization, assignment applicability, completion-aware next-item selection, direct assignment destination resolution, safe fallbacks, and desktop/tablet/Pixel 7 parity coverage.
 
-## Current release
-
 ### v10.42 — Family Planner v2
 
-Current scope:
+Completed: reusable browser-local week templates, additive duplicate-safe template application, duplicate-week and roll-forward tools, workload/conflict analysis, co-op responsibility warnings, and optional learner-safe print/CSV output.
 
-- Reusable browser-local week templates
-- Additive, duplicate-safe template application
-- Duplicate-week and roll-forward operations
-- Source-week and existing target-plan preservation
-- Workload analysis by day and learner/track target
-- Target-aware time-conflict warnings
-- Co-op role and follow-up responsibility gaps
-- Optional learner-safe print preview and CSV export
-- Adult-only note exclusion from learner-safe output
-- Parent/Teacher/Admin editing, Director rollup, and Student denial preserved
-
-Boundaries:
-
-- No automatic completion, XP, coins, grades, attendance, mastery, portfolio approval, or source rewrite
-- No automatic calendar synchronization or network dependency
-- No silent overwrite of target weeks
-- Print and binder output remains optional support material only
-- No live pacing from unconfirmed curriculum input
-- No cloud account, API, database, telemetry, service worker, or cross-project infrastructure changes
-
-## Next planned release
+## Current release
 
 ### v10.43 — Lesson Pack Controlled Apply v1
 
+Current scope:
+
+- Reviewed, reversible browser-local overlays
+- Selective objective, section, practice, lab/project, no-equipment, and media approval
+- Before/after destination comparison
+- Original/OER/public-domain/nonprofit/government-use rights attestation
+- Media license and provenance review
+- Deterministic fingerprints and duplicate-active prevention
+- Browser-local capped audit history
+- Student-safe destination rendering
+- Parent/Teacher/Admin management, Director read-only rollup, and Student denial
+- Audited rollback with prior active state restoration
+
+Boundaries:
+
+- No rewrite of source Lesson Packs, destination source content, assignments, or progress
+- No automatic completion, XP, coins, grades, attendance, mastery, portfolio approval, or record mutation
+- No automatic apply based only on draft status
+- No copied proprietary curriculum workflow or silent rights attestation
+- No cloud account, API, database, telemetry, service worker, external calendar, or network dependency
+- No live pacing from unconfirmed curriculum input
+
+## Next planned release
+
+### v10.44 — Knowledge Check Delivery and Evidence Queue
+
 Planned:
 
-- Reviewed draft-to-live overlays
-- Before/after comparison and selective approval
-- Reversible apply and rollback
-- Audit notes and preserved source content
-- Media provenance, license review, and no-equipment alternatives
-- No copied proprietary curriculum text
+- Learner-safe delivery of approved prompt banks
+- Scheduled oral, written, notebook, project, discussion, and mastery-proof sessions
+- Adult evidence queue and review status
+- Clear separation among submitted, reviewed, mastered, and recorded states
+- No automatic subjective grading or mastery approval
 
 ## Maintained 10-release roadmap
 
-See `docs/roadmap-v10.42-v10.51.md` for the bounded sequence through:
+See `docs/roadmap-v10.43-v10.52.md` for the bounded sequence through:
 
-- Family Planner v2
 - Controlled Lesson Pack apply
 - Knowledge Check delivery and evidence queues
 - Portfolio and records reconciliation
@@ -91,3 +93,4 @@ See `docs/roadmap-v10.42-v10.51.md` for the bounded sequence through:
 - School-year rollover and family operations
 - Reviewed curriculum intake to a proposed year plan
 - Cohesive household workflow and maintenance baseline
+- Content quality and sustainable iteration
