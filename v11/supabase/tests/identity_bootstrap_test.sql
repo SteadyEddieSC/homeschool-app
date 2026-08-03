@@ -56,6 +56,7 @@ create temporary table captured_invite (
   created_at timestamptz,
   invite_token text
 );
+grant select, insert, update, delete on pg_temp.captured_invite to authenticated;
 
 set local role authenticated;
 select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
