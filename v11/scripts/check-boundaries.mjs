@@ -2,8 +2,9 @@ import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 const root = process.cwd();
+const repositoryRoot = path.resolve(root, '..');
 const ignoredDirectories = new Set(['node_modules', 'dist', '.wrangler', 'playwright-report', 'test-results']);
-const textExtensions = new Set(['.ts', '.tsx', '.js', '.mjs', '.json', '.jsonc', '.md', '.sql', '.css', '.html', '.example']);
+const textExtensions = new Set(['.ts', '.tsx', '.js', '.mjs', '.json', '.jsonc', '.md', '.sql', '.css', '.html', '.example', '.toml', '.yml', '.yaml']);
 
 async function collectFiles(directory) {
   const entries = await readdir(directory, { withFileTypes: true });
@@ -22,6 +23,8 @@ function assert(condition, message) {
 }
 
 const packageJson = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+assert(packageJson.version === '11.0.0-alpha.2', 'package release must be 11.0.0-alpha.2');
+assert(packageJson.devDependencies?.supabase === '2.110.0', 'Supabase CLI must be pinned exactly');
 for (const [groupName, dependencies] of Object.entries({
   dependencies: packageJson.dependencies,
   devDependencies: packageJson.devDependencies
@@ -34,21 +37,45 @@ for (const [groupName, dependencies] of Object.entries({
 const wrangler = await readFile(path.join(root, 'wrangler.jsonc'), 'utf8');
 assert(wrangler.includes('beaufort-learning-harbor-v11-preview'), 'v11 must use the isolated preview Worker name');
 assert(!wrangler.includes('"name": "beaufort-learning-harbor"'), 'v11 must not target the v10 production Worker');
+assert(wrangler.includes('"APP_RELEASE": "11.0.0-alpha.2"'), 'Worker release must match alpha.2');
 assert(wrangler.includes('"/api/*"'), 'Worker-first API routing is required');
 
-const migration = await readFile(path.join(root, 'supabase/migrations/202608030001_v11_foundation.sql'), 'utf8');
-const rlsCount = (migration.match(/enable row level security/gi) ?? []).length;
-assert(rlsCount >= 9, `Expected RLS on all shared tables; found ${rlsCount}`);
+const migrationDirectory = path.join(root, 'supabase/migrations');
+const migrationNames = (await readdir(migrationDirectory)).filter((name) => name.endsWith('.sql')).sort();
+const migrationText = (await Promise.all(migrationNames.map((name) => readFile(path.join(migrationDirectory, name), 'utf8')))).join('\n');
+const rlsCount = (migrationText.match(/enable row level security/gi) ?? []).length;
+assert(rlsCount >= 10, `Expected RLS on all shared tables; found ${rlsCount}`);
 for (const requiredBoundary of [
   'current_org_role',
   'can_view_household',
   'can_manage_household',
   'can_view_ticket',
-  'support_messages_select_participant',
-  'support_messages_insert_participant'
+  'organization_invites',
+  'bootstrap_organization',
+  'create_organization_invite',
+  'redeem_organization_invite',
+  'revoke_organization_invite',
+  'shares_managed_organization'
 ]) {
-  assert(migration.includes(requiredBoundary), `Missing Supabase boundary: ${requiredBoundary}`);
+  assert(migrationText.includes(requiredBoundary), `Missing Supabase boundary: ${requiredBoundary}`);
 }
+assert(!/target_role\s+in\s*\([^)]*system-admin/i.test(migrationText), 'System Administrator must not be an invitable role');
+assert(migrationText.includes("role in ('student', 'parent', 'teacher', 'director', 'group-admin')"), 'ordinary membership role allowlist is required');
+assert(migrationText.includes('revoke insert on public.organizations from authenticated'), 'direct organization creation must be revoked');
+
+const supabaseConfig = await readFile(path.join(root, 'supabase/config.toml'), 'utf8');
+assert(supabaseConfig.includes('minimum_password_length = 12'), 'local auth must require at least 12-character passwords');
+assert(supabaseConfig.includes('enable_anonymous_sign_ins = false'), 'anonymous Supabase sign-ins must remain disabled');
+const databaseTest = await readFile(path.join(root, 'supabase/tests/identity_bootstrap_test.sql'), 'utf8');
+assert(databaseTest.includes('System Administrator cannot be invited'), 'database tests must cover privileged invitation denial');
+assert(databaseTest.includes('one-time invitation cannot be reused'), 'database tests must cover invitation replay denial');
+
+const deployWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/deploy-v11-preview.yml'), 'utf8');
+assert(deployWorkflow.includes('workflow_dispatch:'), 'preview deployment must be manually dispatched');
+assert(!/\npush:\s*\n/.test(deployWorkflow), 'preview deployment must not run automatically on push');
+assert(deployWorkflow.includes('environment: v11-preview'), 'preview deployment must use the protected v11-preview environment');
+assert(deployWorkflow.includes('DEPLOY_V11_PREVIEW'), 'preview deployment must require an explicit confirmation phrase');
+assert(deployWorkflow.includes('beaufort-learning-harbor-v11-preview'), 'deployment workflow must verify the isolated Worker target');
 
 const legacyPointer = JSON.parse(await readFile(path.join(root, '../source/current-release.json'), 'utf8'));
 assert(String(legacyPointer.manifest).includes('v10.43'), 'v10.43 must remain the stable legacy release pointer');
@@ -69,4 +96,4 @@ for (const file of await collectFiles(root)) {
   }
 }
 
-console.log(`v11 boundary checks passed: ${rlsCount} RLS tables, isolated Worker, exact dependencies, no committed secrets`);
+console.log(`v11 alpha.2 boundary checks passed: ${rlsCount} RLS tables, identity bootstrap, one-time invitations, manual preview gate, exact dependencies, and no committed secrets`);
