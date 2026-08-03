@@ -6,7 +6,7 @@ select plan(24);
 
 select has_table('public', 'learner_today_items', 'Today item table exists');
 select ok((select relrowsecurity from pg_class where oid = 'public.learner_today_items'::regclass), 'Today items have Row-Level Security enabled');
-select has_function('public', 'transition_learner_today_item', array['uuid', 'text', 'text', 'text'], 'Today transition RPC exists');
+select has_function('public', 'transition_learner_today_item', array['uuid', 'text', 'text', 'text', 'uuid'], 'Idempotent Today transition RPC exists');
 select has_column('public', 'learners', 'pronouns', 'learner pronouns column exists');
 select has_column('public', 'learners', 'avatar_key', 'learner avatar column exists');
 
@@ -122,7 +122,7 @@ select throws_ok(
 select set_config('request.jwt.claim.sub', '20000000-0000-0000-0000-000000000004', true);
 select is((select count(*)::integer from public.learners), 0, 'Unrelated parent cannot read another household learner');
 select throws_ok(
-  $$ select public.transition_learner_today_item((select item_id from pg_temp.beta_fixture), 'start', '', '') $$,
+  $$ select public.transition_learner_today_item((select item_id from pg_temp.beta_fixture), 'start', '', '', '22000000-0000-0000-0000-000000000001') $$,
   'P0001',
   'Learner action is not authorized',
   'Unrelated parent cannot mutate another learner Today item'
@@ -130,17 +130,17 @@ select throws_ok(
 
 select set_config('request.jwt.claim.sub', '20000000-0000-0000-0000-000000000002', true);
 select lives_ok(
-  $$ select public.transition_learner_today_item((select item_id from pg_temp.beta_fixture), 'start', '', '') $$,
+  $$ select public.transition_learner_today_item((select item_id from pg_temp.beta_fixture), 'start', '', '', '22000000-0000-0000-0000-000000000002') $$,
   'Parent-assisted learner mode can start assigned work'
 );
 select is((select status from public.learner_today_items where id = (select item_id from pg_temp.beta_fixture)), 'in-progress', 'Start transition records in-progress');
 select lives_ok(
-  $$ select public.transition_learner_today_item((select item_id from pg_temp.beta_fixture), 'submit-review', 'Synthetic learner note', '') $$,
+  $$ select public.transition_learner_today_item((select item_id from pg_temp.beta_fixture), 'submit-review', 'Synthetic learner note', '', '22000000-0000-0000-0000-000000000003') $$,
   'Parent-assisted learner mode can send work for review'
 );
 select is((select status from public.learner_today_items where id = (select item_id from pg_temp.beta_fixture)), 'ready-for-review', 'Submission waits for explicit adult review');
 select lives_ok(
-  $$ select public.transition_learner_today_item((select item_id from pg_temp.beta_fixture), 'complete', '', 'Reviewed synthetic work') $$,
+  $$ select public.transition_learner_today_item((select item_id from pg_temp.beta_fixture), 'complete', '', 'Reviewed synthetic work', '22000000-0000-0000-0000-000000000004') $$,
   'Household manager can complete work after review'
 );
 select is((select status from public.learner_today_items where id = (select item_id from pg_temp.beta_fixture)), 'completed', 'Adult review records completed status');
