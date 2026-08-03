@@ -2,7 +2,7 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "beaufort-learning-harbor-v11-preview",
   "main": "./worker/index.ts",
-  "compatibility_date": "2026-08-02",
+  "compatibility_date": "2026-07-29",
   "assets": {
     "binding": "ASSETS",
     "not_found_handling": "single-page-application",
