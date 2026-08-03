@@ -142,6 +142,8 @@ select throws_ok(
 select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000003', true);
 select throws_ok(
   $$ insert into public.organizations (name, slug, created_by) values ('Direct Insert', 'direct-insert', auth.uid()) $$,
+  '42501',
+  'permission denied for table organizations',
   'direct organization inserts are blocked in favor of the bootstrap RPC'
 );
 
@@ -156,6 +158,8 @@ select throws_ok(
       'active'
     )
   $$,
+  '42501',
+  'new row violates row-level security policy for table "organization_memberships"',
   'direct System Administrator assignment is blocked by row-level security'
 );
 
@@ -164,8 +168,8 @@ select set_config('request.jwt.claim.sub', '', true);
 select throws_ok(
   $$ select * from public.bootstrap_organization('Anonymous Group', 'anonymous-group') $$,
   '42501',
-  'Authentication is required',
-  'anonymous users cannot bootstrap organizations'
+  'permission denied for function bootstrap_organization',
+  'anonymous users cannot execute organization bootstrap'
 );
 
 select * from finish();
