@@ -30,7 +30,7 @@ This release adds an explicit, reversible bridge from a reviewed Lesson Pack dra
 ### Artifact contract
 
 - File: `beaufort_learning_harbor_v10_43.html`
-- Bytes: `5,584,435`
-- SHA-256: `7cb5d8395ba06bb6c8c4150c75a7d134d3e2aa809fba47dc5e60c96eebc4c7f5`
+- Bytes: `5,584,499`
+- SHA-256: `326fe286bef3cfbc7fa962dc25251a5f03e262b5bff65d54711c6574549e2b39`
 - Lesson Pack schema: `1`
 - Controlled Apply operations schema: `1`
