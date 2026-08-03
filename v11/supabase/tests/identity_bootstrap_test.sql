@@ -128,10 +128,14 @@ select is(
   'teacher',
   'redemption creates only the invited role'
 );
+
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000001', true);
 select ok(
   (select accepted_at is not null from public.organization_invites where id = (select id from pg_temp.captured_invite limit 1)),
-  'redeemed invitation is marked accepted'
+  'organization administrator can verify the redeemed invitation is marked accepted'
 );
+
+select set_config('request.jwt.claim.sub', '10000000-0000-0000-0000-000000000002', true);
 select throws_ok(
   $$ select * from public.redeem_organization_invite((select invite_token from pg_temp.captured_invite limit 1)) $$,
   'P0001',
