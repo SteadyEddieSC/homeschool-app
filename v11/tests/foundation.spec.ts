@@ -1,4 +1,13 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
+
+async function openSupport(page: Page): Promise<void> {
+  const desktopNavigation = page.getByRole('navigation', { name: 'Main navigation' });
+  if (await desktopNavigation.isVisible()) {
+    await desktopNavigation.getByRole('button', { name: /Help/ }).click();
+    return;
+  }
+  await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('button', { name: 'Help' }).click();
+}
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -25,7 +34,7 @@ test('student feedback stays private while administrators can respond and add hi
   const roleSelect = page.getByTestId('role-select');
   await roleSelect.selectOption('student');
   await expect(page.getByTestId('nav-group')).toHaveCount(0);
-  await page.getByTestId('nav-support').click();
+  await openSupport(page);
 
   await page.getByTestId('ticket-subject').fill('Synthetic student navigation problem');
   await page.getByTestId('ticket-description').fill('The synthetic learner could not tell which practice action came next.');
@@ -51,7 +60,7 @@ test('student feedback stays private while administrators can respond and add hi
 });
 
 test('shell and support workflow do not overflow the active viewport', async ({ page }) => {
-  await page.getByTestId('nav-support').click();
+  await openSupport(page);
   await expect(page.getByTestId('support-workspace')).toBeVisible();
   const overflow = await page.evaluate(() => {
     const width = Math.max(document.body.scrollWidth, document.documentElement.scrollWidth);
