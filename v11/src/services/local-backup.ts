@@ -101,7 +101,7 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(binary);
 }
 
-function base64ToBytes(value: string): Uint8Array {
+function base64ToBytes(value: string): Uint8Array<ArrayBuffer> {
   const binary = atob(value);
   const bytes = new Uint8Array(binary.length);
   for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
@@ -112,8 +112,14 @@ function bytesToHex(bytes: Uint8Array): string {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
 }
 
+function ownedArrayBuffer(bytes: Uint8Array): ArrayBuffer {
+  const copy = new Uint8Array(bytes.byteLength);
+  copy.set(bytes);
+  return copy.buffer;
+}
+
 async function sha256(bytes: Uint8Array): Promise<string> {
-  const digest = await crypto.subtle.digest('SHA-256', bytes);
+  const digest = await crypto.subtle.digest('SHA-256', ownedArrayBuffer(bytes));
   return bytesToHex(new Uint8Array(digest));
 }
 
@@ -121,13 +127,13 @@ async function deriveKey(passphrase: string, salt: Uint8Array, usage: KeyUsage[]
   if (passphrase.length < 12) throw new Error('Backup passphrase must be at least 12 characters.');
   const material = await crypto.subtle.importKey(
     'raw',
-    new TextEncoder().encode(passphrase),
+    ownedArrayBuffer(new TextEncoder().encode(passphrase)),
     'PBKDF2',
     false,
     ['deriveKey']
   );
   return crypto.subtle.deriveKey(
-    { name: 'PBKDF2', hash: 'SHA-256', salt, iterations: PBKDF2_ITERATIONS },
+    { name: 'PBKDF2', hash: 'SHA-256', salt: ownedArrayBuffer(salt), iterations: PBKDF2_ITERATIONS },
     material,
     { name: 'AES-GCM', length: 256 },
     false,
@@ -179,7 +185,11 @@ export async function createEncryptedBackup(passphrase: string): Promise<string>
   const salt = crypto.getRandomValues(new Uint8Array(16));
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const key = await deriveKey(passphrase, salt, ['encrypt']);
-  const encrypted = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, plaintext));
+  const encrypted = new Uint8Array(await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv: ownedArrayBuffer(iv) },
+    key,
+    ownedArrayBuffer(plaintext)
+  ));
   const envelope: BackupEnvelope = {
     schema: ENVELOPE_SCHEMA,
     release: RELEASE,
@@ -218,7 +228,11 @@ export async function inspectEncryptedBackup(serialized: string, passphrase: str
   const key = await deriveKey(passphrase, salt, ['decrypt']);
   let plaintext: ArrayBuffer;
   try {
-    plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, encrypted);
+    plaintext = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: ownedArrayBuffer(iv) },
+      key,
+      ownedArrayBuffer(encrypted)
+    );
   } catch {
     throw new Error('Backup could not be decrypted. Check the passphrase and file integrity.');
   }
