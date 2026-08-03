@@ -1,52 +1,102 @@
 # v11 Service Setup Checklist
 
-This checklist separates account-owner actions from work that can be automated in the repository. Alpha 1 does not require completing these steps.
+This checklist separates account-owner actions from work automated by the repository. Alpha 2 can be built and validated without external credentials; a hosted preview requires the owner-controlled steps below. See `hosted-preview-runbook.md` for the exact deployment sequence.
 
 ## Supabase
 
 ### Account-owner actions
 
 1. Create or select the Supabase organization.
-2. Create a dedicated non-production project in a nearby United States region.
-3. Record the project reference and public project URL.
-4. Place the publishable browser key into the preview environment only.
-5. Keep the database password, service-role key, and access tokens outside Git and outside `VITE_` variables.
-6. Review authentication email settings before inviting anyone.
-7. Approve production upgrade only when real families are ready to depend on the service.
+2. Create a dedicated non-production project in an appropriate United States region.
+3. Record the project reference, HTTPS project URL, and publishable browser key.
+4. Keep the database password, service-role key, and access tokens outside Git and outside `VITE_` variables.
+5. Link the reviewed local repository to the preview project.
+6. Run a migration dry run before applying alpha.2 migrations remotely.
+7. Configure the preview Site URL and redirect URLs.
+8. Require email confirmation before inviting outside testers.
+9. Configure a recognizable transactional-email sender before using real addresses.
+10. Approve production upgrade only after recovery, backup, privacy, and role testing are complete.
 
 ### Repository automation
 
-After project ownership exists, the development workflow can:
+The repository now provides:
 
-- link the project through the Supabase CLI;
-- apply reviewed SQL migrations;
-- generate database TypeScript types;
-- run database linting and policy tests;
-- configure non-secret public browser values;
-- add server-side secrets through approved secret stores;
-- deploy future Edge Functions when required;
-- verify schema and Row-Level Security drift.
+- a pinned project-scoped Supabase CLI;
+- reproducible local project configuration;
+- migration reset from an empty database;
+- pgTAP policy and identity-bootstrap tests;
+- reviewed SQL migrations for organizations, memberships, invitations, support, and audit events;
+- exact browser configuration checks;
+- rejection of service-role credentials in browser configuration;
+- future-compatible paths for generated database types and remote schema-drift checks.
+
+## GitHub Actions environment
+
+Create a protected environment named exactly:
+
+```text
+v11-preview
+```
+
+Recommended controls:
+
+- require repository-owner approval;
+- limit deployments to `main`;
+- prevent untrusted fork deployments;
+- keep secrets environment-scoped rather than repository-wide.
+
+Environment secrets:
+
+```text
+CLOUDFLARE_ACCOUNT_ID
+CLOUDFLARE_API_TOKEN
+VITE_SUPABASE_PUBLISHABLE_KEY
+```
+
+Environment variables:
+
+```text
+VITE_SUPABASE_URL
+V11_PREVIEW_URL
+```
+
+The deployment workflow fails before Wrangler runs when any required value is missing or unsafe.
 
 ## Cloudflare
 
 ### Account-owner actions
 
 1. Keep ownership of the existing Cloudflare account and domain.
-2. Authorize the repository installation if the v11 preview receives its own connected deployment.
-3. Approve the first preview Worker deployment.
-4. Add a preview hostname only after the preview is ready for outside review.
-5. Enter secrets directly into Cloudflare secret storage when requested.
+2. Create a narrowly scoped API token for the preview deployment.
+3. Approve the first deployment through the protected GitHub environment.
+4. Add a preview hostname only after the isolated Worker responds correctly.
+5. Keep the v10 production hostname and Worker unchanged.
 
 ### Repository automation
 
 The repository can:
 
 - build the React application and Worker together;
-- deploy the isolated `beaufort-learning-harbor-v11-preview` Worker;
-- create environment-specific configuration;
-- run migrations and smoke tests before deployment;
-- add future R2 bindings and scheduled backup jobs;
-- publish deployment and rollback evidence.
+- validate the isolated `beaufort-learning-harbor-v11-preview` target;
+- deploy only after the exact `DEPLOY_V11_PREVIEW` manual confirmation;
+- verify the deployed `/api/health` release and service identity;
+- publish a machine-readable deployment receipt;
+- preserve rollback evidence without exposing credentials.
+
+## Identity bootstrap
+
+After the preview is deployed:
+
+1. Create the first adult account.
+2. Confirm its email address.
+3. Create the first organization.
+4. Verify the account becomes Group Administrator, not System Administrator.
+5. Create synthetic Parent, Teacher, Director, and Student invitations.
+6. Verify expiration, revocation, replay denial, and role-specific navigation.
+7. Test password recovery and sign-out.
+8. Remove synthetic identities before any later production transition.
+
+System Administrator memberships are never created through invitations.
 
 ## BAND
 
@@ -60,7 +110,7 @@ The repository can:
 
 ### Repository automation after approval
 
-The application can implement:
+The application can later implement:
 
 - server-side OAuth exchange and refresh-token handling;
 - a reviewed “Share to BAND” workflow;
@@ -68,7 +118,7 @@ The application can implement:
 - optional scheduled polling for approved inbound content;
 - audit events and disconnect/revoke controls.
 
-BAND credentials and private student records must never be delivered to browser code or committed to Git.
+BAND is deferred in alpha.2. Its credentials and private student records must never be delivered to browser code or committed to Git.
 
 ## Production prerequisites
 
@@ -82,5 +132,6 @@ Before real group invitations:
 - transactional email configured;
 - support and privacy escalation workflow staffed;
 - production Supabase policies tested with each role;
+- invitation issuance and revocation procedures documented;
 - v10.43 export and recovery path preserved;
-- no real names, screenshots, or family data in the public repository.
+- no real names, screenshots, invitation codes, or family data in the public repository.
