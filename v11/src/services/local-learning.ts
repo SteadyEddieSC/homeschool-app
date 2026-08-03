@@ -5,22 +5,22 @@ import {
   normalizePreferredName,
   normalizePronouns,
   normalizeTitle,
+  type CreateHouseholdOptions,
   type CreateLearnerInput,
   type CreateTodayItemInput,
   type HouseholdSummary,
   type LearnerProfile,
-  type LearningRepository,
+  type LearningMirrorRepository,
+  type LearningSnapshot,
   type TodayItem,
   type TransitionTodayItemInput
 } from '../domain/learning';
 
-interface LocalLearningState {
-  households: HouseholdSummary[];
-  learners: LearnerProfile[];
-  todayItems: TodayItem[];
+interface LocalLearningState extends LearningSnapshot {
+  transitionReceipts: Record<string, string>;
 }
 
-const STORAGE_KEY = 'beaufortLearningHarbor.v11.beta1.learning';
+export const LOCAL_LEARNING_STORAGE_KEY = 'beaufortLearningHarbor.v11.beta1.learning';
 
 function now(): string {
   return new Date().toISOString();
@@ -30,22 +30,31 @@ function clone<T>(value: T): T {
   return structuredClone(value);
 }
 
+function emptyState(): LocalLearningState {
+  return { households: [], learners: [], todayItems: [], transitionReceipts: {} };
+}
+
 function loadState(): LocalLearningState {
   try {
-    const value = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as LocalLearningState | null;
+    const value = JSON.parse(localStorage.getItem(LOCAL_LEARNING_STORAGE_KEY) ?? 'null') as Partial<LocalLearningState> | null;
     if (value && Array.isArray(value.households) && Array.isArray(value.learners) && Array.isArray(value.todayItems)) {
-      return value;
+      return {
+        households: value.households,
+        learners: value.learners,
+        todayItems: value.todayItems,
+        transitionReceipts: value.transitionReceipts && typeof value.transitionReceipts === 'object' ? value.transitionReceipts : {}
+      };
     }
   } catch {
     // Replace damaged synthetic preview state with an empty deterministic store.
   }
-  const state: LocalLearningState = { households: [], learners: [], todayItems: [] };
+  const state = emptyState();
   saveState(state);
   return state;
 }
 
 function saveState(state: LocalLearningState): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(LOCAL_LEARNING_STORAGE_KEY, JSON.stringify(state));
 }
 
 function findItem(state: LocalLearningState, itemId: string): TodayItem {
@@ -54,15 +63,24 @@ function findItem(state: LocalLearningState, itemId: string): TodayItem {
   return item;
 }
 
-export class LocalLearningRepository implements LearningRepository {
+export class LocalLearningRepository implements LearningMirrorRepository {
   async listHouseholds(organizationId: string): Promise<HouseholdSummary[]> {
     return clone(loadState().households.filter((household) => household.organizationId === organizationId));
   }
 
-  async createHousehold(organizationId: string, _actorId: string, name: string): Promise<HouseholdSummary> {
+  async createHousehold(
+    organizationId: string,
+    _actorId: string,
+    name: string,
+    options: CreateHouseholdOptions = {}
+  ): Promise<HouseholdSummary> {
     const state = loadState();
+    if (options.householdId) {
+      const existing = state.households.find((household) => household.id === options.householdId);
+      if (existing) return clone(existing);
+    }
     const household: HouseholdSummary = {
-      id: crypto.randomUUID(),
+      id: options.householdId ?? crypto.randomUUID(),
       organizationId,
       name: normalizeHouseholdName(name),
       createdAt: now()
@@ -78,11 +96,15 @@ export class LocalLearningRepository implements LearningRepository {
 
   async createLearner(input: CreateLearnerInput): Promise<LearnerProfile> {
     const state = loadState();
+    if (input.learnerId) {
+      const existing = state.learners.find((learner) => learner.id === input.learnerId);
+      if (existing) return clone(existing);
+    }
     const household = state.households.find((candidate) => candidate.id === input.householdId && candidate.organizationId === input.organizationId);
     if (!household) throw new Error('Create a household before adding a learner.');
     const timestamp = now();
     const learner: LearnerProfile = {
-      id: crypto.randomUUID(),
+      id: input.learnerId ?? crypto.randomUUID(),
       organizationId: input.organizationId,
       householdId: input.householdId,
       preferredName: normalizePreferredName(input.preferredName),
@@ -108,11 +130,15 @@ export class LocalLearningRepository implements LearningRepository {
 
   async createTodayItem(input: CreateTodayItemInput): Promise<TodayItem> {
     const state = loadState();
+    if (input.itemId) {
+      const existing = state.todayItems.find((item) => item.id === input.itemId);
+      if (existing) return clone(existing);
+    }
     const learner = state.learners.find((candidate) => candidate.id === input.learnerId && candidate.householdId === input.householdId);
     if (!learner) throw new Error('Select a valid learner.');
     const timestamp = now();
     const item: TodayItem = {
-      id: crypto.randomUUID(),
+      id: input.itemId ?? crypto.randomUUID(),
       organizationId: input.organizationId,
       householdId: input.householdId,
       learnerId: input.learnerId,
@@ -136,6 +162,9 @@ export class LocalLearningRepository implements LearningRepository {
 
   async transitionTodayItem(input: TransitionTodayItemInput): Promise<TodayItem> {
     const state = loadState();
+    if (input.operationId && state.transitionReceipts[input.operationId]) {
+      return clone(findItem(state, state.transitionReceipts[input.operationId]));
+    }
     const item = findItem(state, input.itemId);
     const timestamp = now();
 
@@ -164,7 +193,30 @@ export class LocalLearningRepository implements LearningRepository {
     }
 
     item.updatedAt = timestamp;
+    if (input.operationId) state.transitionReceipts[input.operationId] = item.id;
     saveState(state);
     return clone(item);
+  }
+
+  exportSnapshot(): LearningSnapshot {
+    const state = loadState();
+    return clone({ households: state.households, learners: state.learners, todayItems: state.todayItems });
+  }
+
+  replaceOrganizationSnapshot(organizationId: string, snapshot: LearningSnapshot): void {
+    const state = loadState();
+    state.households = [
+      ...state.households.filter((household) => household.organizationId !== organizationId),
+      ...snapshot.households.filter((household) => household.organizationId === organizationId)
+    ];
+    state.learners = [
+      ...state.learners.filter((learner) => learner.organizationId !== organizationId),
+      ...snapshot.learners.filter((learner) => learner.organizationId === organizationId)
+    ];
+    state.todayItems = [
+      ...state.todayItems.filter((item) => item.organizationId !== organizationId),
+      ...snapshot.todayItems.filter((item) => item.organizationId === organizationId)
+    ];
+    saveState(state);
   }
 }
