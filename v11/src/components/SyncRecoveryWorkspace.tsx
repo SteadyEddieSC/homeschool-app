@@ -1,4 +1,4 @@
-import { useRef, useState, type ChangeEvent } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import {
   operationKindLabel,
   syncStatusLabel,
@@ -49,7 +49,6 @@ export function SyncRecoveryWorkspace({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const fileInput = useRef<HTMLInputElement>(null);
 
   async function exportBackup(): Promise<void> {
     setBusy(true);
@@ -141,7 +140,7 @@ export function SyncRecoveryWorkspace({
           <div><strong>{operationKindLabel(operation.kind)}</strong><span>{operation.id.slice(0, 8)} · {new Date(operation.createdAt).toLocaleString()}</span></div>
           <span className={`status-chip status-${operation.status}`}>{syncStatusLabel(operation.status)}</span>
           <p>Attempts: {operation.attempts}{operation.lastError ? ` · ${operation.lastError}` : ''}</p>
-          {(operation.status === 'failed' || operation.status === 'pending') && <div className="button-row"><button className="button secondary small" type="button" onClick={() => manager.retry(operation.id)}>Retry</button><button className="button ghost small" type="button" onClick={() => manager.cancel(operation.id)} data-testid={`cancel-operation-${operation.id}`}>Cancel</button></div>}
+          {(operation.status === 'failed' || operation.status === 'pending') && <div className="button-row">{operation.status === 'failed' && <button className="button secondary small" type="button" onClick={() => manager.retry(operation.id)}>Retry</button>}<button className="button ghost small" type="button" onClick={() => manager.cancel(operation.id)} data-testid={`cancel-operation-${operation.id}`}>Cancel</button></div>}
         </article>)}</div>}
       </section>
 
@@ -155,7 +154,7 @@ export function SyncRecoveryWorkspace({
 
         <article className="panel beta-form-card">
           <div className="section-heading"><div><span className="eyebrow">Controlled restore</span><h2>Inspect before replacing data</h2></div><span className="status-chip neutral">No silent overwrite</span></div>
-          <label className="field"><span>Encrypted backup file</span><input ref={fileInput} type="file" accept="application/json,.json" onChange={(event) => void chooseRestoreFile(event)} data-testid="backup-restore-file" /></label>
+          <label className="field"><span>Encrypted backup file</span><input type="file" accept="application/json,.json" onChange={(event) => void chooseRestoreFile(event)} data-testid="backup-restore-file" /></label>
           <label className="field"><span>Backup passphrase</span><input type="password" autoComplete="current-password" value={restorePassphrase} onChange={(event) => setRestorePassphrase(event.target.value)} data-testid="backup-restore-passphrase" /></label>
           <button className="button secondary" type="button" disabled={busy || !restoreFileText || restorePassphrase.length < 12} onClick={() => void inspectRestore()} data-testid="backup-inspect">Verify and preview</button>
 
