@@ -162,9 +162,9 @@ export class LocalLearningRepository implements LearningMirrorRepository {
 
   async transitionTodayItem(input: TransitionTodayItemInput): Promise<TodayItem> {
     const state = loadState();
-    if (input.operationId && state.transitionReceipts[input.operationId]) {
-      return clone(findItem(state, state.transitionReceipts[input.operationId]));
-    }
+    const receiptItemId = input.operationId ? state.transitionReceipts[input.operationId] : undefined;
+    if (receiptItemId) return clone(findItem(state, receiptItemId));
+
     const item = findItem(state, input.itemId);
     const timestamp = now();
 
