@@ -73,8 +73,8 @@ export class SupabaseOrganizationRepository implements OrganizationRepository {
 
   async createOrganization(_account: CloudAccount, name: string, slug: string): Promise<OrganizationSummary> {
     const result = await this.client.rpc('bootstrap_organization', {
-      organization_name: normalizeOrganizationName(name),
-      organization_slug: normalizeOrganizationSlug(slug)
+      requested_name: normalizeOrganizationName(name),
+      requested_slug: normalizeOrganizationSlug(slug)
     });
     if (result.error) throw result.error;
     const row = Array.isArray(result.data) ? result.data[0] : result.data;
