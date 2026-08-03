@@ -1,11 +1,14 @@
 node_modules/
 site/
+dist/
+.wrangler/
 playwright-report/
 test-results/
 .DS_Store
 *.log
 .env
 .env.*
+!**/.env.example
 private/
 local-data/
 exports/
