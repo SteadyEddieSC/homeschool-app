@@ -12,6 +12,7 @@ export type AppRole = (typeof APP_ROLES)[number];
 export type Capability =
   | 'view-today'
   | 'view-group'
+  | 'manage-household-learners'
   | 'create-ticket'
   | 'view-own-tickets'
   | 'manage-org-tickets'
@@ -37,7 +38,7 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
     role: 'parent',
     label: 'Parent / Guardian',
     description: 'Coordinates household learners, reviews work, and manages family support requests.',
-    capabilities: ['view-today', 'view-group', 'create-ticket', 'view-own-tickets']
+    capabilities: ['view-today', 'view-group', 'manage-household-learners', 'create-ticket', 'view-own-tickets']
   },
   {
     role: 'teacher',
@@ -48,7 +49,7 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
   {
     role: 'director',
     label: 'Director',
-    description: 'Coordinates the homeschool group and triages organization support requests.',
+    description: 'Coordinates the homeschool group and triages organization support requests without automatically opening household learner records.',
     capabilities: [
       'view-today',
       'view-group',
@@ -60,10 +61,11 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
   {
     role: 'group-admin',
     label: 'Group Administrator',
-    description: 'Manages membership, organization settings, and support operations.',
+    description: 'Manages organization membership and explicitly authorized household learning operations.',
     capabilities: [
       'view-today',
       'view-group',
+      'manage-household-learners',
       'create-ticket',
       'view-own-tickets',
       'manage-org-tickets',
@@ -74,7 +76,7 @@ export const ROLE_DEFINITIONS: readonly RoleDefinition[] = [
   {
     role: 'system-admin',
     label: 'System Administrator / Developer',
-    description: 'Operates the platform, deployments, recovery, and technical support.',
+    description: 'Operates the platform, deployments, recovery, and technical support without automatic family-record access.',
     capabilities: [
       'view-today',
       'view-group',

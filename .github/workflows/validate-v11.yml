@@ -60,7 +60,7 @@ jobs:
         run: npm run db:start
       - name: Rebuild database from migrations
         run: npm run db:reset
-      - name: Run identity and RLS database tests
+      - name: Run identity, family, and RLS database tests
         run: npm run db:test
       - name: Stop local Supabase stack
         if: always()
@@ -90,7 +90,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: v11-alpha2-playwright-${{ matrix.project }}
+          name: v11-beta1-playwright-${{ matrix.project }}
           path: |
             v11/playwright-report/
             v11/test-results/
@@ -113,7 +113,7 @@ jobs:
       - name: Upload validated v11 preview build
         uses: actions/upload-artifact@v4
         with:
-          name: beaufort-learning-harbor-v11.0.0-alpha.2-preview
+          name: beaufort-learning-harbor-v11.0.0-beta.1-preview
           path: v11/dist/
           if-no-files-found: error
           retention-days: 30

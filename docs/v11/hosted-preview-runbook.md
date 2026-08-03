@@ -1,6 +1,6 @@
 # v11 Hosted Preview Runbook
 
-This runbook covers the account-owner actions required after alpha 2 is merged. The repository can validate and deploy the preview, but it cannot create or own external accounts on the user's behalf.
+This runbook covers the account-owner actions required after beta 1 is merged. The repository can validate and deploy the preview, but it cannot create or own external accounts on the user's behalf.
 
 ## 1. Create a Supabase preview project
 
@@ -28,19 +28,22 @@ npx supabase db push --dry-run
 npx supabase db push
 ```
 
-Review the dry-run output before applying. Alpha 2 migrations create only application schema, policies, helper functions, invitations, and audit records.
+Review the dry-run output before applying. Beta 1 migrations create the application schema, Row-Level Security policies, identity and invitation functions, parent-managed learner fields, family-visibility helpers, reviewed Today items, and audit records.
+
+Do not apply migrations to any database containing real family data until the preview dry run and local pgTAP suites pass on the exact release commit.
 
 ## 3. Configure Supabase authentication
 
 In the preview project:
 
-1. Keep email/password sign-up enabled.
+1. Keep email/password sign-up enabled for adult accounts.
 2. Require email confirmation before inviting outside testers.
 3. Set the Site URL to the future v11 preview origin.
 4. Add the preview origin to allowed redirect URLs.
 5. Configure a recognizable sender before sending invitations to real addresses.
 6. Keep anonymous sign-in disabled.
 7. Do not enable social providers until their redirect and privacy boundaries are reviewed.
+8. Do not create learner email/password accounts for beta 1. Learners use supervised parent-assisted profiles.
 
 ## 4. Create the protected GitHub environment
 
@@ -100,8 +103,9 @@ The workflow will:
 2. run TypeScript, boundary, and production-build checks;
 3. validate all required protected values without printing them;
 4. deploy only `beaufort-learning-harbor-v11-preview`;
-5. verify `/api/health` returns alpha 2;
-6. upload a deployment receipt.
+5. verify `/api/health` returns beta 1;
+6. verify `/api/config` reports parent-managed learners, supervised handoff, and explicit adult review;
+7. upload a deployment receipt.
 
 If any required value is absent or unsafe, deployment stops before Wrangler runs.
 
@@ -117,22 +121,41 @@ After deployment:
 
 That account becomes the first Group Administrator. It does not become a System Administrator.
 
-## 8. Test with synthetic accounts first
+## 8. Run the bounded household pilot
 
-Use non-personal synthetic test addresses or a controlled test-email domain. Validate at least:
+Use synthetic or disposable adult accounts and original synthetic learning prompts. Validate in this order:
 
-- Group Administrator invitation creation and revocation;
-- Parent, Teacher, Director, and Student invitation redemption;
-- invitation expiration and replay denial;
-- Student denial of membership administration;
-- support ticket privacy and internal-note redaction;
-- password recovery;
-- sign-out and session renewal;
-- mobile navigation on Pixel 7 dimensions.
+1. Invite and sign in as a Parent/Guardian.
+2. Create one synthetic household.
+3. Create one learner profile without an email address.
+4. Assign one Learn item and one Practice item.
+5. Start supervised learner mode and confirm all adult navigation disappears.
+6. Start an item, add a learner note, and send it for review.
+7. Exit learner mode and complete the item after explicit adult review.
+8. Return a second item with feedback and confirm it can be restarted.
+9. Confirm no grade, XP, attendance, mastery, or portfolio outcome is created.
+10. Confirm Teacher, Director, unrelated Parent, and System Administrator accounts cannot see the household learner.
+11. Test password recovery, sign-out, and session renewal.
+12. Repeat the learner flow at Pixel 7 dimensions and during a temporary network interruption.
 
-Do not enter real student names, school records, accommodations, grades, or evidence during preview validation.
+Beta 1 does not yet include a retryable offline mutation queue. During an interruption, record the observed behavior rather than repeatedly pressing an action. Offline queue and recovery work belongs to beta 2.
 
-## 9. Rollback
+Do not enter real student names, school records, accommodations, grades, evidence, or family schedules during preview validation.
+
+## 9. Record pilot findings
+
+Record only sanitized findings in GitHub. Include:
+
+- role and device class;
+- step attempted;
+- expected and observed behavior;
+- whether retrying caused duplication;
+- whether the user understood the handoff and adult-review boundary;
+- a sanitized screenshot only when it contains no names, emails, learner work, invitation codes, or credentials.
+
+Private family details stay outside the public repository.
+
+## 10. Rollback
 
 The v10 application remains unchanged. To remove the hosted preview:
 
@@ -141,4 +164,10 @@ The v10 application remains unchanged. To remove the hosted preview:
 - pause or delete the non-production Supabase project after exporting any required synthetic evidence;
 - retain the deployment receipt and Git commit for audit history.
 
-No v10 rollback is required because alpha 2 never changes the v10 Worker or stable release pointer.
+No v10 rollback is required because beta 1 never changes the v10 Worker or stable release pointer.
+
+## Recommended next action and release
+
+The recommended action after beta 1 is to perform the protected hosted deployment and bounded household pilot above.
+
+The next recommended release is `v11.0.0-beta.2 — Hosted Household Pilot, Offline Queue, and Recovery`.

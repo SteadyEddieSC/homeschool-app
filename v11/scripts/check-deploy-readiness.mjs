@@ -44,6 +44,6 @@ if (parsedPreview.pathname !== '/' && parsedPreview.pathname !== '') fail('V11_P
 const wrangler = await readFile(path.join(process.cwd(), 'wrangler.jsonc'), 'utf8');
 if (!wrangler.includes('"name": "beaufort-learning-harbor-v11-preview"')) fail('Wrangler is not targeting the isolated v11 preview Worker');
 if (wrangler.includes('"name": "beaufort-learning-harbor"')) fail('Wrangler unexpectedly targets the v10 production Worker');
-if (!wrangler.includes('"APP_RELEASE": "11.0.0-alpha.2"')) fail('Wrangler release does not match alpha.2');
+if (!wrangler.includes('"APP_RELEASE": "11.0.0-beta.1"')) fail('Wrangler release does not match beta.1');
 
-console.log('Preview deployment readiness passed: isolated Worker, hosted Supabase URL, publishable browser key, and scoped CI credentials are present.');
+console.log('Preview deployment readiness passed: isolated Worker, hosted Supabase URL, publishable browser key, and scoped CI credentials are present for beta.1.');
