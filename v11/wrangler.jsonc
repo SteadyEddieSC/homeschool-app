@@ -1,0 +1,15 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "beaufort-learning-harbor-v11-preview",
+  "main": "./worker/index.ts",
+  "compatibility_date": "2026-08-02",
+  "assets": {
+    "binding": "ASSETS",
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  "vars": {
+    "APP_ENV": "preview",
+    "APP_RELEASE": "11.0.0-alpha.1"
+  }
+}
