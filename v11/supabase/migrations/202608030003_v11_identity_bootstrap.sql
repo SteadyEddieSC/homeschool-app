@@ -51,8 +51,8 @@ as $$
 $$;
 
 create or replace function public.bootstrap_organization(
-  organization_name text,
-  organization_slug text
+  requested_name text,
+  requested_slug text
 )
 returns table (
   organization_id uuid,
@@ -65,6 +65,8 @@ set search_path = public, pg_temp
 as $$
 declare
   created public.organizations%rowtype;
+  normalized_name text;
+  normalized_slug text;
 begin
   if auth.uid() is null then
     raise exception 'Authentication is required' using errcode = '42501';
@@ -77,18 +79,18 @@ begin
     raise exception 'This account already has an active organization membership' using errcode = '42501';
   end if;
 
-  organization_name := trim(regexp_replace(organization_name, '\s+', ' ', 'g'));
-  organization_slug := lower(trim(organization_slug));
+  normalized_name := trim(regexp_replace(requested_name, '\s+', ' ', 'g'));
+  normalized_slug := lower(trim(requested_slug));
 
-  if char_length(organization_name) < 2 or char_length(organization_name) > 160 then
+  if char_length(normalized_name) < 2 or char_length(normalized_name) > 160 then
     raise exception 'Organization name must be between 2 and 160 characters';
   end if;
-  if organization_slug !~ '^[a-z0-9][a-z0-9-]{1,62}$' then
+  if normalized_slug !~ '^[a-z0-9][a-z0-9-]{1,62}$' then
     raise exception 'Organization address must contain letters, numbers, or hyphens';
   end if;
 
   insert into public.organizations (name, slug, created_by)
-  values (organization_name, organization_slug, auth.uid())
+  values (normalized_name, normalized_slug, auth.uid())
   returning * into created;
 
   insert into public.audit_events (organization_id, actor_id, action, entity_type, entity_id, metadata)
