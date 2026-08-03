@@ -98,15 +98,24 @@ const NAVIGATION_EVENT_ENHANCER = `  document.addEventListener('click', event =>
     });
   });`;
 
+const APPLY_UI_GLOBAL_ANCHOR = '  window.BLHLessonPackApplyUI = Object.freeze({';
+
 export async function buildRelease(manifest) {
   await buildV1043(manifest);
   let text = await readFile(manifest.output, 'utf8');
+  const pointerActionBridge = await readFile('modules/lesson-pack-pointer-action-bridge.js', 'utf8');
   text = replaceOnce(text, MUTATING_WORKSPACE_READER, READ_ONLY_WORKSPACE_READER, 'mutating workspace reader');
   text = replaceOnce(text, MUTATING_DRAFT_CACHE, READ_ONLY_DRAFT_CACHE, 'mutating draft cache');
   text = replaceOnce(text, UNBOUND_SHOW_SCREEN_WRAPPER, NAVIGATION_EVENT_ENHANCER, 'unbound showScreen wrapper');
   const callCount = text.split('ensureLessonPackApplyState()').length - 1;
   if (callCount !== 4) throw new Error(`v10.43 runtime-fix expected four workspace reader calls, found ${callCount}`);
   text = text.replaceAll('ensureLessonPackApplyState()', 'readLessonPackApplyWorkspace()');
+  text = replaceOnce(
+    text,
+    APPLY_UI_GLOBAL_ANCHOR,
+    `${pointerActionBridge.trimEnd()}\n\n${APPLY_UI_GLOBAL_ANCHOR}`,
+    'pointer action bridge'
+  );
   await writeFile(manifest.output, text, 'utf8');
-  console.log(`Applied v10.43 read-only render-state and navigation corrections to ${manifest.output}`);
+  console.log(`Applied v10.43 read-only render-state, navigation, and pointer-action corrections to ${manifest.output}`);
 }
