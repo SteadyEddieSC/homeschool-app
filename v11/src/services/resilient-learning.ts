@@ -19,8 +19,13 @@ import type {
 } from '../domain/sync';
 import { SyncQueueManager } from './sync-queue';
 
-function canonicalFingerprint(kind: string, payload: unknown): string {
-  return `${kind}:${JSON.stringify(payload, Object.keys(payload as object).sort())}`;
+function canonicalFingerprint(kind: string, payload: Record<string, unknown>): string {
+  const ordered = Object.fromEntries(Object.entries(payload).sort(([left], [right]) => left.localeCompare(right)));
+  return `${kind}:${JSON.stringify(ordered)}`;
+}
+
+function activeDuplicateError(): Error {
+  return new Error('This action is already waiting to synchronize. Retry or cancel the existing operation instead of creating a duplicate.');
 }
 
 export interface ResilientLearningRepositoryOptions {
@@ -59,12 +64,18 @@ export class ResilientLearningRepository implements LearningRepository {
     name: string,
     options: CreateHouseholdOptions = {}
   ): Promise<HouseholdSummary> {
+    const fingerprint = canonicalFingerprint('create-household', {
+      organizationId,
+      name: name.trim().replace(/\s+/g, ' ').toLowerCase()
+    });
+    if (this.hasRemoteTarget() && this.queue.hasActiveFingerprint(fingerprint)) throw activeDuplicateError();
+
     const householdId = options.householdId ?? crypto.randomUUID();
     const operationId = options.operationId ?? crypto.randomUUID();
     const result = await this.local.createHousehold(organizationId, actorId, name, { householdId, operationId });
     if (this.hasRemoteTarget()) {
       const payload: CreateHouseholdOperationPayload = { organizationId, actorId, householdId, name: result.name };
-      this.queue.enqueue({ id: operationId, kind: 'create-household', fingerprint: canonicalFingerprint('create-household', payload), payload });
+      this.queue.enqueue({ id: operationId, kind: 'create-household', fingerprint, payload });
       void this.queue.process();
     }
     return result;
@@ -76,6 +87,16 @@ export class ResilientLearningRepository implements LearningRepository {
   }
 
   async createLearner(input: CreateLearnerInput): Promise<LearnerProfile> {
+    const fingerprint = canonicalFingerprint('create-learner', {
+      organizationId: input.organizationId,
+      householdId: input.householdId,
+      preferredName: input.preferredName.trim().replace(/\s+/g, ' ').toLowerCase(),
+      pronouns: input.pronouns.trim().replace(/\s+/g, ' ').toLowerCase(),
+      gradeBand: input.gradeBand,
+      avatar: input.avatar
+    });
+    if (this.hasRemoteTarget() && this.queue.hasActiveFingerprint(fingerprint)) throw activeDuplicateError();
+
     const learnerId = input.learnerId ?? crypto.randomUUID();
     const operationId = input.operationId ?? crypto.randomUUID();
     const normalizedInput = { ...input, learnerId, operationId };
@@ -90,7 +111,7 @@ export class ResilientLearningRepository implements LearningRepository {
         avatar: result.avatar,
         learnerId
       };
-      this.queue.enqueue({ id: operationId, kind: 'create-learner', fingerprint: canonicalFingerprint('create-learner', payload), payload });
+      this.queue.enqueue({ id: operationId, kind: 'create-learner', fingerprint, payload });
       void this.queue.process();
     }
     return result;
@@ -102,6 +123,17 @@ export class ResilientLearningRepository implements LearningRepository {
   }
 
   async createTodayItem(input: CreateTodayItemInput): Promise<TodayItem> {
+    const fingerprint = canonicalFingerprint('create-today-item', {
+      organizationId: input.organizationId,
+      householdId: input.householdId,
+      learnerId: input.learnerId,
+      title: input.title.trim().replace(/\s+/g, ' ').toLowerCase(),
+      instructions: input.instructions.trim(),
+      activityType: input.activityType,
+      dueDate: input.dueDate
+    });
+    if (this.hasRemoteTarget() && this.queue.hasActiveFingerprint(fingerprint)) throw activeDuplicateError();
+
     const itemId = input.itemId ?? crypto.randomUUID();
     const operationId = input.operationId ?? crypto.randomUUID();
     const normalizedInput = { ...input, itemId, operationId };
@@ -118,13 +150,21 @@ export class ResilientLearningRepository implements LearningRepository {
         dueDate: result.dueDate,
         itemId
       };
-      this.queue.enqueue({ id: operationId, kind: 'create-today-item', fingerprint: canonicalFingerprint('create-today-item', payload), payload });
+      this.queue.enqueue({ id: operationId, kind: 'create-today-item', fingerprint, payload });
       void this.queue.process();
     }
     return result;
   }
 
   async transitionTodayItem(input: TransitionTodayItemInput): Promise<TodayItem> {
+    const fingerprint = canonicalFingerprint('transition-today-item', {
+      itemId: input.itemId,
+      action: input.action,
+      learnerNote: input.learnerNote?.trim() ?? '',
+      reviewFeedback: input.reviewFeedback?.trim() ?? ''
+    });
+    if (this.hasRemoteTarget() && this.queue.hasActiveFingerprint(fingerprint)) throw activeDuplicateError();
+
     const operationId = input.operationId ?? crypto.randomUUID();
     const normalizedInput = { ...input, operationId };
     const result = await this.local.transitionTodayItem(normalizedInput);
@@ -136,7 +176,7 @@ export class ResilientLearningRepository implements LearningRepository {
         reviewFeedback: input.reviewFeedback,
         operationId
       };
-      this.queue.enqueue({ id: operationId, kind: 'transition-today-item', fingerprint: canonicalFingerprint('transition-today-item', payload), payload });
+      this.queue.enqueue({ id: operationId, kind: 'transition-today-item', fingerprint, payload });
       void this.queue.process();
     }
     return result;
