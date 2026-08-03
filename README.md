@@ -1,6 +1,6 @@
 # Beaufort Learning Harbor
 
-Beaufort Learning Harbor is a homeschool and co-op learning application. The repository now maintains two deliberately separated development tracks: a validated offline v10 application and a cloud-ready v11 platform being built beside it.
+Beaufort Learning Harbor is a homeschool and co-op learning application. The repository maintains two deliberately separated development tracks: a validated offline v10 application and a cloud-ready v11 platform being built beside it.
 
 ## Development tracks
 
@@ -8,11 +8,11 @@ Beaufort Learning Harbor is a homeschool and co-op learning application. The rep
 
 The current production and downloadable baseline remains v10.43. It is an offline-first, deterministic single-file application with synthetic demo data, versioned import/export, role boundaries, lesson planning, controlled Lesson Pack overlays, and comprehensive browser validation.
 
-### Foundation preview — v11.0.0-alpha.1
+### Identity preview — v11.0.0-alpha.2
 
-The `v11/` directory introduces a TypeScript, React, Vite, Cloudflare Worker, and Supabase-ready architecture for online homeschool-group use. Alpha 1 adds the new application shell, account/household/group role model, initial Row-Level Security schema, and a built-in Help & Feedback workflow. It does not replace v10.43, deploy to production, or contain real family data.
+The `v11/` directory contains a TypeScript, React, Vite, Cloudflare Worker, and Supabase-ready application for online homeschool-group use. Alpha 2 adds account creation and recovery, first-organization bootstrap, role-limited one-time invitations, member administration, local database-policy testing, and a protected manual deployment route. It does not replace v10.43, deploy automatically, or contain real family data.
 
-See `docs/v11/architecture.md`, `docs/v11/setup-checklist.md`, `docs/v11/migration-strategy.md`, and `docs/v11/release-v11.0.0-alpha.1.md`.
+See `docs/v11/architecture.md`, `docs/v11/setup-checklist.md`, `docs/v11/hosted-preview-runbook.md`, `docs/v11/migration-strategy.md`, and `docs/v11/release-v11.0.0-alpha.2.md`.
 
 ## Current stable baseline
 
@@ -47,12 +47,14 @@ See `docs/v11/architecture.md`, `docs/v11/setup-checklist.md`, `docs/v11/migrati
 
 ### v11 cloud-ready application
 
-- `v11/src/`: React application, domain policies, services, and role-aware UI
-- `v11/worker/`: Cloudflare Worker API boundary
-- `v11/supabase/migrations/`: Postgres schema and Row-Level Security migrations
+- `v11/src/`: React application, identity/domain policies, services, and role-aware UI
+- `v11/worker/`: Cloudflare Worker API and response-security boundary
+- `v11/supabase/migrations/`: Postgres schema, invitation functions, and Row-Level Security migrations
+- `v11/supabase/tests/`: transaction-scoped synthetic database-policy tests
 - `v11/tests/`: desktop, tablet, and Pixel 7 browser workflows
-- `docs/v11/`: architecture, setup, migration, and release documentation
-- `.github/workflows/validate-v11.yml`: isolated v11 build and browser gates
+- `docs/v11/`: architecture, setup, migration, preview runbook, and release documentation
+- `.github/workflows/validate-v11.yml`: isolated v11 build, database, and browser gates
+- `.github/workflows/deploy-v11-preview.yml`: protected manual-only preview deployment
 
 ## Local workflow
 
@@ -67,7 +69,7 @@ npm test
 
 The validated v10 single-file output is generated at `site/index.html` and published as a downloadable Actions artifact.
 
-### v11
+### v11 application
 
 ```bash
 cd v11
@@ -77,17 +79,31 @@ npx playwright install chromium
 npm run test:e2e
 ```
 
-Without Supabase browser configuration, v11 operates in clearly labeled local-preview mode with synthetic browser-local support tickets.
+Without Supabase browser configuration, v11 operates in clearly labeled local-preview mode with synthetic browser-local support, membership, and invitation records.
+
+### v11 database policies
+
+With Docker running:
+
+```bash
+cd v11
+npm run db:start
+npm run db:reset
+npm run db:test
+npm run db:stop
+```
+
+The database suite rebuilds from migrations and verifies identity bootstrap, invitation expiry/replay controls, role restrictions, and Row-Level Security using synthetic transaction-scoped accounts.
 
 ## Cloudflare deployments
 
 The root `wrangler.jsonc` remains the deployment source of truth for the stable `beaufort-learning-harbor` Worker.
 
-The v11 preview uses `v11/wrangler.jsonc` and the separate Worker name `beaufort-learning-harbor-v11-preview`. CI validates but does not deploy the alpha preview.
+The v11 preview uses `v11/wrangler.jsonc` and the separate Worker name `beaufort-learning-harbor-v11-preview`. Normal validation CI builds but does not deploy the preview. Deployment requires an explicit manual workflow dispatch, a protected `v11-preview` GitHub environment, scoped secrets, and the exact confirmation phrase.
 
 ## Privacy and content boundaries
 
-Only synthetic data belongs in this public repository. Real family exports, screenshots, backups, student work, account data, provider tokens, and local data must remain outside Git.
+Only synthetic data belongs in this public repository. Real family exports, screenshots, backups, student work, account data, provider tokens, invitation codes, and local data must remain outside Git.
 
 Never place a Supabase service-role key, BAND client secret, OAuth access token, database password, or private key in browser configuration or a committed file.
 
@@ -95,7 +111,7 @@ Lesson packs and tests use original synthetic examples. Do not commit copied pro
 
 Controlled Lesson Pack apply in v10 is explicit, browser-local, reversible, and adult-reviewed. It never rewrites the source pack, destination source lesson, assignment, progress, reward, grade, attendance, mastery, or portfolio records.
 
-The v11 database treats UI hiding as insufficient authorization. Shared tables require Row-Level Security, household access is separate from organization membership, and public GitHub escalation from private support tickets must be manual and sanitized.
+The v11 database treats UI hiding as insufficient authorization. Shared tables require Row-Level Security, household access is separate from organization membership, invitation codes are one-time and expiring, System Administrator access cannot be invited, and public GitHub escalation from private support tickets must be manual and sanitized.
 
 ## License
 
