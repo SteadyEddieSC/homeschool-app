@@ -4,6 +4,7 @@ export interface RuntimeConfiguration {
   release: string;
   environment: string;
   supabaseConfigured: boolean;
+  supabaseHost: string;
   mode: 'cloud' | 'local-preview';
 }
 
@@ -27,29 +28,38 @@ if (serviceRoleDetected) {
   throw new Error('A Supabase service-role key must never be exposed to the browser.');
 }
 
-const urlIsValid = (() => {
-  if (!supabaseUrl) return false;
+const parsedSupabaseUrl = (() => {
+  if (!supabaseUrl) return null;
   try {
     const parsed = new URL(supabaseUrl);
-    return parsed.protocol === 'https:' && parsed.hostname.endsWith('.supabase.co');
+    const hosted = parsed.protocol === 'https:' && parsed.hostname.endsWith('.supabase.co');
+    const loopback = parsed.protocol === 'http:' && ['127.0.0.1', 'localhost', '::1'].includes(parsed.hostname);
+    return hosted || loopback ? parsed : null;
   } catch {
-    return false;
+    return null;
   }
 })();
 
 export const runtimeConfiguration: RuntimeConfiguration = Object.freeze({
-  release: '11.0.0-alpha.1',
+  release: '11.0.0-alpha.2',
   environment: String(import.meta.env.VITE_APP_ENV ?? 'preview'),
-  supabaseConfigured: Boolean(urlIsValid && publishableKey),
-  mode: urlIsValid && publishableKey ? 'cloud' : 'local-preview'
+  supabaseConfigured: Boolean(parsedSupabaseUrl && publishableKey),
+  supabaseHost: parsedSupabaseUrl?.hostname ?? '',
+  mode: parsedSupabaseUrl && publishableKey ? 'cloud' : 'local-preview'
 });
 
 export const supabase: SupabaseClient | null = runtimeConfiguration.supabaseConfigured
   ? createClient(supabaseUrl, publishableKey, {
       auth: {
+        flowType: 'pkce',
         persistSession: true,
         autoRefreshToken: true,
         detectSessionInUrl: true
+      },
+      global: {
+        headers: {
+          'x-client-info': `beaufort-learning-harbor/${runtimeConfiguration.release}`
+        }
       }
     })
   : null;

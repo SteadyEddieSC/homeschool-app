@@ -1,0 +1,2 @@
+-- Alpha 2 intentionally starts with no application records.
+-- Database tests create transaction-scoped synthetic identities and roll them back.

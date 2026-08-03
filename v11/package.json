@@ -1,6 +1,6 @@
 {
   "name": "beaufort-learning-harbor-v11",
-  "version": "11.0.0-alpha.1",
+  "version": "11.0.0-alpha.2",
   "private": true,
   "type": "module",
   "engines": {
@@ -11,10 +11,15 @@
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
     "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:deploy-readiness": "node scripts/check-deploy-readiness.mjs",
     "verify": "npm run typecheck && npm run check:boundaries && npm run build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "test:e2e": "playwright test",
-    "deploy:preview": "npm run verify && wrangler deploy"
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:test": "supabase test db",
+    "db:stop": "supabase stop --no-backup",
+    "deploy:preview": "npm run verify && npm run check:deploy-readiness && wrangler deploy"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.110.8",
@@ -28,6 +33,7 @@
     "@types/react": "19.2.17",
     "@types/react-dom": "19.2.3",
     "@vitejs/plugin-react": "6.0.4",
+    "supabase": "2.110.0",
     "typescript": "6.0.3",
     "vite": "8.1.5",
     "wrangler": "4.114.0"

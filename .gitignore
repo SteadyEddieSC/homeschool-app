@@ -2,8 +2,11 @@ node_modules/
 site/
 dist/
 .wrangler/
+.supabase/
 playwright-report/
 test-results/
+deployment-health.json
+deployment-receipt.json
 .DS_Store
 *.log
 .env
