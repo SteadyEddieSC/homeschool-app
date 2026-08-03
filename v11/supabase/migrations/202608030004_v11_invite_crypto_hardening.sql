@@ -96,12 +96,12 @@ begin
     raise exception 'Invitation code is invalid';
   end if;
 
-  select * into invitation
-  from public.organization_invites
-  where token_hash = extensions.digest(trim(invite_token), 'sha256')
-    and accepted_at is null
-    and revoked_at is null
-    and expires_at > now()
+  select candidate.* into invitation
+  from public.organization_invites candidate
+  where candidate.token_hash = extensions.digest(trim(invite_token), 'sha256')
+    and candidate.accepted_at is null
+    and candidate.revoked_at is null
+    and candidate.expires_at > now()
   for update;
 
   if invitation.id is null then
@@ -111,10 +111,11 @@ begin
     raise exception 'System Administrator access cannot be granted by invitation' using errcode = '42501';
   end if;
   if exists (
-    select 1 from public.organization_memberships
-    where organization_id = invitation.organization_id
-      and user_id = auth.uid()
-      and status = 'active'
+    select 1
+    from public.organization_memberships membership
+    where membership.organization_id = invitation.organization_id
+      and membership.user_id = auth.uid()
+      and membership.status = 'active'
   ) then
     raise exception 'This account is already an active organization member';
   end if;
@@ -131,13 +132,13 @@ begin
     raise exception 'Existing membership cannot be reactivated with this invitation' using errcode = '42501';
   end if;
 
-  update public.organization_invites
+  update public.organization_invites target
   set accepted_by = auth.uid(), accepted_at = now()
-  where id = invitation.id;
+  where target.id = invitation.id;
 
-  select * into organization
-  from public.organizations
-  where id = invitation.organization_id;
+  select target.* into organization
+  from public.organizations target
+  where target.id = invitation.organization_id;
 
   insert into public.audit_events (organization_id, actor_id, action, entity_type, entity_id, metadata)
   values (
