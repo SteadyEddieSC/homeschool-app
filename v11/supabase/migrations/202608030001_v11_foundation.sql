@@ -34,7 +34,8 @@ create table public.households (
   name text not null check (char_length(name) between 1 and 160),
   created_by uuid not null references auth.users(id),
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now()
+  updated_at timestamptz not null default now(),
+  unique (id, organization_id)
 );
 
 create table public.household_memberships (
@@ -57,11 +58,8 @@ create table public.learners (
   status text not null default 'active' check (status in ('active', 'inactive', 'archived')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
-  constraint learners_household_org_fk foreign key (household_id, organization_id)
-    references public.households(id, organization_id) on delete cascade
+  foreign key (household_id, organization_id) references public.households(id, organization_id) on delete cascade
 );
-
-alter table public.households add constraint households_id_org_unique unique (id, organization_id);
 
 create table public.support_tickets (
   id uuid primary key default gen_random_uuid(),
@@ -107,7 +105,6 @@ create table public.audit_events (
 
 create index organization_memberships_user_idx on public.organization_memberships(user_id, status);
 create index household_memberships_user_idx on public.household_memberships(user_id);
-create index households_org_idx on public.households(organization_id);
 create index learners_household_idx on public.learners(household_id, status);
 create index support_tickets_org_updated_idx on public.support_tickets(organization_id, updated_at desc);
 create index support_tickets_creator_idx on public.support_tickets(created_by, updated_at desc);
@@ -115,57 +112,34 @@ create index support_ticket_messages_ticket_idx on public.support_ticket_message
 create index audit_events_org_created_idx on public.audit_events(organization_id, created_at desc);
 
 create or replace function public.set_updated_at()
-returns trigger
-language plpgsql
-as $$
+returns trigger language plpgsql as $$
 begin
   new.updated_at = now();
   return new;
 end;
 $$;
 
-create trigger profiles_updated_at before update on public.profiles
-for each row execute function public.set_updated_at();
-create trigger organizations_updated_at before update on public.organizations
-for each row execute function public.set_updated_at();
-create trigger organization_memberships_updated_at before update on public.organization_memberships
-for each row execute function public.set_updated_at();
-create trigger households_updated_at before update on public.households
-for each row execute function public.set_updated_at();
-create trigger household_memberships_updated_at before update on public.household_memberships
-for each row execute function public.set_updated_at();
-create trigger learners_updated_at before update on public.learners
-for each row execute function public.set_updated_at();
-create trigger support_tickets_updated_at before update on public.support_tickets
-for each row execute function public.set_updated_at();
+create trigger profiles_updated_at before update on public.profiles for each row execute function public.set_updated_at();
+create trigger organizations_updated_at before update on public.organizations for each row execute function public.set_updated_at();
+create trigger organization_memberships_updated_at before update on public.organization_memberships for each row execute function public.set_updated_at();
+create trigger households_updated_at before update on public.households for each row execute function public.set_updated_at();
+create trigger household_memberships_updated_at before update on public.household_memberships for each row execute function public.set_updated_at();
+create trigger learners_updated_at before update on public.learners for each row execute function public.set_updated_at();
+create trigger support_tickets_updated_at before update on public.support_tickets for each row execute function public.set_updated_at();
 
 create or replace function public.handle_new_user()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   insert into public.profiles (id, display_name)
-  values (
-    new.id,
-    coalesce(nullif(trim(new.raw_user_meta_data ->> 'display_name'), ''), split_part(coalesce(new.email, 'Member'), '@', 1))
-  )
+  values (new.id, coalesce(nullif(trim(new.raw_user_meta_data ->> 'display_name'), ''), split_part(coalesce(new.email, 'Member'), '@', 1)))
   on conflict (id) do nothing;
   return new;
 end;
 $$;
-
-create trigger auth_user_profile_created
-after insert on auth.users
-for each row execute function public.handle_new_user();
+create trigger auth_user_profile_created after insert on auth.users for each row execute function public.handle_new_user();
 
 create or replace function public.bootstrap_organization_admin()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   insert into public.organization_memberships (organization_id, user_id, role, status)
   values (new.id, new.created_by, 'group-admin', 'active')
@@ -173,17 +147,10 @@ begin
   return new;
 end;
 $$;
-
-create trigger organization_admin_created
-after insert on public.organizations
-for each row execute function public.bootstrap_organization_admin();
+create trigger organization_admin_created after insert on public.organizations for each row execute function public.bootstrap_organization_admin();
 
 create or replace function public.bootstrap_household_guardian()
-returns trigger
-language plpgsql
-security definer
-set search_path = public, pg_temp
-as $$
+returns trigger language plpgsql security definer set search_path = public, pg_temp as $$
 begin
   insert into public.household_memberships (household_id, user_id, relationship, can_manage)
   values (new.id, new.created_by, 'guardian', true)
@@ -191,97 +158,50 @@ begin
   return new;
 end;
 $$;
-
-create trigger household_guardian_created
-after insert on public.households
-for each row execute function public.bootstrap_household_guardian();
+create trigger household_guardian_created after insert on public.households for each row execute function public.bootstrap_household_guardian();
 
 create or replace function public.current_org_role(target_organization uuid)
-returns text
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-  select membership.role
-  from public.organization_memberships membership
-  where membership.organization_id = target_organization
-    and membership.user_id = auth.uid()
-    and membership.status = 'active'
+returns text language sql stable security definer set search_path = public, pg_temp as $$
+  select role from public.organization_memberships
+  where organization_id = target_organization and user_id = auth.uid() and status = 'active'
   limit 1
 $$;
 
 create or replace function public.is_org_member(target_organization uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
+returns boolean language sql stable security definer set search_path = public, pg_temp as $$
   select public.current_org_role(target_organization) is not null
 $$;
 
 create or replace function public.can_manage_org(target_organization uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
+returns boolean language sql stable security definer set search_path = public, pg_temp as $$
   select coalesce(public.current_org_role(target_organization) in ('group-admin', 'system-admin'), false)
 $$;
 
 create or replace function public.can_support_org(target_organization uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
+returns boolean language sql stable security definer set search_path = public, pg_temp as $$
   select coalesce(public.current_org_role(target_organization) in ('director', 'group-admin', 'system-admin'), false)
 $$;
 
 create or replace function public.is_household_member(target_household uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-  select exists (
-    select 1 from public.household_memberships membership
-    where membership.household_id = target_household and membership.user_id = auth.uid()
-  )
+returns boolean language sql stable security definer set search_path = public, pg_temp as $$
+  select exists (select 1 from public.household_memberships where household_id = target_household and user_id = auth.uid())
 $$;
 
 create or replace function public.can_view_household(target_household uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
+returns boolean language sql stable security definer set search_path = public, pg_temp as $$
   select exists (
-    select 1
-    from public.households household
-    where household.id = target_household
-      and (
-        public.is_household_member(household.id)
-        or coalesce(public.current_org_role(household.organization_id) in ('teacher', 'director', 'group-admin', 'system-admin'), false)
-      )
+    select 1 from public.households household
+    where household.id = target_household and (
+      public.is_household_member(household.id)
+      or coalesce(public.current_org_role(household.organization_id) in ('teacher', 'director', 'group-admin', 'system-admin'), false)
+    )
   )
 $$;
 
 create or replace function public.can_manage_household(target_household uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
+returns boolean language sql stable security definer set search_path = public, pg_temp as $$
   select exists (
-    select 1
-    from public.households household
+    select 1 from public.households household
     left join public.household_memberships membership
       on membership.household_id = household.id and membership.user_id = auth.uid()
     where household.id = target_household
@@ -290,26 +210,15 @@ as $$
 $$;
 
 create or replace function public.ticket_organization(target_ticket uuid)
-returns uuid
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
-  select ticket.organization_id from public.support_tickets ticket where ticket.id = target_ticket
+returns uuid language sql stable security definer set search_path = public, pg_temp as $$
+  select organization_id from public.support_tickets where id = target_ticket
 $$;
 
 create or replace function public.can_view_ticket(target_ticket uuid)
-returns boolean
-language sql
-stable
-security definer
-set search_path = public, pg_temp
-as $$
+returns boolean language sql stable security definer set search_path = public, pg_temp as $$
   select exists (
     select 1 from public.support_tickets ticket
-    where ticket.id = target_ticket
-      and (ticket.created_by = auth.uid() or public.can_support_org(ticket.organization_id))
+    where ticket.id = target_ticket and (ticket.created_by = auth.uid() or public.can_support_org(ticket.organization_id))
   )
 $$;
 
@@ -343,78 +252,46 @@ alter table public.support_tickets enable row level security;
 alter table public.support_ticket_messages enable row level security;
 alter table public.audit_events enable row level security;
 
-create policy profiles_select_self on public.profiles
-for select to authenticated using (id = auth.uid());
-create policy profiles_update_self on public.profiles
-for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
+create policy profiles_select_self on public.profiles for select to authenticated using (id = auth.uid());
+create policy profiles_update_self on public.profiles for update to authenticated using (id = auth.uid()) with check (id = auth.uid());
 
-create policy organizations_select_member on public.organizations
-for select to authenticated using (public.is_org_member(id));
-create policy organizations_insert_owner on public.organizations
-for insert to authenticated with check (created_by = auth.uid());
-create policy organizations_update_admin on public.organizations
-for update to authenticated using (public.can_manage_org(id)) with check (public.can_manage_org(id));
-create policy organizations_delete_admin on public.organizations
-for delete to authenticated using (public.can_manage_org(id));
+create policy organizations_select_member on public.organizations for select to authenticated using (public.is_org_member(id));
+create policy organizations_insert_owner on public.organizations for insert to authenticated with check (created_by = auth.uid());
+create policy organizations_update_admin on public.organizations for update to authenticated using (public.can_manage_org(id)) with check (public.can_manage_org(id));
+create policy organizations_delete_admin on public.organizations for delete to authenticated using (public.can_manage_org(id));
 
-create policy organization_memberships_select on public.organization_memberships
-for select to authenticated using (user_id = auth.uid() or public.can_manage_org(organization_id));
-create policy organization_memberships_insert_admin on public.organization_memberships
-for insert to authenticated with check (public.can_manage_org(organization_id));
-create policy organization_memberships_update_admin on public.organization_memberships
-for update to authenticated using (public.can_manage_org(organization_id)) with check (public.can_manage_org(organization_id));
-create policy organization_memberships_delete_admin on public.organization_memberships
-for delete to authenticated using (public.can_manage_org(organization_id));
+create policy organization_memberships_select on public.organization_memberships for select to authenticated using (user_id = auth.uid() or public.can_manage_org(organization_id));
+create policy organization_memberships_insert_admin on public.organization_memberships for insert to authenticated with check (public.can_manage_org(organization_id));
+create policy organization_memberships_update_admin on public.organization_memberships for update to authenticated using (public.can_manage_org(organization_id)) with check (public.can_manage_org(organization_id));
+create policy organization_memberships_delete_admin on public.organization_memberships for delete to authenticated using (public.can_manage_org(organization_id));
 
-create policy households_select_authorized on public.households
-for select to authenticated using (public.can_view_household(id));
-create policy households_insert_member on public.households
-for insert to authenticated with check (created_by = auth.uid() and public.is_org_member(organization_id));
-create policy households_update_manager on public.households
-for update to authenticated using (public.can_manage_household(id)) with check (public.can_manage_household(id));
-create policy households_delete_manager on public.households
-for delete to authenticated using (public.can_manage_household(id));
+create policy households_select_authorized on public.households for select to authenticated using (public.can_view_household(id));
+create policy households_insert_member on public.households for insert to authenticated with check (created_by = auth.uid() and public.is_org_member(organization_id));
+create policy households_update_manager on public.households for update to authenticated using (public.can_manage_household(id)) with check (public.can_manage_household(id));
+create policy households_delete_manager on public.households for delete to authenticated using (public.can_manage_household(id));
 
-create policy household_memberships_select on public.household_memberships
-for select to authenticated using (user_id = auth.uid() or public.can_manage_household(household_id));
-create policy household_memberships_insert_manager on public.household_memberships
-for insert to authenticated with check (public.can_manage_household(household_id));
-create policy household_memberships_update_manager on public.household_memberships
-for update to authenticated using (public.can_manage_household(household_id)) with check (public.can_manage_household(household_id));
-create policy household_memberships_delete_manager on public.household_memberships
-for delete to authenticated using (public.can_manage_household(household_id));
+create policy household_memberships_select on public.household_memberships for select to authenticated using (user_id = auth.uid() or public.can_manage_household(household_id));
+create policy household_memberships_insert_manager on public.household_memberships for insert to authenticated with check (public.can_manage_household(household_id));
+create policy household_memberships_update_manager on public.household_memberships for update to authenticated using (public.can_manage_household(household_id)) with check (public.can_manage_household(household_id));
+create policy household_memberships_delete_manager on public.household_memberships for delete to authenticated using (public.can_manage_household(household_id));
 
-create policy learners_select_household on public.learners
-for select to authenticated using (public.can_view_household(household_id));
-create policy learners_insert_manager on public.learners
-for insert to authenticated with check (public.can_manage_household(household_id));
-create policy learners_update_manager on public.learners
-for update to authenticated using (public.can_manage_household(household_id)) with check (public.can_manage_household(household_id));
-create policy learners_delete_manager on public.learners
-for delete to authenticated using (public.can_manage_household(household_id));
+create policy learners_select_household on public.learners for select to authenticated using (public.can_view_household(household_id));
+create policy learners_insert_manager on public.learners for insert to authenticated with check (public.can_manage_household(household_id));
+create policy learners_update_manager on public.learners for update to authenticated using (public.can_manage_household(household_id)) with check (public.can_manage_household(household_id));
+create policy learners_delete_manager on public.learners for delete to authenticated using (public.can_manage_household(household_id));
 
-create policy support_tickets_select_participant on public.support_tickets
-for select to authenticated using (created_by = auth.uid() or public.can_support_org(organization_id));
-create policy support_tickets_insert_member on public.support_tickets
-for insert to authenticated with check (created_by = auth.uid() and public.is_org_member(organization_id));
-create policy support_tickets_update_support on public.support_tickets
-for update to authenticated using (public.can_support_org(organization_id)) with check (public.can_support_org(organization_id));
+create policy support_tickets_select_participant on public.support_tickets for select to authenticated using (created_by = auth.uid() or public.can_support_org(organization_id));
+create policy support_tickets_insert_member on public.support_tickets for insert to authenticated with check (created_by = auth.uid() and public.is_org_member(organization_id));
+create policy support_tickets_update_support on public.support_tickets for update to authenticated using (public.can_support_org(organization_id)) with check (public.can_support_org(organization_id));
 
-create policy support_messages_select_participant on public.support_ticket_messages
-for select to authenticated using (
-  public.can_view_ticket(ticket_id)
-  and (not is_internal or public.can_support_org(public.ticket_organization(ticket_id)))
+create policy support_messages_select_participant on public.support_ticket_messages for select to authenticated using (
+  public.can_view_ticket(ticket_id) and (not is_internal or public.can_manage_org(public.ticket_organization(ticket_id)))
 );
-create policy support_messages_insert_participant on public.support_ticket_messages
-for insert to authenticated with check (
-  author_id = auth.uid()
-  and public.can_view_ticket(ticket_id)
-  and (not is_internal or public.can_manage_org(public.ticket_organization(ticket_id)))
+create policy support_messages_insert_participant on public.support_ticket_messages for insert to authenticated with check (
+  author_id = auth.uid() and public.can_view_ticket(ticket_id) and (not is_internal or public.can_manage_org(public.ticket_organization(ticket_id)))
 );
 
-create policy audit_events_select_admin on public.audit_events
-for select to authenticated using (public.can_manage_org(organization_id));
-create policy audit_events_insert_admin on public.audit_events
-for insert to authenticated with check (public.can_manage_org(organization_id) and actor_id = auth.uid());
+create policy audit_events_select_admin on public.audit_events for select to authenticated using (public.can_manage_org(organization_id));
+create policy audit_events_insert_admin on public.audit_events for insert to authenticated with check (public.can_manage_org(organization_id) and actor_id = auth.uid());
 
 commit;
