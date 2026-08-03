@@ -31,8 +31,8 @@ with check (
     household_id is null
     or exists (
       select 1 from public.households household
-      where household.id = household_id
-        and household.organization_id = organization_id
+      where household.id = support_tickets.household_id
+        and household.organization_id = support_tickets.organization_id
         and public.can_view_household(household.id)
     )
   )
