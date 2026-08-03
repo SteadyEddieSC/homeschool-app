@@ -10,6 +10,7 @@ import {
   normalizePreferredName,
   normalizePronouns,
   normalizeTitle,
+  type CreateHouseholdOptions,
   type CreateLearnerInput,
   type CreateTodayItemInput,
   type HouseholdSummary,
@@ -121,12 +122,23 @@ export class SupabaseLearningRepository implements LearningRepository {
     return (result.data as HouseholdRow[]).map(householdFromRow);
   }
 
-  async createHousehold(organizationId: string, actorId: string, name: string): Promise<HouseholdSummary> {
-    const result = await this.client
-      .from('households')
-      .insert({ organization_id: organizationId, name: normalizeHouseholdName(name), created_by: actorId })
-      .select('id, organization_id, name, created_at')
-      .single();
+  async createHousehold(
+    organizationId: string,
+    actorId: string,
+    name: string,
+    options: CreateHouseholdOptions = {}
+  ): Promise<HouseholdSummary> {
+    const record = {
+      id: options.householdId,
+      organization_id: organizationId,
+      name: normalizeHouseholdName(name),
+      created_by: actorId,
+      client_operation_id: options.operationId
+    };
+    const query = options.operationId
+      ? this.client.from('households').upsert(record, { onConflict: 'client_operation_id' })
+      : this.client.from('households').insert(record);
+    const result = await query.select('id, organization_id, name, created_at').single();
     if (result.error) throw result.error;
     return householdFromRow(result.data as HouseholdRow);
   }
@@ -142,20 +154,22 @@ export class SupabaseLearningRepository implements LearningRepository {
   }
 
   async createLearner(input: CreateLearnerInput): Promise<LearnerProfile> {
-    const result = await this.client
-      .from('learners')
-      .insert({
-        organization_id: input.organizationId,
-        household_id: input.householdId,
-        preferred_name: normalizePreferredName(input.preferredName),
-        pronouns: normalizePronouns(input.pronouns),
-        grade_band: input.gradeBand,
-        avatar_key: input.avatar,
-        access_mode: 'parent-assisted',
-        status: 'active'
-      })
-      .select(learnerColumns)
-      .single();
+    const record = {
+      id: input.learnerId,
+      organization_id: input.organizationId,
+      household_id: input.householdId,
+      preferred_name: normalizePreferredName(input.preferredName),
+      pronouns: normalizePronouns(input.pronouns),
+      grade_band: input.gradeBand,
+      avatar_key: input.avatar,
+      access_mode: 'parent-assisted',
+      status: 'active',
+      client_operation_id: input.operationId
+    };
+    const query = input.operationId
+      ? this.client.from('learners').upsert(record, { onConflict: 'client_operation_id' })
+      : this.client.from('learners').insert(record);
+    const result = await query.select(learnerColumns).single();
     if (result.error) throw result.error;
     return learnerFromRow(result.data as unknown as LearnerRow);
   }
@@ -174,21 +188,23 @@ export class SupabaseLearningRepository implements LearningRepository {
   }
 
   async createTodayItem(input: CreateTodayItemInput): Promise<TodayItem> {
-    const result = await this.client
-      .from('learner_today_items')
-      .insert({
-        organization_id: input.organizationId,
-        household_id: input.householdId,
-        learner_id: input.learnerId,
-        assigned_by: input.assignedBy,
-        title: normalizeTitle(input.title),
-        instructions: normalizeInstructions(input.instructions),
-        activity_type: input.activityType,
-        due_date: input.dueDate,
-        status: 'assigned'
-      })
-      .select(todayColumns)
-      .single();
+    const record = {
+      id: input.itemId,
+      organization_id: input.organizationId,
+      household_id: input.householdId,
+      learner_id: input.learnerId,
+      assigned_by: input.assignedBy,
+      title: normalizeTitle(input.title),
+      instructions: normalizeInstructions(input.instructions),
+      activity_type: input.activityType,
+      due_date: input.dueDate,
+      status: 'assigned',
+      client_operation_id: input.operationId
+    };
+    const query = input.operationId
+      ? this.client.from('learner_today_items').upsert(record, { onConflict: 'client_operation_id' })
+      : this.client.from('learner_today_items').insert(record);
+    const result = await query.select(todayColumns).single();
     if (result.error) throw result.error;
     return todayItemFromRow(result.data as unknown as TodayItemRow);
   }
@@ -198,7 +214,8 @@ export class SupabaseLearningRepository implements LearningRepository {
       target_item: input.itemId,
       requested_action: input.action,
       submitted_learner_note: normalizeNote(input.learnerNote),
-      submitted_review_feedback: normalizeNote(input.reviewFeedback)
+      submitted_review_feedback: normalizeNote(input.reviewFeedback),
+      operation_id: input.operationId ?? crypto.randomUUID()
     });
     if (result.error) throw result.error;
     const row = Array.isArray(result.data) ? result.data[0] : result.data;
