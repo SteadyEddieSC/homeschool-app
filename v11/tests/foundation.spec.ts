@@ -103,11 +103,14 @@ test('family learner administration stays hidden from Student, Teacher, Director
   for (const role of ['student', 'teacher', 'director', 'system-admin']) {
     await roleSelect.selectOption(role);
     await expect(page.getByTestId('nav-learners')).toHaveCount(0);
+    await expect(page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('button', { name: 'Learners' })).toHaveCount(0);
   }
   await roleSelect.selectOption('parent');
-  await expect(page.getByTestId('nav-learners')).toBeVisible();
+  await expect(page.getByTestId('nav-learners')).toHaveCount(1);
+  await expect(page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('button', { name: 'Learners' })).toHaveCount(1);
   await roleSelect.selectOption('group-admin');
-  await expect(page.getByTestId('nav-learners')).toBeVisible();
+  await expect(page.getByTestId('nav-learners')).toHaveCount(1);
+  await expect(page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('button', { name: 'Learners' })).toHaveCount(1);
 });
 
 test('student feedback stays private while administrators can respond and add hidden notes', async ({ page }) => {
