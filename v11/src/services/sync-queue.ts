@@ -107,6 +107,13 @@ export class SyncQueueManager {
     };
   }
 
+  hasActiveFingerprint(fingerprint: string): boolean {
+    return loadState().operations.some((operation) =>
+      operation.fingerprint === fingerprint
+      && ['pending', 'syncing', 'failed'].includes(operation.status)
+    );
+  }
+
   enqueue(input: EnqueueSyncOperationInput): SyncOperation {
     const state = loadState();
     const duplicate = state.operations.find((operation) =>
