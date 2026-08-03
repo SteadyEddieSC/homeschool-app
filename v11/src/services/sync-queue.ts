@@ -61,6 +61,7 @@ export interface SyncQueueManagerOptions {
 export class SyncQueueManager {
   private readonly listeners = new Set<SyncQueueListener>();
   private processing = false;
+  private enabled = true;
   private executor: SyncOperationExecutor | null = null;
   private mode: SyncQueueSnapshot['mode'];
   private readonly onlineProvider: () => boolean;
@@ -73,6 +74,12 @@ export class SyncQueueManager {
   setMode(mode: SyncQueueSnapshot['mode']): void {
     this.mode = mode;
     this.emit();
+  }
+
+  setEnabled(enabled: boolean): void {
+    this.enabled = enabled;
+    this.emit();
+    if (enabled) void this.process();
   }
 
   setExecutor(executor: SyncOperationExecutor | null): void {
@@ -128,7 +135,7 @@ export class SyncQueueManager {
   }
 
   async process(): Promise<void> {
-    if (this.processing || !this.executor || !this.onlineProvider()) {
+    if (!this.enabled || this.processing || !this.executor || !this.onlineProvider()) {
       this.emit();
       return;
     }
@@ -136,7 +143,7 @@ export class SyncQueueManager {
     this.processing = true;
     this.emit();
     try {
-      while (this.onlineProvider()) {
+      while (this.enabled && this.onlineProvider()) {
         const state = loadState();
         const operation = state.operations.find((candidate) => candidate.status === 'pending' || candidate.status === 'failed');
         if (!operation) break;
