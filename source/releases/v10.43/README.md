@@ -16,6 +16,7 @@ This release adds an explicit, reversible bridge from a reviewed Lesson Pack dra
 - Student-safe destination rendering that excludes adult notes, reviewer role, rights attestations, audit details, fingerprints, and rollback controls.
 - Parent/Teacher/Admin management, Director read-only rollups, and Student denial of authoring/apply controls.
 - Audited rollback with restoration of the prior active overlay state.
+- A movement-bounded pointer bridge preserves explicit apply and rollback actions if a legacy screen refresh replaces the visible control during a click or tap, while ordinary keyboard activation remains available.
 - Dedicated Node, static-integrity, privacy, desktop, touch-tablet, and Pixel 7 coverage.
 
 ### Preserved boundaries
@@ -30,7 +31,7 @@ This release adds an explicit, reversible bridge from a reviewed Lesson Pack dra
 ### Artifact contract
 
 - File: `beaufort_learning_harbor_v10_43.html`
-- Bytes: `5,584,499`
-- SHA-256: `326fe286bef3cfbc7fa962dc25251a5f03e262b5bff65d54711c6574549e2b39`
+- Bytes: `5,586,842`
+- SHA-256: `0bb4547d7b9a37c7def673c200feb50c912f288c173db80e39e91f4be816465c`
 - Lesson Pack schema: `1`
 - Controlled Apply operations schema: `1`
