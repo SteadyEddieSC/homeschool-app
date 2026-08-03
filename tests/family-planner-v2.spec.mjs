@@ -148,7 +148,9 @@ test('analysis surfaces conflicts and responsibility gaps while learner-safe pri
   const downloadPromise = page.waitForEvent('download');
   await page.getByTestId('family-planner-csv').click();
   const download = await downloadPromise;
-  expect(download.suggestedFilename()).toMatch(/beaufort-learning-harbor-week-.*-v10\.42\.csv/);
+  const release = await page.evaluate(() => document.documentElement.dataset.release || '');
+  expect(download.suggestedFilename()).toMatch(/^beaufort-learning-harbor-week-.*\.csv$/);
+  expect(download.suggestedFilename()).toContain(`-${release}.csv`);
   const path = await download.path();
   const csv = await readFile(path, 'utf8');
   expect(csv).toContain('Synthetic overlap A');
