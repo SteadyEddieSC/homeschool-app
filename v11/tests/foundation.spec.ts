@@ -1,4 +1,4 @@
-import { expect, test, type BrowserContext, type Page } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 
 async function openDestination(page: Page, label: string): Promise<void> {
   const desktopNavigation = page.getByRole('navigation', { name: 'Main navigation' });
@@ -177,8 +177,9 @@ test('encrypted backup verifies counts and requires confirmation before restore'
   await page.getByTestId('backup-apply').click();
   await page.waitForLoadState('domcontentloaded');
   await openDestination(page, 'Learners');
-  await expect(page.getByText('Synthetic Harbor Household', { exact: true })).toBeVisible();
-  await expect(page.getByText('Synthetic Extra Household', { exact: true })).toHaveCount(0);
+  const householdList = page.getByLabel('Households', { exact: true });
+  await expect(householdList.getByText('Synthetic Harbor Household', { exact: true })).toBeVisible();
+  await expect(householdList.getByText('Synthetic Extra Household', { exact: true })).toHaveCount(0);
 });
 
 test('an incorrect backup passphrase does not expose a restore preview', async ({ page }) => {
