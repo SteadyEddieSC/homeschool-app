@@ -8,7 +8,7 @@ interface Env {
   APP_RELEASE?: string;
 }
 
-const RELEASE = '11.0.0-beta.2';
+const RELEASE = '11.0.0-beta.3';
 const SERVICE = 'beaufort-learning-harbor-v11-preview';
 
 function securityHeaders(headers = new Headers()): Headers {
@@ -33,20 +33,12 @@ function json(body: unknown, init: ResponseInit = {}): Response {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const url = new URL(request.url);
-
     if (url.pathname.startsWith('/api/') && !['GET', 'HEAD'].includes(request.method)) {
       return json({ error: 'Method not allowed' }, { status: 405, headers: { allow: 'GET, HEAD' } });
     }
-
     if (url.pathname === '/api/health') {
-      return json({
-        ok: true,
-        service: SERVICE,
-        release: env.APP_RELEASE ?? RELEASE,
-        environment: env.APP_ENV ?? 'preview'
-      });
+      return json({ ok: true, service: SERVICE, release: env.APP_RELEASE ?? RELEASE, environment: env.APP_ENV ?? 'preview' });
     }
-
     if (url.pathname === '/api/config') {
       return json({
         release: env.APP_RELEASE ?? RELEASE,
@@ -66,10 +58,16 @@ export default {
           parentAssistedHandoff: true,
           independentLearnerAuthentication: false,
           explicitAdultReview: true,
+          objectiveKnowledgeChecks: true,
+          deterministicObjectiveScoring: true,
+          explicitEvidenceReview: true,
+          evidenceRevisionHistory: true,
+          weeklyHouseholdPlanning: true,
           automaticGrades: false,
           automaticMastery: false,
           automaticAttendance: false,
-          automaticXp: false
+          automaticXp: false,
+          automaticPortfolioApproval: false
         },
         resilience: {
           localMirror: true,
@@ -78,6 +76,8 @@ export default {
           retryAndCancelControls: true,
           syncDisabledWhileSignedOut: true,
           encryptedPortableBackup: true,
+          beta3RecordsIncludedInBackup: true,
+          beta2BackupImport: true,
           restorePreviewRequired: true,
           automaticCloudBackup: false
         },
@@ -87,17 +87,12 @@ export default {
         }
       });
     }
-
-    if (url.pathname.startsWith('/api/')) {
-      return json({ error: 'Not found' }, { status: 404 });
-    }
-
+    if (url.pathname.startsWith('/api/')) return json({ error: 'Not found' }, { status: 404 });
     const assetResponse = await env.ASSETS.fetch(request);
-    const headers = securityHeaders(new Headers(assetResponse.headers));
     return new Response(assetResponse.body, {
       status: assetResponse.status,
       statusText: assetResponse.statusText,
-      headers
+      headers: securityHeaders(new Headers(assetResponse.headers))
     });
   }
 };

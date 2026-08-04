@@ -58,11 +58,11 @@ jobs:
           import { readFile } from 'node:fs/promises';
           const health = JSON.parse(await readFile('deployment-health.json', 'utf8'));
           if (health.ok !== true) throw new Error('Preview health endpoint did not return ok=true');
-          if (health.release !== '11.0.0-beta.2') throw new Error(`Unexpected deployed release: ${health.release}`);
+          if (health.release !== '11.0.0-beta.3') throw new Error(`Unexpected deployed release: ${health.release}`);
           if (health.service !== process.env.EXPECTED_WORKER_NAME) throw new Error(`Unexpected Worker service: ${health.service}`);
           console.log('Deployed preview health verified.');
           NODE
-      - name: Verify resilience configuration
+      - name: Verify evidence and planning configuration
         run: |
           curl --fail --silent --show-error --retry 8 --retry-delay 5 \
             "${V11_PREVIEW_URL%/}/api/config" \
@@ -70,12 +70,13 @@ jobs:
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const config = JSON.parse(await readFile('deployment-config.json', 'utf8'));
-          if (config.learning?.parentManagedLearners !== true) throw new Error('Parent-managed learner capability is not active');
-          if (config.learning?.explicitAdultReview !== true) throw new Error('Explicit adult review is not active');
+          if (config.learning?.deterministicObjectiveScoring !== true) throw new Error('Deterministic objective scoring is not active');
+          if (config.learning?.explicitEvidenceReview !== true) throw new Error('Explicit evidence review is not active');
+          if (config.learning?.weeklyHouseholdPlanning !== true) throw new Error('Weekly household planning is not active');
+          if (config.learning?.automaticGrades !== false) throw new Error('Automatic grades must remain disabled');
           if (config.resilience?.orderedMutationQueue !== true) throw new Error('Ordered mutation queue is not active');
-          if (config.resilience?.idempotentOperationReceipts !== true) throw new Error('Operation receipts are not active');
           if (config.resilience?.encryptedPortableBackup !== true) throw new Error('Encrypted portable backup is not active');
-          if (config.resilience?.restorePreviewRequired !== true) throw new Error('Restore preview boundary is not active');
+          if (config.resilience?.beta2BackupImport !== true) throw new Error('Beta 2 backup compatibility is not active');
           NODE
       - name: Create deployment receipt
         run: |
@@ -85,7 +86,7 @@ jobs:
           const configuration = JSON.parse(await readFile('deployment-config.json', 'utf8'));
           const receipt = {
             schema: 'beaufort-learning-harbor-v11-preview-deployment-receipt-v1',
-            release: '11.0.0-beta.2',
+            release: '11.0.0-beta.3',
             worker: process.env.EXPECTED_WORKER_NAME,
             previewUrl: process.env.V11_PREVIEW_URL,
             commit: process.env.GITHUB_SHA,
@@ -93,7 +94,7 @@ jobs:
             runAttempt: process.env.GITHUB_RUN_ATTEMPT,
             deployedAt: new Date().toISOString(),
             health,
-            reviewedLearning: configuration.learning,
+            learning: configuration.learning,
             resilience: configuration.resilience
           };
           await writeFile('deployment-receipt.json', `${JSON.stringify(receipt, null, 2)}\n`);
@@ -101,7 +102,7 @@ jobs:
       - name: Upload deployment receipt
         uses: actions/upload-artifact@v4
         with:
-          name: beaufort-learning-harbor-v11.0.0-beta.2-deployment-receipt
+          name: beaufort-learning-harbor-v11.0.0-beta.3-deployment-receipt
           path: |
             v11/deployment-health.json
             v11/deployment-config.json

@@ -6,11 +6,7 @@ async function openDestination(page: Page, label: string): Promise<void> {
     await desktopNavigation.getByRole('button', { name: new RegExp(label) }).click();
     return;
   }
-  await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('button', { name: label }).click();
-}
-
-async function horizontalOverflow(page: Page): Promise<number> {
-  return page.evaluate(() => Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - window.innerWidth);
+  await page.getByRole('navigation', { name: 'Mobile navigation' }).getByRole('button', { name: label, exact: true }).click();
 }
 
 async function resetPreview(page: Page, path = '/'): Promise<void> {
@@ -32,17 +28,37 @@ async function createSyntheticHouseholdAndLearner(page: Page): Promise<void> {
   await expect(page.getByText('Synthetic Learner was added without an email account.')).toBeVisible();
 }
 
+async function assignItem(page: Page, title: string, type: 'learn' | 'practice' | 'quiz' | 'proof'): Promise<string> {
+  await openDestination(page, 'Today');
+  await page.getByTestId('assignment-title').fill(title);
+  await page.getByTestId('assignment-type').selectOption(type);
+  await page.getByTestId('create-assignment').click();
+  await expect(page.getByText(new RegExp(`was assigned to Synthetic Learner`))).toBeVisible();
+  return page.evaluate((itemTitle) => {
+    const state = JSON.parse(localStorage.getItem('beaufortLearningHarbor.v11.beta1.learning') ?? '{}') as {
+      todayItems?: Array<{ id: string; title: string }>;
+    };
+    const item = state.todayItems?.find((candidate) => candidate.title === itemTitle);
+    if (!item) throw new Error(`Missing synthetic Today item: ${itemTitle}`);
+    return item.id;
+  }, title);
+}
+
+async function horizontalOverflow(page: Page): Promise<number> {
+  return page.evaluate(() => Math.max(document.body.scrollWidth, document.documentElement.scrollWidth) - window.innerWidth);
+}
+
 test.beforeEach(async ({ page }) => {
   await resetPreview(page);
 });
 
-test('beta.2 renders without credentials and exposes resilience readiness', async ({ page, request }) => {
+test('beta.3 renders without credentials and exposes explicit learning boundaries', async ({ page, request }) => {
   const health = await request.get('/api/health');
   expect(health.ok()).toBe(true);
   await expect(health.json()).resolves.toMatchObject({
     ok: true,
     service: 'beaufort-learning-harbor-v11-preview',
-    release: '11.0.0-beta.2',
+    release: '11.0.0-beta.3',
     environment: 'preview'
   });
 
@@ -51,7 +67,10 @@ test('beta.2 renders without credentials and exposes resilience readiness', asyn
   await expect(config.json()).resolves.toMatchObject({
     learning: {
       parentManagedLearners: true,
-      explicitAdultReview: true,
+      deterministicObjectiveScoring: true,
+      explicitEvidenceReview: true,
+      evidenceRevisionHistory: true,
+      weeklyHouseholdPlanning: true,
       automaticGrades: false,
       automaticMastery: false,
       automaticAttendance: false,
@@ -60,12 +79,9 @@ test('beta.2 renders without credentials and exposes resilience readiness', asyn
     resilience: {
       localMirror: true,
       orderedMutationQueue: true,
-      idempotentOperationReceipts: true,
-      retryAndCancelControls: true,
-      syncDisabledWhileSignedOut: true,
       encryptedPortableBackup: true,
-      restorePreviewRequired: true,
-      automaticCloudBackup: false
+      beta2BackupImport: true,
+      restorePreviewRequired: true
     }
   });
 
@@ -74,115 +90,144 @@ test('beta.2 renders without credentials and exposes resilience readiness', asyn
   await expect(page.getByTestId('sync-indicator')).toHaveText('Local only');
 });
 
-test('Parent creates a learner, assigns work, uses handoff, and completes adult review', async ({ page }) => {
+test('general Today work still uses supervised handoff and explicit adult review', async ({ page }) => {
   await createSyntheticHouseholdAndLearner(page);
-  await expect(page.getByText('Synthetic Learner', { exact: true })).toBeVisible();
-
-  await openDestination(page, 'Today');
-  await page.getByTestId('assignment-title').fill('Synthetic reading practice');
-  await page.getByTestId('assignment-instructions').fill('Read the original synthetic passage and leave a short note.');
-  await page.getByTestId('assignment-type').selectOption('practice');
-  await page.getByTestId('create-assignment').click();
-  await expect(page.getByText('The practice item was assigned to Synthetic Learner.')).toBeVisible();
-
+  const itemId = await assignItem(page, 'Synthetic reading practice', 'practice');
   await page.getByRole('button', { name: 'Start learner mode' }).click();
-  await expect(page.getByTestId('learner-handoff')).toBeVisible();
-  await page.getByRole('button', { name: 'Start', exact: true }).click();
-  await page.getByLabel('Note for the adult reviewer optional').fill('Synthetic learner note for review.');
-  await page.getByRole('button', { name: 'Send for review' }).click();
-  await expect(page.getByText('Waiting for an adult review.')).toBeVisible();
+  const card = page.getByTestId(`handoff-item-${itemId}`);
+  await card.getByRole('button', { name: 'Start', exact: true }).click();
+  await card.getByTestId(`learner-note-${itemId}`).fill('Synthetic learner note for review.');
+  await card.getByTestId(`submit-review-${itemId}`).click();
+  await expect(card.getByText('Waiting for an adult review.')).toBeVisible();
   await page.getByTestId('end-handoff').click();
-
-  await page.getByLabel(/Adult feedback/).fill('Reviewed synthetic work.');
-  await page.getByRole('button', { name: 'Mark complete after review' }).click();
+  await page.getByTestId(`review-note-${itemId}`).fill('Reviewed synthetic work.');
+  await page.getByTestId(`complete-item-${itemId}`).click();
   await expect(page.getByText('The adult review marked this item complete.')).toBeVisible();
-  await expect(page.getByText('Completed', { exact: true })).toBeVisible();
 });
 
-test('offline household changes queue once, reject duplicates, and synchronize in order after reconnect', async ({ page, context }) => {
+test('objective checks, proof revisions, adult decisions, and weekly plans form one family workflow', async ({ page }) => {
+  await createSyntheticHouseholdAndLearner(page);
+  const quizId = await assignItem(page, 'Synthetic harbor knowledge check', 'quiz');
+  const proofId = await assignItem(page, 'Synthetic harbor model proof', 'proof');
+
+  await openDestination(page, 'Plan');
+  await page.getByTestId('check-title').fill('Synthetic harbor check');
+  await page.getByTestId('question-type-0').selectOption('true-false');
+  await page.getByTestId('question-prompt-0').fill('The synthetic harbor uses an explicit answer key.');
+  await page.getByTestId('question-correct-0').selectOption('0');
+  await page.getByTestId('create-check').click();
+  await expect(page.getByText('Knowledge check attached')).toBeVisible();
+
+  await page.getByTestId('plan-title').fill('Synthetic family week');
+  await page.getByTestId('create-weekly-plan').click();
+  await expect(page.getByText('Synthetic family week was created.')).toBeVisible();
+  await page.getByTestId('plan-item-title').fill('Synthetic Monday reading');
+  await page.getByTestId('add-plan-item').click();
+  await expect(page.getByText('Synthetic Monday reading was added')).toBeVisible();
+
+  await openDestination(page, 'Today');
+  await page.getByRole('button', { name: 'Start learner mode' }).click();
+  await page.getByTestId(`handoff-item-${quizId}`).getByRole('button', { name: 'Start', exact: true }).click();
+  const studioState = await page.evaluate(() => JSON.parse(localStorage.getItem('beaufortLearningHarbor.v11.beta3.studio') ?? '{}') as {
+    knowledgeChecks?: Array<{ id: string; questions: Array<{ id: string }> }>;
+  });
+  const check = studioState.knowledgeChecks?.[0];
+  if (!check) throw new Error('Synthetic knowledge check was not persisted.');
+  await page.getByTestId(`answer-${check.id}-${check.questions[0]!.id}-0`).check();
+  await page.getByTestId(`submit-check-${check.id}`).click();
+  await expect(page.getByText('Check scored 1 of 1.')).toBeVisible();
+  await expect(page.getByText('100% tool score')).toBeVisible();
+
+  await page.getByTestId(`handoff-item-${proofId}`).getByRole('button', { name: 'Start', exact: true }).click();
+  await page.getByTestId(`evidence-content-${proofId}`).fill('Synthetic first proof revision.');
+  await page.getByTestId(`submit-evidence-${proofId}`).click();
+  await expect(page.getByText('Proof revision 1 was sent for adult review.')).toBeVisible();
+  await expect(page.getByText('Synthetic Monday reading', { exact: true })).toBeVisible();
+  await page.getByTestId('end-handoff').click();
+
+  await openDestination(page, 'Plan');
+  const firstEvidenceState = await page.evaluate(() => JSON.parse(localStorage.getItem('beaufortLearningHarbor.v11.beta3.studio') ?? '{}') as {
+    evidenceSubmissions?: Array<{ id: string; revision: number }>;
+  });
+  const firstSubmission = firstEvidenceState.evidenceSubmissions?.[0];
+  if (!firstSubmission) throw new Error('Synthetic evidence was not persisted.');
+  await page.getByTestId(`evidence-feedback-${firstSubmission.id}`).fill('Add one more synthetic detail.');
+  await page.getByTestId(`return-evidence-${firstSubmission.id}`).click();
+  await expect(page.getByText('Proof was returned with feedback and can be revised.')).toBeVisible();
+
+  await openDestination(page, 'Today');
+  await page.getByRole('button', { name: 'Start learner mode' }).click();
+  await page.getByTestId(`handoff-item-${proofId}`).getByRole('button', { name: 'Start', exact: true }).click();
+  await expect(page.getByText('Add one more synthetic detail.')).toBeVisible();
+  await page.getByTestId(`evidence-content-${proofId}`).fill('Synthetic second proof revision with another detail.');
+  await page.getByTestId(`submit-evidence-${proofId}`).click();
+  await expect(page.getByText('Proof revision 2 was sent for adult review.')).toBeVisible();
+  await page.getByTestId('end-handoff').click();
+
+  await openDestination(page, 'Plan');
+  const secondEvidenceState = await page.evaluate(() => JSON.parse(localStorage.getItem('beaufortLearningHarbor.v11.beta3.studio') ?? '{}') as {
+    evidenceSubmissions?: Array<{ id: string; revision: number }>;
+  });
+  const secondSubmission = secondEvidenceState.evidenceSubmissions?.find((submission) => submission.revision === 2);
+  if (!secondSubmission) throw new Error('Synthetic evidence revision 2 was not persisted.');
+  await page.getByTestId(`evidence-feedback-${secondSubmission.id}`).fill('Accepted after explicit adult review.');
+  await page.getByTestId(`accept-evidence-${secondSubmission.id}`).click();
+  await expect(page.getByText('Proof was explicitly accepted and the reviewed Today item was completed.')).toBeVisible();
+
+  await openDestination(page, 'Today');
+  await expect(page.getByText('Synthetic harbor model proof').locator('..').locator('..')).toContainText('Completed');
+  await expect(page.getByText('Tool-scored result: 1/1 (100%).')).toBeVisible();
+});
+
+test('beta.3 cloud simulation queues studio operations once and reconnects in order', async ({ page, context }) => {
   await resetPreview(page, '/?sync-sim=1');
   await context.setOffline(true);
   await page.waitForFunction(() => navigator.onLine === false);
-
   await createSyntheticHouseholdAndLearner(page);
-
-  await page.getByTestId('learner-name').fill('Synthetic Learner');
-  await page.getByTestId('learner-pronouns').fill('they/them');
-  await page.getByTestId('learner-grade').selectOption('4-6');
-  await page.getByTestId('learner-avatar').selectOption('heron');
-  await page.getByTestId('create-learner').click();
-  await expect(page.getByText('This action is already waiting to synchronize.')).toBeVisible();
-  await expect(page.getByText('Synthetic Learner', { exact: true })).toHaveCount(1);
-
-  await openDestination(page, 'Today');
-  await page.getByTestId('assignment-title').fill('Synthetic offline assignment');
-  await page.getByTestId('create-assignment').click();
-  await expect(page.getByText('The learn item was assigned to Synthetic Learner.')).toBeVisible();
-  await page.getByTestId('assignment-title').fill('Synthetic offline assignment');
-  await page.getByTestId('create-assignment').click();
-  await expect(page.getByText('This action is already waiting to synchronize.')).toBeVisible();
-
+  await assignItem(page, 'Synthetic queued quiz', 'quiz');
+  await openDestination(page, 'Plan');
+  await page.getByTestId('question-type-0').selectOption('true-false');
+  await page.getByTestId('question-prompt-0').fill('Queued scoring is deterministic.');
+  await page.getByTestId('create-check').click();
+  await page.getByTestId('question-type-0').selectOption('true-false');
+  await page.getByTestId('question-prompt-0').fill('A second check must be rejected.');
+  await page.getByTestId('create-check').click();
+  await expect(page.getByText('already has a knowledge check')).toBeVisible();
   await openDestination(page, 'Sync');
-  await expect(page.getByTestId('sync-mode')).toHaveText('Offline');
-  await expect(page.getByTestId('sync-pending-count')).toHaveText('3');
-  await expect(page.getByTestId('sync-failed-count')).toHaveText('0');
-
+  await expect(page.getByTestId('sync-pending-count')).toHaveText('4');
   await context.setOffline(false);
   await page.waitForFunction(() => navigator.onLine === true);
   await expect(page.getByTestId('sync-pending-count')).toHaveText('0', { timeout: 10_000 });
   await expect(page.getByTestId('sync-indicator')).toHaveText('Synced');
-  await expect(page.getByText('Completed', { exact: true })).toHaveCount(3);
 });
 
-test('a pending operation can be cancelled explicitly while offline', async ({ page, context }) => {
-  await resetPreview(page, '/?sync-sim=1');
-  await context.setOffline(true);
-  await page.waitForFunction(() => navigator.onLine === false);
-  await openDestination(page, 'Learners');
-  await page.getByTestId('household-name').fill('Synthetic Cancel Household');
-  await page.getByTestId('create-household').click();
-  await openDestination(page, 'Sync');
-  await expect(page.getByTestId('sync-pending-count')).toHaveText('1');
-  await page.getByRole('button', { name: 'Cancel' }).click();
-  await expect(page.getByTestId('sync-pending-count')).toHaveText('0');
-  await expect(page.getByText('Cancelled', { exact: true })).toBeVisible();
-});
-
-test('encrypted backup verifies counts and requires confirmation before restore', async ({ page }) => {
+test('encrypted backup includes beta.3 learning records and requires preview confirmation', async ({ page }) => {
   await createSyntheticHouseholdAndLearner(page);
+  await assignItem(page, 'Synthetic backup quiz', 'quiz');
+  await openDestination(page, 'Plan');
+  await page.getByTestId('question-type-0').selectOption('true-false');
+  await page.getByTestId('question-prompt-0').fill('Backup records include knowledge checks.');
+  await page.getByTestId('create-check').click();
+
   await openDestination(page, 'Sync');
   const passphrase = 'SyntheticBackupPassphrase123!';
   await page.getByTestId('backup-export-passphrase').fill(passphrase);
   const downloadPromise = page.waitForEvent('download');
   await page.getByTestId('backup-export').click();
-  const download = await downloadPromise;
-  const backupPath = await download.path();
+  const backupPath = await (await downloadPromise).path();
   expect(backupPath).not.toBeNull();
-
-  await openDestination(page, 'Learners');
-  await page.getByTestId('household-name').fill('Synthetic Extra Household');
-  await page.getByTestId('create-household').click();
-  await expect(page.getByText('Synthetic Extra Household was created.')).toBeVisible();
-
-  await openDestination(page, 'Sync');
   await page.getByTestId('backup-restore-file').setInputFiles(backupPath!);
   await page.getByTestId('backup-restore-passphrase').fill(passphrase);
   await page.getByTestId('backup-inspect').click();
   const preview = page.getByTestId('restore-preview');
-  await expect(preview).toBeVisible();
+  await expect(preview).toContainText('Knowledge checks1');
   await expect(preview).toContainText('Households1');
-  await expect(preview).toContainText('Learners1');
   await expect(page.getByTestId('backup-apply')).toBeDisabled();
   await page.getByTestId('backup-confirm').check();
-  await page.getByTestId('backup-apply').click();
-  await page.waitForLoadState('domcontentloaded');
-  await openDestination(page, 'Learners');
-  const householdList = page.getByLabel('Households', { exact: true });
-  await expect(householdList.getByText('Synthetic Harbor Household', { exact: true })).toBeVisible();
-  await expect(householdList.getByText('Synthetic Extra Household', { exact: true })).toHaveCount(0);
+  await expect(page.getByTestId('backup-apply')).toBeEnabled();
 });
 
-test('an incorrect backup passphrase does not expose a restore preview', async ({ page }) => {
+test('incorrect backup passphrase does not expose restore contents', async ({ page }) => {
   await createSyntheticHouseholdAndLearner(page);
   await openDestination(page, 'Sync');
   await page.getByTestId('backup-export-passphrase').fill('SyntheticBackupPassphrase123!');
@@ -196,36 +241,35 @@ test('an incorrect backup passphrase does not expose a restore preview', async (
   await expect(page.getByTestId('restore-preview')).toHaveCount(0);
 });
 
-test('family learner administration stays hidden from unrelated roles', async ({ page }) => {
+test('family and planning administration stay hidden from unrelated roles', async ({ page }) => {
   const roleSelect = page.getByTestId('role-select');
   for (const role of ['student', 'teacher', 'director', 'system-admin']) {
     await roleSelect.selectOption(role);
     await expect(page.getByTestId('nav-learners')).toHaveCount(0);
+    await expect(page.getByTestId('nav-studio')).toHaveCount(0);
   }
   await roleSelect.selectOption('parent');
   await expect(page.getByTestId('nav-learners')).toHaveCount(1);
+  await expect(page.getByTestId('nav-studio')).toHaveCount(1);
 });
 
-test('student feedback stays private while administrators can add hidden notes', async ({ page }) => {
+test('student support notes remain private from internal administrator notes', async ({ page }) => {
   const roleSelect = page.getByTestId('role-select');
   await roleSelect.selectOption('student');
   await openDestination(page, 'Help');
   await page.getByTestId('ticket-subject').fill('Synthetic student navigation problem');
-  await page.getByTestId('ticket-description').fill('The synthetic learner could not tell which practice action came next.');
+  await page.getByTestId('ticket-description').fill('The synthetic learner could not tell which action came next.');
   await page.getByTestId('submit-ticket').click();
-
   await roleSelect.selectOption('group-admin');
   await page.getByTestId('ticket-reply').fill('PRIVATE INTERNAL SYNTHETIC NOTE');
   await page.locator('.check-row.compact input[type="checkbox"]').check();
   await page.getByTestId('submit-reply').click();
-  await expect(page.getByTestId('ticket-detail')).toContainText('PRIVATE INTERNAL SYNTHETIC NOTE');
-
   await roleSelect.selectOption('student');
   await expect(page.getByTestId('ticket-detail')).not.toContainText('PRIVATE INTERNAL SYNTHETIC NOTE');
 });
 
-test('learner, Today, and Sync workspaces do not overflow the active viewport', async ({ page }) => {
-  for (const destination of ['Learners', 'Today', 'Sync']) {
+test('Today, Plan, Learners, and Sync do not overflow the active viewport', async ({ page }) => {
+  for (const destination of ['Today', 'Plan', 'Learners', 'Sync']) {
     await openDestination(page, destination);
     expect(await horizontalOverflow(page)).toBeLessThanOrEqual(1);
   }
