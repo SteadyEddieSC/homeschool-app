@@ -66,7 +66,13 @@ select lives_ok($$ select public.submit_knowledge_attempt_v2(
 ) $$, 'Retrying the hosted attempt is idempotent');
 select is((select count(*)::integer from public.knowledge_attempts where client_operation_id = '56000000-0000-0000-0000-000000000001'), 1, 'Hosted retry creates one attempt');
 select is((select count(*)::integer from public.learning_studio_operation_receipts where operation_id = '56000000-0000-0000-0000-000000000001'), 1, 'Hosted retry creates one operation receipt');
+
+reset role;
 select is((select count(*)::integer from public.audit_events where entity_id = '56100000-0000-0000-0000-000000000001'), 1, 'Hosted retry creates one audit event');
+set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', '50000000-0000-0000-0000-000000000001', true);
+
 select is(public.hosted_pilot_schema_status()->>'release', '11.0.0-beta.4', 'Schema status reports beta.4');
 select is((public.hosted_pilot_schema_status()->>'production_data_enabled')::boolean, false, 'Schema status keeps production data disabled');
 
@@ -75,7 +81,7 @@ values ('57000000-0000-0000-0000-000000000001', '51000000-0000-0000-0000-0000000
 
 select lives_ok($$
   insert into public.weekly_plan_items(id, organization_id, household_id, plan_id, learner_id, scheduled_date, title, activity_type, client_operation_id)
-  values ('57200000-0000-0000-0000-000000000001', '51000000-0000-0000-0000-000000000001', '52000000-0000-0000-0000-000000000001', '57000000-0000-0000-0000-000000000001', '53000000-0000-0000-0000-000000000001', current_date + 6, 'Valid hosted plan item', 'learn', '57300000-0000-0000-0000-000000000001')
+  values ('57200000-0000-0000-000000000001', '51000000-0000-0000-0000-000000000001', '52000000-0000-0000-0000-000000000001', '57000000-0000-0000-0000-000000000001', '53000000-0000-0000-0000-000000000001', current_date + 6, 'Valid hosted plan item', 'learn', '57300000-0000-0000-0000-000000000001')
 $$, 'Last day of the seven-day plan is accepted');
 select throws_ok($$
   insert into public.weekly_plan_items(id, organization_id, household_id, plan_id, learner_id, scheduled_date, title, activity_type, client_operation_id)
