@@ -1,7 +1,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(14);
+select plan(13);
 
 select has_table('public', 'migration_import_receipts', 'Migration receipts table exists');
 select has_table('public', 'production_readiness_decisions', 'Readiness decisions table exists');
