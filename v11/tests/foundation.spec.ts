@@ -158,7 +158,7 @@ test('objective checks, proof revisions, adult decisions, and weekly plans form 
   await openDestination(page, 'Today');
   await page.getByRole('button', { name: 'Start learner mode' }).click();
   await page.getByTestId(`handoff-item-${proofId}`).getByRole('button', { name: 'Start', exact: true }).click();
-  await expect(page.getByText('Add one more synthetic detail.')).toBeVisible();
+  await expect(page.getByTestId(`proof-item-${proofId}`).getByText('Add one more synthetic detail.')).toBeVisible();
   await page.getByTestId(`evidence-content-${proofId}`).fill('Synthetic second proof revision with another detail.');
   await page.getByTestId(`submit-evidence-${proofId}`).click();
   await expect(page.getByText('Proof revision 2 was sent for adult review.')).toBeVisible();
