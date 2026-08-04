@@ -1,11 +1,12 @@
 import { createHash } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
-
-const dir = path.join(process.cwd(), 'artifacts/rc1');
+const dir = path.join(process.cwd(), 'test-results/rc1');
 await mkdir(dir, { recursive: true });
-const candidates = await readFile(path.join(dir, 'migration-candidates.json'), 'utf8');
-const digest = createHash('sha256').update(candidates).digest('hex');
+const migrationText = await readFile(path.join(dir, 'migration-rehearsal-report.json'), 'utf8');
+const migration = JSON.parse(migrationText);
+if (migration.release !== '11.0.0-rc.1' || migration.syntheticOnly !== true || migration.dryRunWrites !== 0) throw new Error('Vendor exit rehearsal requires the validated synthetic rc.1 migration report.');
+const digest = createHash('sha256').update(migrationText).digest('hex');
 const report = {
   schema: 'beaufort-learning-harbor-vendor-exit-rehearsal-v1',
   release: '11.0.0-rc.1',
