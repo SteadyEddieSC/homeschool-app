@@ -1,4 +1,4 @@
-import { readFile } from 'node:fs/promises';
+import { readFile, readdir } from 'node:fs/promises';
 import path from 'node:path';
 
 function fail(message) {
@@ -31,19 +31,35 @@ const previewUrl = required('V11_PREVIEW_URL');
 
 if (!/^[a-f0-9]{32}$/i.test(accountId)) fail('CLOUDFLARE_ACCOUNT_ID has an unexpected format');
 if (apiToken.length < 20) fail('CLOUDFLARE_API_TOKEN has an unexpected format');
-if (jwtRole(publishableKey) === 'service_role') fail('a Supabase service-role key was supplied as a browser key');
+if (publishableKey.startsWith('sb_secret_') || jwtRole(publishableKey) === 'service_role') {
+  fail('a Supabase secret or service-role key was supplied as a browser key');
+}
 
-const parsedSupabase = new URL(supabaseUrl);
+let parsedSupabase;
+let parsedPreview;
+try {
+  parsedSupabase = new URL(supabaseUrl);
+  parsedPreview = new URL(previewUrl);
+} catch {
+  fail('Supabase and preview URLs must be valid absolute URLs');
+}
 if (parsedSupabase.protocol !== 'https:' || !parsedSupabase.hostname.endsWith('.supabase.co')) {
   fail('VITE_SUPABASE_URL must be an HTTPS Supabase-hosted project URL');
 }
-const parsedPreview = new URL(previewUrl);
 if (parsedPreview.protocol !== 'https:') fail('V11_PREVIEW_URL must use HTTPS');
 if (parsedPreview.pathname !== '/' && parsedPreview.pathname !== '') fail('V11_PREVIEW_URL must identify the preview origin, not an application path');
+if (parsedPreview.hostname === parsedSupabase.hostname) fail('Preview and Supabase origins must remain separate');
+
+const migrations = (await readdir(path.join(process.cwd(), 'supabase/migrations')))
+  .filter((name) => name.endsWith('.sql'))
+  .sort();
+if (migrations.at(-1) !== '202608040008_v11_hosted_pilot.sql') {
+  fail('migration 008 is not the latest reviewed migration');
+}
 
 const wrangler = await readFile(path.join(process.cwd(), 'wrangler.jsonc'), 'utf8');
 if (!wrangler.includes('"name": "beaufort-learning-harbor-v11-preview"')) fail('Wrangler is not targeting the isolated v11 preview Worker');
 if (wrangler.includes('"name": "beaufort-learning-harbor"')) fail('Wrangler unexpectedly targets the v10 production Worker');
-if (!wrangler.includes('"APP_RELEASE": "11.0.0-beta.3"')) fail('Wrangler release does not match beta.3');
+if (!wrangler.includes('"APP_RELEASE": "11.0.0-beta.4"')) fail('Wrangler release does not match beta.4');
 
-console.log('Preview deployment readiness passed for beta.3. This command validates configuration only and does not deploy automatically.');
+console.log('Preview deployment readiness passed for beta.4. Configuration and migration boundaries are valid; this command does not deploy or modify a provider project.');
