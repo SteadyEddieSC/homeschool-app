@@ -22,6 +22,7 @@ Beta 2 makes the beta.1 household workflow resilient without requiring a hosted 
 - Backup record counts, source release, export time, and explicit exclusions.
 - Restore preview and confirmation before replacement.
 - A local emergency pre-restore snapshot.
+- A non-overlapping mobile shell with navigation outside the scroll region.
 - Browser and database tests for retry idempotency, duplicate prevention, reconnect processing, cancellation, wrong-passphrase denial, verified restore, and responsive presentation.
 
 ## Backup contents
