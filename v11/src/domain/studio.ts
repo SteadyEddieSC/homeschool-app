@@ -94,6 +94,14 @@ export interface WeeklyPlanItem {
   createdAt: string;
 }
 
+export interface LearningStudioSnapshot {
+  knowledgeChecks: KnowledgeCheck[];
+  knowledgeAttempts: KnowledgeAttempt[];
+  evidenceSubmissions: EvidenceSubmission[];
+  weeklyPlans: WeeklyPlan[];
+  weeklyPlanItems: WeeklyPlanItem[];
+}
+
 export interface CreateKnowledgeCheckInput {
   organizationId: string;
   householdId: string;
@@ -170,6 +178,11 @@ export interface LearningStudioRepository {
   createWeeklyPlan(input: CreateWeeklyPlanInput): Promise<WeeklyPlan>;
   listWeeklyPlanItems(organizationId: string, learnerId?: string): Promise<WeeklyPlanItem[]>;
   createWeeklyPlanItem(input: CreateWeeklyPlanItemInput): Promise<WeeklyPlanItem>;
+}
+
+export interface LearningStudioMirrorRepository extends LearningStudioRepository {
+  readOrganizationSnapshot(organizationId: string): Promise<LearningStudioSnapshot>;
+  replaceOrganizationSnapshot(organizationId: string, snapshot: LearningStudioSnapshot): void;
 }
 
 function normalized(value: string, label: string, min: number, max: number): string {
