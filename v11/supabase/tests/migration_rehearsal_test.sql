@@ -1,14 +1,14 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
-select plan(13);
+select plan(14);
 
 select has_table('public', 'migration_import_receipts', 'Migration receipts table exists');
 select has_table('public', 'production_readiness_decisions', 'Readiness decisions table exists');
 select has_function('public', 'release_candidate_readiness_status', array[]::text[], 'Release-candidate status RPC exists');
 select col_is_unique('public', 'migration_import_receipts', array['organization_id','source_release','source_record_type','source_record_id'], 'Source records have one import receipt');
 select col_default_is('public', 'migration_import_receipts', 'rehearsal_only', 'true', 'Migration receipts default to rehearsal only');
-select col_default_is('public', 'production_readiness_decisions', 'decision', '''not-ready''::text', 'Readiness defaults to not ready');
+select col_default_is('public', 'production_readiness_decisions', 'decision', 'not-ready', 'Readiness defaults to not ready');
 select col_default_is('public', 'production_readiness_decisions', 'production_cutover_approved', 'false', 'Production cutover defaults false');
 select policies_are('public', 'migration_import_receipts', array['migration_receipts_group_admin_insert','migration_receipts_group_admin_read'], 'Migration receipt policies are explicit');
 select policies_are('public', 'production_readiness_decisions', array['readiness_group_admin_read'], 'Readiness is read-only for authenticated clients');
