@@ -121,7 +121,13 @@ select lives_ok(
 );
 select is((select status from public.learner_today_items where id = '35000000-0000-0000-0000-000000000001'), 'in-progress', 'Transition retry does not advance status twice');
 select is((select count(*)::integer from public.learning_operation_receipts where operation_id = '36000000-0000-0000-0000-000000000001'), 1, 'Transition retry creates one receipt');
+
+reset role;
 select is((select count(*)::integer from public.audit_events where metadata ->> 'operation_id' = '36000000-0000-0000-0000-000000000001'), 1, 'Transition retry creates one audit event');
+set local role authenticated;
+select set_config('request.jwt.claim.role', 'authenticated', true);
+select set_config('request.jwt.claim.sub', '30000000-0000-0000-0000-000000000001', true);
+
 select throws_ok(
   $$ select public.transition_learner_today_item(
     '35000000-0000-0000-0000-000000000001',
