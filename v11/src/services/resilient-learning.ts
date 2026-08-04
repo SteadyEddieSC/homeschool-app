@@ -312,18 +312,22 @@ export class ResilientLearningRepository implements LearningRepository {
       });
       return;
     }
-    const payload = operation.payload as CreateWeeklyPlanItemOperationPayload;
-    await this.studioRemote.createWeeklyPlanItem({
-      organizationId: payload.organizationId,
-      householdId: payload.householdId,
-      planId: payload.planId,
-      learnerId: payload.learnerId,
-      scheduledDate: payload.scheduledDate,
-      title: payload.title,
-      activityType: payload.activityType,
-      todayItemId: payload.todayItemId,
-      planItemId: payload.id,
-      operationId: operation.id
-    });
+    if (operation.kind === 'create-weekly-plan-item') {
+      const payload = operation.payload as CreateWeeklyPlanItemOperationPayload;
+      await this.studioRemote.createWeeklyPlanItem({
+        organizationId: payload.organizationId,
+        householdId: payload.householdId,
+        planId: payload.planId,
+        learnerId: payload.learnerId,
+        scheduledDate: payload.scheduledDate,
+        title: payload.title,
+        activityType: payload.activityType,
+        todayItemId: payload.todayItemId,
+        planItemId: payload.id,
+        operationId: operation.id
+      });
+      return;
+    }
+    throw new Error(`Unsupported synchronization operation: ${operation.kind satisfies never}`);
   }
 }
