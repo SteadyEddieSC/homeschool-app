@@ -10,10 +10,7 @@
   },
   "vars": {
     "APP_ENV": "preview",
-    "APP_RELEASE": "11.0.0-beta.4"
+    "APP_RELEASE": "11.0.0-rc.1"
   },
-  "observability": {
-    "enabled": true,
-    "head_sampling_rate": 0.1
-  }
+  "observability": { "enabled": true, "head_sampling_rate": 0.1 }
 }
