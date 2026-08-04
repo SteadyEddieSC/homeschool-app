@@ -81,7 +81,7 @@ values ('57000000-0000-0000-0000-000000000001', '51000000-0000-0000-0000-0000000
 
 select lives_ok($$
   insert into public.weekly_plan_items(id, organization_id, household_id, plan_id, learner_id, scheduled_date, title, activity_type, client_operation_id)
-  values ('57200000-0000-0000-000000000001', '51000000-0000-0000-0000-000000000001', '52000000-0000-0000-0000-000000000001', '57000000-0000-0000-0000-000000000001', '53000000-0000-0000-0000-000000000001', current_date + 6, 'Valid hosted plan item', 'learn', '57300000-0000-0000-0000-000000000001')
+  values ('57200000-0000-0000-0000-000000000001', '51000000-0000-0000-0000-000000000001', '52000000-0000-0000-0000-000000000001', '57000000-0000-0000-0000-000000000001', '53000000-0000-0000-0000-000000000001', current_date + 6, 'Valid hosted plan item', 'learn', '57300000-0000-0000-0000-000000000001')
 $$, 'Last day of the seven-day plan is accepted');
 select throws_ok($$
   insert into public.weekly_plan_items(id, organization_id, household_id, plan_id, learner_id, scheduled_date, title, activity_type, client_operation_id)
