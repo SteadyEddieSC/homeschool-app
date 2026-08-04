@@ -1,0 +1,142 @@
+{
+  "schema": "beaufort-learning-harbor-v10.43-export-v1",
+  "release": "10.43.0",
+  "rehearsal": true,
+  "synthetic": true,
+  "exportedAt": "2026-08-04T12:00:00.000Z",
+  "organization": {
+    "id": "syn-org-001",
+    "name": "Synthetic Harbor Cooperative"
+  },
+  "records": {
+    "households": [
+      {
+        "id": "syn-household-001",
+        "name": "Synthetic Harbor Household"
+      }
+    ],
+    "learners": [
+      {
+        "id": "syn-learner-001",
+        "householdId": "syn-household-001",
+        "preferredName": "Synthetic Learner",
+        "pronouns": "they/them",
+        "gradeBand": "4-6",
+        "avatar": "heron"
+      }
+    ],
+    "assignments": [
+      {
+        "id": "syn-assignment-learn-001",
+        "learnerId": "syn-learner-001",
+        "title": "Synthetic Harbor Reading",
+        "instructions": "Read the synthetic harbor passage and identify the main idea.",
+        "activityType": "learn",
+        "dueDate": "2026-08-05",
+        "status": "assigned",
+        "learnerNote": "",
+        "reviewFeedback": ""
+      },
+      {
+        "id": "syn-assignment-quiz-001",
+        "learnerId": "syn-learner-001",
+        "title": "Synthetic Harbor Knowledge Check",
+        "instructions": "Complete the synthetic two-question check.",
+        "activityType": "quiz",
+        "dueDate": "2026-08-06",
+        "status": "completed",
+        "learnerNote": "Synthetic quiz note.",
+        "reviewFeedback": "Legacy completion marker requires an adult review in v11."
+      },
+      {
+        "id": "syn-assignment-proof-001",
+        "learnerId": "syn-learner-001",
+        "title": "Synthetic Harbor Model Proof",
+        "instructions": "Explain the synthetic model in your own words.",
+        "activityType": "proof",
+        "dueDate": "2026-08-07",
+        "status": "completed",
+        "learnerNote": "Synthetic proof note.",
+        "reviewFeedback": "Legacy proof acceptance requires an adult review in v11."
+      }
+    ],
+    "knowledgeChecks": [
+      {
+        "id": "syn-check-001",
+        "assignmentId": "syn-assignment-quiz-001",
+        "title": "Synthetic Harbor Check",
+        "questions": [
+          {
+            "id": "syn-question-001",
+            "type": "true-false",
+            "prompt": "The synthetic harbor uses an explicit answer key.",
+            "options": ["True", "False"],
+            "correctOption": 0,
+            "explanation": "Synthetic deterministic scoring fixture."
+          },
+          {
+            "id": "syn-question-002",
+            "type": "multiple-choice",
+            "prompt": "Which record remains adult-reviewed?",
+            "options": ["Navigation", "Subjective proof", "Page loading"],
+            "correctOption": 1,
+            "explanation": "Subjective proof remains an adult decision."
+          }
+        ]
+      }
+    ],
+    "knowledgeAttempts": [
+      {
+        "id": "syn-attempt-001",
+        "checkId": "syn-check-001",
+        "answers": [0, 1],
+        "submittedAt": "2026-08-04T12:10:00.000Z"
+      }
+    ],
+    "evidenceSubmissions": [
+      {
+        "id": "syn-evidence-001",
+        "assignmentId": "syn-assignment-proof-001",
+        "kind": "text",
+        "content": "Synthetic model explanation used only for migration rehearsal.",
+        "learnerNote": "Synthetic evidence note.",
+        "revision": 1,
+        "status": "accepted",
+        "adultFeedback": "Legacy acceptance is imported as pending adult re-review."
+      }
+    ],
+    "weeklyPlans": [
+      {
+        "id": "syn-plan-001",
+        "householdId": "syn-household-001",
+        "weekStart": "2026-08-03",
+        "title": "Synthetic Harbor Week"
+      }
+    ],
+    "weeklyPlanItems": [
+      {
+        "id": "syn-plan-item-001",
+        "planId": "syn-plan-001",
+        "learnerId": "syn-learner-001",
+        "scheduledDate": "2026-08-05",
+        "title": "Synthetic Harbor Reading",
+        "activityType": "learn",
+        "assignmentId": "syn-assignment-learn-001"
+      }
+    ],
+    "unsupported": [
+      {
+        "kind": "xp-ledger",
+        "count": 14,
+        "reason": "v11 does not migrate XP or gamification outcomes."
+      }
+    ]
+  },
+  "exclusions": [
+    "credentials and authentication sessions",
+    "active invitation tokens",
+    "provider configuration and integration tokens",
+    "real family or learner records",
+    "automatic grades, mastery, attendance, XP, and portfolio approval"
+  ]
+}
