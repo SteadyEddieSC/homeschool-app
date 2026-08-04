@@ -1,11 +1,9 @@
 {
   "name": "beaufort-learning-harbor-v11",
-  "version": "11.0.0-beta.4",
+  "version": "11.0.0-rc.1",
   "private": true,
   "type": "module",
-  "engines": {
-    "node": ">=22"
-  },
+  "engines": { "node": ">=22" },
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
@@ -14,7 +12,10 @@
     "check:deploy-readiness": "node scripts/check-deploy-readiness.mjs",
     "pilot:doctor": "node scripts/pilot-doctor.mjs",
     "pilot:verify-schema": "node scripts/verify-remote-schema.mjs",
-    "verify": "npm run typecheck && npm run check:boundaries && npm run build",
+    "migration:rehearse": "node scripts/rehearse-v1043-import.mjs",
+    "readiness:report": "node scripts/production-readiness.mjs",
+    "vendor-exit:verify": "node scripts/vendor-exit-rehearsal.mjs",
+    "verify": "npm run typecheck && npm run check:boundaries && npm run migration:rehearse && npm run readiness:report && npm run vendor-exit:verify && npm run build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "test:e2e": "playwright test",
     "db:start": "supabase start",
