@@ -218,6 +218,14 @@ export class SupabaseLearningStudioRepository implements LearningStudioRepositor
 
   async createKnowledgeCheck(input: CreateKnowledgeCheckInput): Promise<KnowledgeCheck> {
     const operationId = input.operationId ?? crypto.randomUUID();
+    const existing = await this.client
+      .from('knowledge_checks')
+      .select(checkColumns)
+      .eq('client_operation_id', operationId)
+      .maybeSingle();
+    if (existing.error) throw existing.error;
+    if (existing.data) return checkFromRow(existing.data as unknown as KnowledgeCheckRow);
+
     const record = {
       id: input.checkId ?? crypto.randomUUID(),
       organization_id: input.organizationId,
@@ -229,11 +237,7 @@ export class SupabaseLearningStudioRepository implements LearningStudioRepositor
       created_by: input.createdBy,
       client_operation_id: operationId
     };
-    const result = await this.client
-      .from('knowledge_checks')
-      .upsert(record, { onConflict: 'client_operation_id' })
-      .select(checkColumns)
-      .single();
+    const result = await this.client.from('knowledge_checks').insert(record).select(checkColumns).single();
     if (result.error) throw result.error;
     return checkFromRow(result.data as unknown as KnowledgeCheckRow);
   }
@@ -334,6 +338,15 @@ export class SupabaseLearningStudioRepository implements LearningStudioRepositor
   }
 
   async createWeeklyPlan(input: CreateWeeklyPlanInput): Promise<WeeklyPlan> {
+    const operationId = input.operationId ?? crypto.randomUUID();
+    const existing = await this.client
+      .from('weekly_plans')
+      .select(planColumns)
+      .eq('client_operation_id', operationId)
+      .maybeSingle();
+    if (existing.error) throw existing.error;
+    if (existing.data) return planFromRow(existing.data as unknown as WeeklyPlanRow);
+
     const record = {
       id: input.planId ?? crypto.randomUUID(),
       organization_id: input.organizationId,
@@ -341,9 +354,9 @@ export class SupabaseLearningStudioRepository implements LearningStudioRepositor
       week_start: input.weekStart,
       title: normalizeStudioTitle(input.title),
       created_by: input.createdBy,
-      client_operation_id: input.operationId ?? crypto.randomUUID()
+      client_operation_id: operationId
     };
-    const result = await this.client.from('weekly_plans').upsert(record, { onConflict: 'client_operation_id' }).select(planColumns).single();
+    const result = await this.client.from('weekly_plans').insert(record).select(planColumns).single();
     if (result.error) throw result.error;
     return planFromRow(result.data as unknown as WeeklyPlanRow);
   }
@@ -357,6 +370,15 @@ export class SupabaseLearningStudioRepository implements LearningStudioRepositor
   }
 
   async createWeeklyPlanItem(input: CreateWeeklyPlanItemInput): Promise<WeeklyPlanItem> {
+    const operationId = input.operationId ?? crypto.randomUUID();
+    const existing = await this.client
+      .from('weekly_plan_items')
+      .select(planItemColumns)
+      .eq('client_operation_id', operationId)
+      .maybeSingle();
+    if (existing.error) throw existing.error;
+    if (existing.data) return planItemFromRow(existing.data as unknown as WeeklyPlanItemRow);
+
     const record = {
       id: input.planItemId ?? crypto.randomUUID(),
       organization_id: input.organizationId,
@@ -367,9 +389,9 @@ export class SupabaseLearningStudioRepository implements LearningStudioRepositor
       title: normalizeStudioTitle(input.title),
       activity_type: input.activityType,
       today_item_id: input.todayItemId ?? null,
-      client_operation_id: input.operationId ?? crypto.randomUUID()
+      client_operation_id: operationId
     };
-    const result = await this.client.from('weekly_plan_items').upsert(record, { onConflict: 'client_operation_id' }).select(planItemColumns).single();
+    const result = await this.client.from('weekly_plan_items').insert(record).select(planItemColumns).single();
     if (result.error) throw result.error;
     return planItemFromRow(result.data as unknown as WeeklyPlanItemRow);
   }
