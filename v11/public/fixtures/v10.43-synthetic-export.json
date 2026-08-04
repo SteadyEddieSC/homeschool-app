@@ -77,7 +77,7 @@
           {
             "id": "syn-question-002",
             "type": "multiple-choice",
-            "prompt": "Which record remains adult-reviewed?",
+            "prompt": "Which synthetic record remains adult-reviewed?",
             "options": ["Navigation", "Subjective proof", "Page loading"],
             "correctOption": 1,
             "explanation": "Subjective proof remains an adult decision."
