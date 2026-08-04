@@ -6,10 +6,10 @@ import { SYNC_QUEUE_STORAGE_KEY } from './sync-queue';
 
 const ENVELOPE_SCHEMA = 'beaufort-learning-harbor-encrypted-backup-v1';
 const PAYLOAD_SCHEMA = 'beaufort-learning-harbor-local-preview-backup-v1';
-const RELEASE = '11.0.0-beta.3';
-const COMPATIBLE_RELEASES = ['11.0.0-beta.2', RELEASE] as const;
+const RELEASE = '11.0.0-beta.4';
+const COMPATIBLE_RELEASES = ['11.0.0-beta.2', '11.0.0-beta.3', RELEASE] as const;
 const PBKDF2_ITERATIONS = 120_000;
-const EMERGENCY_ROLLBACK_KEY = 'beaufortLearningHarbor.v11.beta3.preRestoreSnapshot';
+const EMERGENCY_ROLLBACK_KEY = 'beaufortLearningHarbor.v11.beta4.preRestoreSnapshot';
 
 interface BackupEnvelope {
   schema: typeof ENVELOPE_SCHEMA;
@@ -78,7 +78,7 @@ function currentPayload(): BackupPayload {
     studio: parseStore(LOCAL_STUDIO_STORAGE_KEY, emptyStudioStore()), support: parseStore(LOCAL_SUPPORT_STORAGE_KEY, []),
     syncQueue: parseStore(SYNC_QUEUE_STORAGE_KEY, { schema: 'beaufort-learning-harbor-sync-queue-v1', lastSuccessfulSyncAt: null, operations: [] })
   };
-  return { schema: PAYLOAD_SCHEMA, sourceRelease: RELEASE, exportedAt: new Date().toISOString(), stores, counts: recordCounts(stores), exclusions: ['Supabase sessions and credentials', 'passwords and password-reset state', 'service-role keys and deployment secrets', 'BAND and OAuth tokens', 'active invitation tokens'] };
+  return { schema: PAYLOAD_SCHEMA, sourceRelease: RELEASE, exportedAt: new Date().toISOString(), stores, counts: recordCounts(stores), exclusions: ['Supabase sessions and credentials', 'passwords and password-reset state', 'service-role keys and deployment secrets', 'BAND and OAuth tokens', 'active invitation tokens', 'hosted reconciliation diagnostics'] };
 }
 function legacyBeta2Counts(stores: Omit<BackupPayload['stores'], 'studio'>): Record<string, number> {
   return { households: countArray(stores.learning, 'households'), learners: countArray(stores.learning, 'learners'), todayItems: countArray(stores.learning, 'todayItems'), supportTickets: Array.isArray(stores.support) ? stores.support.length : 0, members: countArray(stores.organization, 'members'), queuedOperations: countArray(stores.syncQueue, 'operations') };
