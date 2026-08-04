@@ -16,7 +16,7 @@ interface LocalOrganizationState {
   invitations: CreatedInvitation[];
 }
 
-const STORAGE_KEY = 'beaufortLearningHarbor.v11.alpha2.organization';
+export const LOCAL_ORGANIZATION_STORAGE_KEY = 'beaufortLearningHarbor.v11.alpha2.organization';
 
 function now(): string {
   return new Date().toISOString();
@@ -43,7 +43,7 @@ function defaultState(): LocalOrganizationState {
 
 function loadState(): LocalOrganizationState {
   try {
-    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) ?? 'null') as LocalOrganizationState | null;
+    const parsed = JSON.parse(localStorage.getItem(LOCAL_ORGANIZATION_STORAGE_KEY) ?? 'null') as LocalOrganizationState | null;
     if (parsed?.organization?.id && Array.isArray(parsed.members) && Array.isArray(parsed.invitations)) return parsed;
   } catch {
     // A damaged preview record is replaced with deterministic synthetic state.
@@ -54,7 +54,7 @@ function loadState(): LocalOrganizationState {
 }
 
 function saveState(state: LocalOrganizationState): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+  localStorage.setItem(LOCAL_ORGANIZATION_STORAGE_KEY, JSON.stringify(state));
 }
 
 function inviteToken(): string {

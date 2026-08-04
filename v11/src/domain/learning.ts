@@ -52,6 +52,11 @@ export interface TodayItem {
   updatedAt: string;
 }
 
+export interface CreateHouseholdOptions {
+  householdId?: string;
+  operationId?: string;
+}
+
 export interface CreateLearnerInput {
   organizationId: string;
   householdId: string;
@@ -59,6 +64,8 @@ export interface CreateLearnerInput {
   pronouns: string;
   gradeBand: GradeBand;
   avatar: LearnerAvatar;
+  learnerId?: string;
+  operationId?: string;
 }
 
 export interface CreateTodayItemInput {
@@ -70,6 +77,8 @@ export interface CreateTodayItemInput {
   instructions: string;
   activityType: ActivityType;
   dueDate: string;
+  itemId?: string;
+  operationId?: string;
 }
 
 export interface TransitionTodayItemInput {
@@ -77,16 +86,28 @@ export interface TransitionTodayItemInput {
   action: TodayTransitionAction;
   learnerNote?: string;
   reviewFeedback?: string;
+  operationId?: string;
 }
 
 export interface LearningRepository {
   listHouseholds(organizationId: string): Promise<HouseholdSummary[]>;
-  createHousehold(organizationId: string, actorId: string, name: string): Promise<HouseholdSummary>;
+  createHousehold(organizationId: string, actorId: string, name: string, options?: CreateHouseholdOptions): Promise<HouseholdSummary>;
   listLearners(organizationId: string): Promise<LearnerProfile[]>;
   createLearner(input: CreateLearnerInput): Promise<LearnerProfile>;
   listTodayItems(organizationId: string, learnerId?: string): Promise<TodayItem[]>;
   createTodayItem(input: CreateTodayItemInput): Promise<TodayItem>;
   transitionTodayItem(input: TransitionTodayItemInput): Promise<TodayItem>;
+}
+
+export interface LearningSnapshot {
+  households: HouseholdSummary[];
+  learners: LearnerProfile[];
+  todayItems: TodayItem[];
+}
+
+export interface LearningMirrorRepository extends LearningRepository {
+  exportSnapshot(): LearningSnapshot;
+  replaceOrganizationSnapshot(organizationId: string, snapshot: LearningSnapshot): void;
 }
 
 export function normalizeHouseholdName(value: string): string {

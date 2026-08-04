@@ -4,7 +4,7 @@ This roadmap keeps v10.43 as the stable production and downloadable fallback unt
 
 ## v11.0.0-beta.1 — Parent-Managed Learners and Today Workflow
 
-Status: current release candidate.
+Status: completed.
 
 Purpose: prove one complete family workflow without requiring learner email accounts.
 
@@ -16,34 +16,51 @@ Purpose: prove one complete family workflow without requiring learner email acco
 - family-scoped Row-Level Security;
 - no automatic learning outcomes.
 
-## v11.0.0-beta.2 — Hosted Household Pilot, Offline Queue, and Recovery
+## v11.0.0-beta.2 — Offline Queue, Recovery, and Preview Readiness
 
-Recommended next release.
+Status: current release candidate.
 
-Purpose: prove that beta.1 works safely in the owner-controlled hosted preview and remains understandable when connectivity is unreliable.
+Purpose: make the beta.1 household workflow resilient without requiring the hosted Supabase project yet.
 
-- create and configure the protected hosted Supabase preview;
-- manually deploy only the isolated v11 preview Worker;
-- show last successful synchronization and current connection state;
-- add a bounded retryable offline mutation queue for supported household actions;
-- prevent duplicate assignment or review transitions during retry;
-- add exportable preview backup and documented restore verification;
-- add deployment and migration receipts without storing secrets;
-- run a small household pilot using synthetic or disposable records;
-- capture usability findings by Parent and Learner workflow.
+- application-owned local mirror;
+- visible Local only, Offline, Pending, Failed, and Synced states;
+- bounded retryable mutation queue;
+- stable operation IDs and semantic duplicate prevention;
+- database idempotency receipts for Today transitions;
+- explicit Retry, Cancel, and Clear completed controls;
+- synchronization disabled while signed out;
+- encrypted portable local-preview backup;
+- integrity verification and restore preview;
+- local emergency pre-restore snapshot;
+- hosted-preview deployment and migration readiness without automatic deployment.
 
-Beta 2 must not migrate v10.43 records or replace production.
+Beta 2 does not create a hosted project, migrate v10.43, or replace production.
 
 ## v11.0.0-beta.3 — Evidence, Knowledge Checks, and Family Planning
 
-Purpose: begin moving validated learning functions into the new architecture after the hosted household workflow is stable.
+Recommended next release.
 
-- objective quiz/test delivery and tool scoring;
+Purpose: move validated learning and planning workflows into the typed architecture after the household flow is resilient.
+
+- objective quiz/test delivery and deterministic tool scoring;
 - subjective proof/evidence submission and adult review;
+- explicit return-for-revision and feedback loops;
 - weekly household planning and learner assignment views;
-- explicit feedback and return-for-revision loops;
+- queue contracts for supported evidence and planning mutations;
 - no hidden XP, mastery, grade, attendance, or portfolio outcomes;
 - compatibility mapping for future v10.43 import without importing real data yet.
+
+## v11.0.0-beta.4 — Hosted Pilot and Operational Recovery
+
+Purpose: connect the owner-controlled preview when Supabase setup is convenient.
+
+- create and configure the protected hosted Supabase preview;
+- manually deploy only the isolated v11 preview Worker;
+- apply reviewed migrations after a dry run;
+- exercise the beta.2 queue during interruptions;
+- verify hosted backup and restore procedures;
+- collect sanitized Parent, Learner, and Administrator pilot findings;
+- resolve hosted usability and operational defects.
 
 ## v11.0.0-rc.1 — Migration Rehearsal and Production Readiness
 
@@ -55,6 +72,10 @@ Purpose: rehearse migration and recovery without committing to production cutove
 - accessibility and living-room/mobile usability review;
 - privacy, authorization, audit, and rate-limit review;
 - owner-approved production checklist.
+
+## Recommended next action
+
+When convenient, create the non-production Supabase project, review `supabase db push --dry-run`, and use beta.2 synchronization and recovery during a bounded hosted household pilot. This action can happen before or after beta.3; it does not block continued local development.
 
 ## Production cutover decision
 

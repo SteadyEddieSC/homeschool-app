@@ -41,7 +41,7 @@ const parsedSupabaseUrl = (() => {
 })();
 
 export const runtimeConfiguration: RuntimeConfiguration = Object.freeze({
-  release: '11.0.0-alpha.2',
+  release: '11.0.0-beta.2',
   environment: String(import.meta.env.VITE_APP_ENV ?? 'preview'),
   supabaseConfigured: Boolean(parsedSupabaseUrl && publishableKey),
   supabaseHost: parsedSupabaseUrl?.hostname ?? '',

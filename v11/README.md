@@ -1,30 +1,32 @@
 # Beaufort Learning Harbor v11
 
-`v11/` is the cloud-ready TypeScript application being developed beside the stable v10.43 single-file application.
+`v11/` is the typed, cloud-ready application being developed beside the stable v10.43 single-file application.
 
-## Current preview — v11.0.0-beta.1
+## Current preview — v11.0.0-beta.2
 
-Beta 1 preserves the identity and hosted-preview boundaries from alpha.2 and adds the first complete household learning workflow:
+Beta 2 preserves the identity, role, household, learner, and adult-review boundaries from beta.1 and adds resilience that can be tested before a hosted Supabase project exists:
 
 - React and strict TypeScript source;
 - Vite and one isolated Cloudflare Worker;
-- Supabase Auth sign-in, sign-up, confirmation messaging, sign-out, and password recovery;
-- first-organization bootstrap and one-time role-limited invitations;
+- optional Supabase Auth and Postgres integration;
 - parent-managed learner profiles without learner email accounts;
-- preferred name, optional pronouns, grade band, avatar, and parent-assisted access metadata;
-- household-scoped Row-Level Security that does not expose family records from organization membership alone;
-- a supervised device-handoff learner mode that hides adult navigation;
-- Learn, Practice, Quiz/Test, and Proof Today items;
-- explicit learner start and review submission actions;
-- explicit adult complete or return decisions;
-- browser-local equivalents for credential-free UX testing;
-- Postgres migrations and pgTAP authorization tests;
-- a protected, manual-only Cloudflare preview deployment workflow;
-- deployment health and reviewed-learning configuration verification.
+- supervised learner-device handoff;
+- reviewed Today assignments;
+- application-owned local learning mirror;
+- ordered persistent mutation queue;
+- stable operation IDs and duplicate prevention;
+- database receipts for idempotent Today transitions;
+- visible Local only, Offline, Pending, Failed, and Synced states;
+- explicit retry, cancellation, and queue cleanup controls;
+- encrypted portable local-preview backup;
+- checksum verification and restore preview;
+- local emergency pre-restore snapshot;
+- browser-local cloud simulation that transmits no data;
+- protected manual-only hosted deployment path.
 
-Beta 1 does **not** replace v10.43, deploy automatically, migrate family data, create independent learner logins, configure BAND, or award automatic learning outcomes.
+Beta 2 does **not** replace v10.43, deploy automatically, require Supabase setup, migrate family data, configure BAND, or award automatic learning outcomes.
 
-## Run the application locally
+## Run locally
 
 ```bash
 cd v11
@@ -40,11 +42,47 @@ Start the interactive preview:
 npm run dev
 ```
 
-Without environment values the application displays **Local preview** and uses synthetic browser-local support, membership, invitation, household, learner, and Today records.
+Without environment values, the application displays **Local preview** and stores only synthetic browser-local records.
 
-## Run the local Supabase policy suite
+## Exercise the synchronization queue without Supabase
 
-Docker must be running for the local Supabase stack.
+Open the local preview with:
+
+```text
+http://127.0.0.1:4173/?sync-sim=1
+```
+
+Simulation uses the real persistent queue but acknowledges operations locally. It sends nothing to Supabase or another provider.
+
+A useful exercise is:
+
+1. enable browser offline mode;
+2. create one household, learner, and Today item;
+3. confirm three Pending operations;
+4. attempt the same learner or assignment again and confirm duplicate rejection;
+5. reconnect;
+6. confirm ordered completion and a last successful synchronization time;
+7. create another pending operation and test Cancel.
+
+## Encrypted backup and restore
+
+The Sync workspace can create an encrypted local-preview backup using:
+
+- PBKDF2 with SHA-256;
+- 120,000 derivation iterations;
+- AES-256-GCM;
+- random salt and initialization vector;
+- SHA-256 ciphertext verification.
+
+The backup includes application-owned organization, household, learner, Today, support, and queue data. It excludes sessions, passwords, credentials, deployment secrets, OAuth/BAND tokens, and active invitation tokens.
+
+Restore always verifies and decrypts the file, validates its record counts, displays a preview, and requires explicit confirmation. A malformed or incorrectly decrypted file does not modify local records.
+
+See `docs/v11/offline-recovery.md`.
+
+## Run the local database policy suite
+
+Docker must be running:
 
 ```bash
 npm run db:start
@@ -53,11 +91,11 @@ npm run db:test
 npm run db:stop
 ```
 
-The reset rebuilds the database from every migration. The pgTAP suites create transaction-scoped synthetic identities and verify organization bootstrap, invitation replay denial, System Administrator restrictions, family visibility, cross-household denial, constrained Today transitions, and the absence of automatic grade, XP, attendance, or mastery fields.
+The reset rebuilds migrations `001–006`. The pgTAP suites verify identity bootstrap, invitation replay denial, family visibility, cross-household denial, reviewed Today transitions, client operation IDs, idempotent retry receipts, audit-event deduplication, and receipt-forgery denial.
 
 ## Optional Supabase browser configuration
 
-Copy `.env.example` to `.env.local` and enter only public browser values:
+Supabase setup is not required for beta.2 local development. When ready, copy `.env.example` to `.env.local` and enter only public browser values:
 
 ```text
 VITE_APP_ENV=preview
@@ -65,58 +103,34 @@ VITE_SUPABASE_URL=https://PROJECT_REF.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=PUBLIC_PUBLISHABLE_KEY
 ```
 
-For local Supabase development, the URL may be `http://127.0.0.1:54321` with the publishable key shown by `supabase status`.
+Never place a service-role key, BAND secret, OAuth access token, database password, or private key in a `VITE_` variable. Vite variables are included in browser-delivered code.
 
-Never place a Supabase service-role key, BAND secret, provider access token, database password, or private key in a `VITE_` variable. Vite variables are included in browser-delivered code.
+## Hosted preview boundary
 
-## Identity and learner progression
-
-A hosted adult follows this sequence:
-
-1. Create or sign in to an adult account.
-2. Confirm the email address when confirmation is enabled.
-3. Create the first organization or redeem an invitation.
-4. Load the role permitted by the organization membership.
-5. A Parent/Guardian or Group Administrator creates an authorized household.
-6. The household manager creates a learner profile without a learner email.
-7. The household manager assigns a Today item.
-8. The adult starts supervised learner mode and hands over the device.
-9. The learner starts the item and sends it for review.
-10. The adult exits learner mode and explicitly completes or returns the work.
-
-Parent-assisted learner mode is not a separate authentication boundary. The adult account remains signed in and remains the database actor. The interface hides adult navigation, restricts available actions, and records explicit status transitions.
-
-## Cloudflare preview
-
-The preview Worker is intentionally named:
+The preview Worker remains:
 
 ```text
 beaufort-learning-harbor-v11-preview
 ```
 
-It is separate from the current `beaufort-learning-harbor` Worker. Validation CI builds an artifact but does not deploy it.
+It is separate from the current `beaufort-learning-harbor` Worker. Validation CI builds an artifact but does not deploy it. The protected deployment workflow requires manual dispatch, the exact confirmation phrase, environment approval, scoped Cloudflare credentials, and a hosted Supabase URL and publishable key.
 
-The only repository deployment route is `.github/workflows/deploy-v11-preview.yml`. It requires:
+## Privacy and authority
 
-- manual workflow dispatch;
-- the exact `DEPLOY_V11_PREVIEW` confirmation;
-- a protected GitHub environment named `v11-preview`;
-- scoped Cloudflare credentials;
-- a hosted Supabase URL and publishable browser key;
-- an HTTPS preview origin.
+- Only synthetic data belongs in the public repository or test artifacts.
+- Organization membership alone does not reveal household learner records.
+- Parent-assisted learner mode is supervised and is not independent authentication.
+- Synchronization is disabled while a hosted user is signed out.
+- A local save is not labeled as a cloud synchronization.
+- Direct Today updates are prohibited; constrained transitions and operation receipts preserve explicit adult authority.
+- Today items contain no automatic grade, XP, attendance, mastery, or portfolio approval.
 
-See `docs/v11/hosted-preview-runbook.md` before configuring or running it.
+## Recommended next action
 
-## Privacy boundary
+Create the non-production Supabase project later, review `supabase db push --dry-run`, apply migrations only to the preview project, and use beta.2 queue/recovery tools during a synthetic household pilot.
 
-Only synthetic preview data belongs in the repository or public preview. Real accounts, family exports, screenshots, student work, backups, database dumps, and provider credentials must remain outside Git.
+## Next recommended release
 
-Private support submissions remain in the application database. Nothing is copied to the public GitHub repository automatically. Invitation codes are shown once and should be shared directly with the intended member rather than posted publicly.
+`v11.0.0-beta.3 — Evidence, Knowledge Checks, and Family Planning`.
 
-Organization membership does not automatically reveal household learner records. Teacher, Director, unrelated Parent, and System Administrator roles remain outside a household unless a deliberate relationship or household-management rule grants access.
-
-## Recommended next action and release
-
-After beta.1, configure the owner-controlled hosted preview and conduct a bounded household pilot using synthetic or disposable records.
-
-The next recommended release is `v11.0.0-beta.2 — Hosted Household Pilot, Offline Queue, and Recovery`. See `docs/v11/roadmap-v11-beta.md`.
+See `docs/v11/roadmap-v11-beta.md`.

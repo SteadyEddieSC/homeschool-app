@@ -9,7 +9,7 @@ import {
   type TicketStatus
 } from '../domain/support';
 
-const STORAGE_KEY = 'beaufortLearningHarbor.v11.alpha2.supportTickets';
+export const LOCAL_SUPPORT_STORAGE_KEY = 'beaufortLearningHarbor.v11.alpha2.supportTickets';
 const MAX_TICKETS = 100;
 
 function cloneTicket(ticket: SupportTicket): SupportTicket {
@@ -18,7 +18,7 @@ function cloneTicket(ticket: SupportTicket): SupportTicket {
 
 function loadTickets(): SupportTicket[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(LOCAL_SUPPORT_STORAGE_KEY);
     if (!raw) return [];
     const parsed: unknown = JSON.parse(raw);
     if (!Array.isArray(parsed)) return [];
@@ -29,7 +29,7 @@ function loadTickets(): SupportTicket[] {
 }
 
 function saveTickets(tickets: SupportTicket[]): void {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(tickets.slice(-MAX_TICKETS)));
+  localStorage.setItem(LOCAL_SUPPORT_STORAGE_KEY, JSON.stringify(tickets.slice(-MAX_TICKETS)));
 }
 
 function visibleTicket(ticket: SupportTicket, actor: SupportActor): boolean {
@@ -77,7 +77,7 @@ export class LocalSupportRepository implements SupportRepository {
       subject: normalizeTicketText(input.subject, 'Subject', 160),
       description: normalizeTicketText(input.description, 'Description', 4000),
       route: input.route.slice(0, 240),
-      appVersion: '11.0.0-alpha.2',
+      appVersion: '11.0.0-beta.2',
       diagnosticsConsent: input.diagnosticsConsent,
       createdAt: now,
       updatedAt: now,
