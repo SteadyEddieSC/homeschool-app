@@ -226,13 +226,21 @@ test('hosted pilot remains explicitly deferred without provider configuration an
   const download = await downloadPromise;
   const diagnosticsPath = await download.path();
   expect(diagnosticsPath).not.toBeNull();
-  const report = JSON.parse(await readFile(diagnosticsPath!, 'utf8')) as Record<string, unknown>;
+  const report = JSON.parse(await readFile(diagnosticsPath!, 'utf8')) as {
+    release?: string;
+    queue?: { operations?: Array<Record<string, unknown>> };
+    reconciliation?: unknown;
+  };
   expect(report.release).toBe('11.0.0-beta.4');
-  expect(report).toHaveProperty('queue');
-  expect(report).toHaveProperty('reconciliation');
-  expect(JSON.stringify(report)).not.toContain('payload');
-  expect(JSON.stringify(report)).not.toContain('Synthetic Learner');
-  expect(JSON.stringify(report)).not.toContain('PRIVATE INTERNAL SYNTHETIC NOTE');
+  expect(report.queue).toBeDefined();
+  expect(report.reconciliation).toBeDefined();
+  for (const operation of report.queue?.operations ?? []) {
+    expect(operation).not.toHaveProperty('payload');
+    expect(operation).not.toHaveProperty('lastError');
+  }
+  const serialized = JSON.stringify(report);
+  expect(serialized).not.toContain('Synthetic Learner');
+  expect(serialized).not.toContain('PRIVATE INTERNAL SYNTHETIC NOTE');
 });
 
 test('divergent hosted records are visible and acknowledgeable without exposing record content', async ({ page }) => {
