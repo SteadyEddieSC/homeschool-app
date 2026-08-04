@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { IdentityBootstrap } from './components/IdentityBootstrap';
 import { LearnersWorkspace } from './components/LearnersWorkspace';
+import { LearningStudioWorkspace } from './components/LearningStudioWorkspace';
 import { MembersWorkspace } from './components/MembersWorkspace';
 import { PasswordUpdatePanel } from './components/PasswordUpdatePanel';
 import { SignInPanel } from './components/SignInPanel';
@@ -16,6 +17,7 @@ import { useCloudIdentity } from './lib/use-cloud-identity';
 import { useSyncQueue } from './lib/use-sync-queue';
 import { LocalLearningRepository } from './services/local-learning';
 import { LocalOrganizationRepository } from './services/local-organization';
+import { LocalLearningStudioRepository } from './services/local-studio';
 import { LocalSupportRepository } from './services/local-support';
 import { ResilientLearningRepository } from './services/resilient-learning';
 import { SupabaseLearningRepository } from './services/supabase-learning';
@@ -23,7 +25,7 @@ import { SupabaseOrganizationRepository } from './services/supabase-organization
 import { SupabaseSupportRepository } from './services/supabase-support';
 import { SyncQueueManager } from './services/sync-queue';
 
-const SCREENS = ['today', 'group', 'learners', 'members', 'support', 'settings'] as const;
+const SCREENS = ['today', 'studio', 'group', 'learners', 'members', 'support', 'settings'] as const;
 type Screen = (typeof SCREENS)[number];
 
 const localSupportRepository = new LocalSupportRepository();
@@ -47,9 +49,11 @@ const resilientLearningRepository = new ResilientLearningRepository({
   queue: syncQueueManager,
   simulateRemote: simulationEnabledAtBoot
 });
+const learningStudioRepository = new LocalLearningStudioRepository(syncQueueManager);
 
 const NAV_ITEMS = [
   { id: 'today', label: 'Today', description: 'Assign, learn, and review', icon: '◉' },
+  { id: 'studio', label: 'Plan', description: 'Checks, proof, and the week', icon: '▦' },
   { id: 'group', label: 'Group', description: 'Households and coordination', icon: '⌂' },
   { id: 'learners', label: 'Learners', description: 'Profiles and handoff', icon: '◇' },
   { id: 'members', label: 'Members', description: 'Roles and invitations', icon: '◎' },
@@ -79,13 +83,13 @@ function useOnlineStatus(): boolean {
 function GroupScreen({ role }: { role: AppRole }) {
   return (
     <div className="page-stack">
-      <section className="page-heading"><span className="eyebrow">Resilient relationship model</span><h1>Family work stays local immediately and synchronizes only through explicit boundaries.</h1><p>Beta 2 adds operation receipts, retry controls, and encrypted recovery without requiring the hosted Supabase project yet.</p></section>
+      <section className="page-heading"><span className="eyebrow">Explicit learning authority</span><h1>Objective scoring, subjective proof, and planning remain separate decisions.</h1><p>Beta 3 adds deterministic checks and preserved evidence revisions without turning a tool result or a plan into a hidden educational outcome.</p></section>
       <section className="model-grid">
-        <article className="panel model-card"><span className="model-number">01</span><h2>Local mirror</h2><p>Supported household actions are written locally first so the current device remains usable during a temporary interruption.</p></article>
-        <article className="panel model-card"><span className="model-number">02</span><h2>Operation queue</h2><p>Cloud-bound actions receive stable identifiers, preserve order, and cannot be duplicated by a retry.</p></article>
-        <article className="panel model-card"><span className="model-number">03</span><h2>Controlled recovery</h2><p>Encrypted backups are verified and previewed before replacing application-owned local records.</p></article>
+        <article className="panel model-card"><span className="model-number">01</span><h2>Tool result</h2><p>An explicit answer key can score objective questions, but the score does not create a grade, mastery, attendance, XP, or completion record.</p></article>
+        <article className="panel model-card"><span className="model-number">02</span><h2>Adult judgment</h2><p>Subjective proof is accepted or returned only by an authorized adult, with revision history and feedback preserved.</p></article>
+        <article className="panel model-card"><span className="model-number">03</span><h2>Plan, not outcome</h2><p>A weekly plan helps the household coordinate work but never silently marks an assignment complete.</p></article>
       </section>
-      <section className="panel boundary-list"><div className="section-heading"><div><span className="eyebrow">Current role</span><h2>{getRoleDefinition(role).label}</h2></div></div><ul><li>Synchronization is disabled while a hosted user is signed out.</li><li>Parent-assisted learner actions still require explicit adult review.</li><li>Retry receipts prevent the same Today transition from applying twice.</li><li>Backups exclude sessions, credentials, deployment secrets, OAuth tokens, and active invitation tokens.</li></ul></section>
+      <section className="panel boundary-list"><div className="section-heading"><div><span className="eyebrow">Current role</span><h2>{getRoleDefinition(role).label}</h2></div></div><ul><li>Parent-assisted learner mode hides adult navigation.</li><li>Knowledge attempts receive stable operation receipts.</li><li>Evidence returns preserve every prior submission.</li><li>Beta 3 records participate in the beta.2 encrypted local backup.</li></ul></section>
     </div>
   );
 }
@@ -94,11 +98,11 @@ function SettingsOverview({ role }: { role: AppRole }) {
   const definition = getRoleDefinition(role);
   return (
     <div className="page-stack">
-      <section className="page-heading"><span className="eyebrow">Beta 2 readiness</span><h1>Supabase can wait; resilience and recovery do not have to.</h1><p>The application now exposes pending work, failed retries, local-only status, and encrypted backup/restore before any hosted pilot begins.</p></section>
+      <section className="page-heading"><span className="eyebrow">Beta 3 readiness</span><h1>Family learning workflows can advance locally while Supabase remains deferred.</h1><p>Knowledge checks, evidence, revisions, and weekly plans use the same visible queue and controlled recovery boundaries introduced in beta.2.</p></section>
       <section className="settings-grid">
-        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">S</span><div><h2>Supabase</h2><p>Optional hosted identity and database target.</p></div></div><span className={`status-chip ${runtimeConfiguration.supabaseConfigured ? 'resolved' : 'neutral'}`}>{runtimeConfiguration.supabaseConfigured ? 'Configured' : 'Deferred'}</span><p className="muted">Configured host: {runtimeConfiguration.supabaseHost || 'none'}. Local preview remains fully testable.</p></article>
-        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">Q</span><div><h2>Offline queue</h2><p>Ordered operations with retry, cancellation, and duplicate prevention.</p></div></div><span className="status-chip acknowledged">Ready</span><p className="muted">Cloud simulation can validate the queue without sending data anywhere.</p></article>
-        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">R</span><div><h2>Recovery</h2><p>Encrypted portable backups with integrity verification and restore preview.</p></div></div><span className="status-chip resolved">Available</span><p className="muted">A pre-restore rollback snapshot is retained locally before replacement.</p></article>
+        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">S</span><div><h2>Supabase</h2><p>Optional hosted identity and database target.</p></div></div><span className={`status-chip ${runtimeConfiguration.supabaseConfigured ? 'resolved' : 'neutral'}`}>{runtimeConfiguration.supabaseConfigured ? 'Configured' : 'Deferred'}</span><p className="muted">Configured host: {runtimeConfiguration.supabaseHost || 'none'}. Local beta.3 workflows remain testable.</p></article>
+        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">K</span><div><h2>Checks &amp; proof</h2><p>Deterministic objective scoring and explicit adult proof review.</p></div></div><span className="status-chip acknowledged">Ready</span><p className="muted">No tool score or proof submission silently creates an educational outcome.</p></article>
+        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">R</span><div><h2>Recovery</h2><p>Encrypted portable backups include beta.3 local records and queue state.</p></div></div><span className="status-chip resolved">Available</span><p className="muted">Restore remains verified, previewed, and explicitly confirmed.</p></article>
       </section>
       <section className="panel permission-summary"><h2>Current access</h2><p>{definition.description}</p><div className="permission-chips">{definition.capabilities.map((capability) => <span key={capability}>{capability}</span>)}</div></section>
     </div>
@@ -126,6 +130,10 @@ export default function BetaApp() {
       setScreen('today');
     }
     if (screen === 'learners' && !hasCapability(effectiveRole, 'manage-household-learners')) {
+      window.location.hash = '/today';
+      setScreen('today');
+    }
+    if (screen === 'studio' && !['parent', 'group-admin'].includes(effectiveRole)) {
       window.location.hash = '/today';
       setScreen('today');
     }
@@ -158,10 +166,20 @@ export default function BetaApp() {
   const supportRepository: SupportRepository = cloud.identity && cloudSupportRepository ? cloudSupportRepository : localSupportRepository;
 
   if (handoffLearnerId) {
-    return <TodayWorkspace organizationId={organizationId} actorId={actorId} role={role} repository={learningRepository} handoffLearnerId={handoffLearnerId} onBeginHandoff={setHandoffLearnerId} onEndHandoff={() => setHandoffLearnerId(null)} />;
+    return <TodayWorkspace
+      organizationId={organizationId}
+      actorId={actorId}
+      role={role}
+      repository={learningRepository}
+      handoffLearnerId={handoffLearnerId}
+      onBeginHandoff={setHandoffLearnerId}
+      onEndHandoff={() => setHandoffLearnerId(null)}
+      renderLearnerSupplement={(version, onLearningChanged) => <LearningStudioWorkspace key={version} organizationId={organizationId} actorId={actorId} role={role} learningRepository={learningRepository} studioRepository={learningStudioRepository} mode="learner" learnerId={handoffLearnerId} onLearningChanged={onLearningChanged} />}
+    />;
   }
 
   const visibleNav = NAV_ITEMS.filter((item) => {
+    if (item.id === 'studio') return role === 'parent' || role === 'group-admin';
     if (item.id === 'group') return hasCapability(role, 'view-group');
     if (item.id === 'learners') return hasCapability(role, 'manage-household-learners');
     if (item.id === 'members') return hasCapability(role, 'manage-group-settings');
@@ -205,6 +223,7 @@ export default function BetaApp() {
         </header>
         <main className="content" id="main-content">
           {screen === 'today' && <TodayWorkspace organizationId={organizationId} actorId={actorId} role={role} repository={learningRepository} handoffLearnerId={null} onBeginHandoff={setHandoffLearnerId} onEndHandoff={() => setHandoffLearnerId(null)} />}
+          {screen === 'studio' && (role === 'parent' || role === 'group-admin') && <LearningStudioWorkspace organizationId={organizationId} actorId={actorId} role={role} learningRepository={learningRepository} studioRepository={learningStudioRepository} mode="adult" />}
           {screen === 'group' && hasCapability(role, 'view-group') && <GroupScreen role={role} />}
           {screen === 'learners' && hasCapability(role, 'manage-household-learners') && <LearnersWorkspace organizationId={organizationId} actorId={actorId} repository={learningRepository} onBeginHandoff={setHandoffLearnerId} />}
           {screen === 'members' && hasCapability(role, 'manage-group-settings') && <MembersWorkspace organizationId={organizationId} organizationName={organizationName} repository={organizationRepository} />}

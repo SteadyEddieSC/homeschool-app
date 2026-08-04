@@ -3,12 +3,26 @@ import type {
   CreateTodayItemInput,
   TransitionTodayItemInput
 } from './learning';
+import type {
+  EvidenceSubmission,
+  KnowledgeAttempt,
+  KnowledgeCheck,
+  ReviewEvidenceInput,
+  WeeklyPlan,
+  WeeklyPlanItem
+} from './studio';
 
 export const SYNC_OPERATION_KINDS = [
   'create-household',
   'create-learner',
   'create-today-item',
-  'transition-today-item'
+  'transition-today-item',
+  'create-knowledge-check',
+  'submit-knowledge-attempt',
+  'submit-evidence',
+  'review-evidence',
+  'create-weekly-plan',
+  'create-weekly-plan-item'
 ] as const;
 
 export const SYNC_OPERATION_STATUSES = [
@@ -41,11 +55,41 @@ export interface TransitionTodayItemOperationPayload extends TransitionTodayItem
   operationId: string;
 }
 
+export interface CreateKnowledgeCheckOperationPayload extends KnowledgeCheck {
+  operationId: string;
+}
+
+export interface SubmitKnowledgeAttemptOperationPayload extends KnowledgeAttempt {
+  operationId: string;
+}
+
+export interface SubmitEvidenceOperationPayload extends EvidenceSubmission {
+  operationId: string;
+}
+
+export interface ReviewEvidenceOperationPayload extends ReviewEvidenceInput {
+  operationId: string;
+}
+
+export interface CreateWeeklyPlanOperationPayload extends WeeklyPlan {
+  operationId: string;
+}
+
+export interface CreateWeeklyPlanItemOperationPayload extends WeeklyPlanItem {
+  operationId: string;
+}
+
 export type SyncOperationPayload =
   | CreateHouseholdOperationPayload
   | CreateLearnerOperationPayload
   | CreateTodayItemOperationPayload
-  | TransitionTodayItemOperationPayload;
+  | TransitionTodayItemOperationPayload
+  | CreateKnowledgeCheckOperationPayload
+  | SubmitKnowledgeAttemptOperationPayload
+  | SubmitEvidenceOperationPayload
+  | ReviewEvidenceOperationPayload
+  | CreateWeeklyPlanOperationPayload
+  | CreateWeeklyPlanItemOperationPayload;
 
 export interface SyncOperation {
   id: string;
@@ -90,5 +134,11 @@ export function operationKindLabel(kind: SyncOperationKind): string {
   if (kind === 'create-household') return 'Create household';
   if (kind === 'create-learner') return 'Create learner';
   if (kind === 'create-today-item') return 'Create Today item';
-  return 'Update Today item';
+  if (kind === 'transition-today-item') return 'Update Today item';
+  if (kind === 'create-knowledge-check') return 'Create knowledge check';
+  if (kind === 'submit-knowledge-attempt') return 'Submit knowledge attempt';
+  if (kind === 'submit-evidence') return 'Submit proof';
+  if (kind === 'review-evidence') return 'Review proof';
+  if (kind === 'create-weekly-plan') return 'Create weekly plan';
+  return 'Add weekly plan item';
 }

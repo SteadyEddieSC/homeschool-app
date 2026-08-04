@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import {
   ACTIVITY_TYPES,
   activityLabel,
@@ -17,6 +17,7 @@ interface TodayWorkspaceProps {
   handoffLearnerId: string | null;
   onBeginHandoff(learnerId: string): void;
   onEndHandoff(): void;
+  renderLearnerSupplement?: (version: number, onLearningChanged: () => Promise<void>) => ReactNode;
 }
 
 function todayDate(): string {
@@ -27,7 +28,16 @@ function statusLabel(status: TodayItem['status']): string {
   return status.split('-').map((part) => part.charAt(0).toUpperCase() + part.slice(1)).join(' ');
 }
 
-export function TodayWorkspace({ organizationId, actorId, role, repository, handoffLearnerId, onBeginHandoff, onEndHandoff }: TodayWorkspaceProps) {
+export function TodayWorkspace({
+  organizationId,
+  actorId,
+  role,
+  repository,
+  handoffLearnerId,
+  onBeginHandoff,
+  onEndHandoff,
+  renderLearnerSupplement
+}: TodayWorkspaceProps) {
   const [learners, setLearners] = useState<LearnerProfile[]>([]);
   const [items, setItems] = useState<TodayItem[]>([]);
   const [selectedLearnerId, setSelectedLearnerId] = useState('');
@@ -40,6 +50,7 @@ export function TodayWorkspace({ organizationId, actorId, role, repository, hand
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [supplementVersion, setSupplementVersion] = useState(0);
 
   const canManage = role === 'parent' || role === 'group-admin';
 
@@ -60,7 +71,8 @@ export function TodayWorkspace({ organizationId, actorId, role, repository, hand
   const learnerMap = useMemo(() => new Map(learners.map((learner) => [learner.id, learner])), [learners]);
   const activeLearner = handoffLearnerId ? learnerMap.get(handoffLearnerId) ?? null : null;
   const visibleItems = handoffLearnerId ? items.filter((item) => item.learnerId === handoffLearnerId) : items;
-  const reviewQueue = items.filter((item) => item.status === 'ready-for-review');
+  const reviewQueue = items.filter((item) => item.status === 'ready-for-review' && item.activityType !== 'proof');
+  const proofReviewCount = items.filter((item) => item.status === 'ready-for-review' && item.activityType === 'proof').length;
 
   async function assignItem(): Promise<void> {
     const learner = learnerMap.get(selectedLearnerId);
@@ -113,6 +125,7 @@ export function TodayWorkspace({ organizationId, actorId, role, repository, hand
             ? 'The item was returned with feedback.'
             : `${item.title} is now in progress.`);
       await refresh();
+      setSupplementVersion((current) => current + 1);
     } catch (reason) {
       setError(reason instanceof Error ? reason.message : 'Unable to update the item.');
     } finally {
@@ -137,10 +150,12 @@ export function TodayWorkspace({ organizationId, actorId, role, repository, hand
             <p className="muted">Due {item.dueDate}</p>
             {item.reviewFeedback && <div className="feedback-box"><strong>Adult feedback</strong><p>{item.reviewFeedback}</p></div>}
             {['assigned', 'returned'].includes(item.status) && <button className="button primary" type="button" disabled={busy} onClick={() => void transition(item.id, 'start')} data-testid={`start-item-${item.id}`}>Start</button>}
-            {item.status === 'in-progress' && <div className="review-submit"><label className="field"><span>Note for the adult reviewer <small>optional</small></span><textarea value={learnerNotes[item.id] ?? ''} onChange={(event) => setLearnerNotes((current) => ({ ...current, [item.id]: event.target.value }))} data-testid={`learner-note-${item.id}`} /></label><button className="button primary" type="button" disabled={busy} onClick={() => void transition(item.id, 'submit-review')} data-testid={`submit-review-${item.id}`}>Send for review</button></div>}
+            {item.status === 'in-progress' && item.activityType !== 'quiz' && item.activityType !== 'proof' && <div className="review-submit"><label className="field"><span>Note for the adult reviewer <small>optional</small></span><textarea value={learnerNotes[item.id] ?? ''} onChange={(event) => setLearnerNotes((current) => ({ ...current, [item.id]: event.target.value }))} data-testid={`learner-note-${item.id}`} /></label><button className="button primary" type="button" disabled={busy} onClick={() => void transition(item.id, 'submit-review')} data-testid={`submit-review-${item.id}`}>Send for review</button></div>}
+            {item.status === 'in-progress' && ['quiz', 'proof'].includes(item.activityType) && <p className="message info">Continue below to complete the knowledge check or submit proof.</p>}
             {item.status === 'ready-for-review' && <p className="message info">Waiting for an adult review. No grade, mastery, attendance, or XP is awarded automatically.</p>}
             {item.status === 'completed' && <p className="message success">Adult review completed this item.</p>}
           </article>)}</div>
+          {renderLearnerSupplement?.(supplementVersion, refresh)}
         </main>
       </div>
     );
@@ -149,8 +164,8 @@ export function TodayWorkspace({ organizationId, actorId, role, repository, hand
   return (
     <div className="page-stack" data-testid="today-workspace">
       <section className="hero-panel">
-        <div><span className="eyebrow">Household learning day</span><h1>{canManage ? 'Assign, hand off, and review without hidden outcomes.' : 'Know what happens next.'}</h1><p>{canManage ? 'Beta 1 connects one bounded family workflow from adult assignment to supervised learner action and explicit adult review.' : 'Learner work remains visible only through an authorized household relationship.'}</p></div>
-        <div className="hero-badge"><strong>v11</strong><span>Beta 1</span></div>
+        <div><span className="eyebrow">Household learning day</span><h1>{canManage ? 'Assign, hand off, score, and review without hidden outcomes.' : 'Know what happens next.'}</h1><p>{canManage ? 'Beta 3 keeps Today as the clear path into objective checks, subjective proof, weekly planning, and explicit adult decisions.' : 'Learner work remains visible only through an authorized household relationship.'}</p></div>
+        <div className="hero-badge"><strong>v11</strong><span>Beta 3</span></div>
       </section>
 
       {message && <p className="message success" role="status">{message}</p>}
@@ -175,12 +190,12 @@ export function TodayWorkspace({ organizationId, actorId, role, repository, hand
 
       <section className="panel">
         <div className="section-heading"><div><span className="eyebrow">Adult review queue</span><h2>Explicit decisions only</h2></div><span className="status-chip neutral">{reviewQueue.length} waiting</span></div>
-        {!canManage ? <p className="empty-state">Adult household review is not available to this role.</p> : reviewQueue.length === 0 ? <p className="empty-state">No work is waiting for review.</p> : <div className="today-card-list">{reviewQueue.map((item) => <article className="today-card" key={item.id} data-testid={`review-item-${item.id}`}>
+        {!canManage ? <p className="empty-state">Adult household review is not available to this role.</p> : <>{proofReviewCount > 0 && <p className="message info">{proofReviewCount} proof item(s) require explicit evidence review in Plan before completion.</p>}{reviewQueue.length === 0 ? <p className="empty-state">No objective or general work is waiting for review.</p> : <div className="today-card-list">{reviewQueue.map((item) => <article className="today-card" key={item.id} data-testid={`review-item-${item.id}`}>
           <div className="today-card-heading"><div><span className="eyebrow">{learnerMap.get(item.learnerId)?.preferredName ?? 'Learner'} · {activityLabel(item.activityType)}</span><h3>{item.title}</h3></div><span className="status-chip acknowledged">Ready for review</span></div>
           {item.learnerNote && <div className="feedback-box"><strong>Learner note</strong><p>{item.learnerNote}</p></div>}
           <label className="field"><span>Adult feedback <small>optional for complete, recommended for return</small></span><textarea value={reviewNotes[item.id] ?? ''} onChange={(event) => setReviewNotes((current) => ({ ...current, [item.id]: event.target.value }))} data-testid={`review-note-${item.id}`} /></label>
           <div className="button-row"><button className="button primary" type="button" disabled={busy} onClick={() => void transition(item.id, 'complete')} data-testid={`complete-item-${item.id}`}>Mark complete after review</button><button className="button secondary" type="button" disabled={busy} onClick={() => void transition(item.id, 'return')} data-testid={`return-item-${item.id}`}>Return with feedback</button></div>
-        </article>)}</div>}
+        </article>)}</div>}</>}
       </section>
 
       <section className="panel">
