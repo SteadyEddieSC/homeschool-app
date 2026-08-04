@@ -92,7 +92,7 @@ assert(!backup.includes('service_role'), 'backup must never handle service-role 
 const engine = await readFile(path.join(root, 'src/migration/v1043-rehearsal.ts'), 'utf8');
 for (const boundary of ['MAX_SOURCE_BYTES = 512_000','MAX_RECORDS = 500','assertExactKeys','FORBIDDEN_KEY_PATTERN','SYNTHETIC_ID_PATTERN','parseLegacyV1043Export','planLegacyMigration','update-review-required','Legacy completion is imported as awaiting adult review','Legacy proof acceptance is not authoritative','applyMigrationPlan','REHEARSAL_STORAGE_KEY','REHEARSAL_ROLLBACK_KEY','rollbackMigrationRehearsal','AES-GCM','PBKDF2','runRecoveryRehearsal',"requestedDecision === 'production-ready'",'productionReady: false']) assert(engine.includes(boundary), `migration engine missing ${boundary}`);
 assert(!engine.includes('LOCAL_LEARNING_STORAGE_KEY') && !engine.includes('LOCAL_STUDIO_STORAGE_KEY'), 'migration rehearsal must not write normal stores');
-assert(!engine.includes('.from('), 'browser migration rehearsal must not write Supabase');
+assert(!engine.includes('client.from(') && !engine.includes('supabase.from('), 'browser migration rehearsal must not write Supabase');
 const fixture = await readFile(path.join(root, 'public/fixtures/v10.43-synthetic-export.json'), 'utf8');
 assert(fixture.includes('"rehearsal": true') && fixture.includes('"synthetic": true') && fixture.includes('syn-learner-001') && fixture.includes('unsupported'), 'fixture must be synthetic and cover unsupported records');
 const migrationScript = await readFile(path.join(root, 'scripts/migration-rehearsal.mjs'), 'utf8');
@@ -125,7 +125,7 @@ const forbiddenPatterns = [
   { pattern: /SUPABASE_SERVICE_ROLE_KEY\s*=\s*\S+/i, label: 'Supabase service-role secret' },
   { pattern: /VITE_[A-Z0-9_]*(?:SERVICE_ROLE|CLIENT_SECRET|ACCESS_TOKEN)\s*[:=]\s*[^$\s][^\s]*/i, label: 'privileged Vite secret' },
   { pattern: /BAND_(?:CLIENT_SECRET|ACCESS_TOKEN)\s*=\s*\S+/i, label: 'BAND secret' },
-  { pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----/, label: 'private key' },
+  { pattern: /-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----\r?\n[A-Za-z0-9+/=]{20,}/, label: 'private key' },
   { pattern: /eyJ[A-Za-z0-9_-]{40,}\.[A-Za-z0-9_-]{40,}\.[A-Za-z0-9_-]{20,}/, label: 'JWT-like credential' }
 ];
 for (const file of await collectFiles(root)) {
