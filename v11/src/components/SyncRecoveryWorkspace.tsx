@@ -101,7 +101,7 @@ export function SyncRecoveryWorkspace({ manager, snapshot, simulationEnabled, on
 
   return (
     <div className="page-stack" data-testid="sync-recovery-workspace">
-      <section className="page-heading"><span className="eyebrow">Sync &amp; recovery</span><h1>See what is saved, what is waiting, and how to recover it.</h1><p>Beta 3 keeps knowledge checks, proof revisions, and weekly plans inside the same visible local queue and encrypted recovery boundary.</p></section>
+      <section className="page-heading"><span className="eyebrow">Sync &amp; recovery</span><h1>See what is saved, what is waiting, and how to recover it.</h1><p>Beta 4 keeps Today, knowledge checks, proof revisions, and weekly plans in the same visible local-first queue while hosted acknowledgements remain ordered, retryable, and disabled during signed-out sessions.</p></section>
       {message && <p className="message success" role="status">{message}</p>}
       {error && <p className="message error" role="alert">{error}</p>}
 
@@ -114,7 +114,7 @@ export function SyncRecoveryWorkspace({ manager, snapshot, simulationEnabled, on
 
       <section className="panel sync-controls">
         <div className="section-heading"><div><span className="eyebrow">Preview testing</span><h2>Cloud queue simulation</h2></div><span className={`status-chip ${simulationEnabled ? 'acknowledged' : 'neutral'}`}>{simulationEnabled ? 'Enabled' : 'Disabled'}</span></div>
-        <p className="muted">Simulation acknowledges queued operations without sending data anywhere. It is intended for local testing and browser validation.</p>
+        <p className="muted">Simulation acknowledges queued operations without sending data anywhere. It exercises the same operation ordering used by the hosted pilot.</p>
         <label className="toggle-row"><input type="checkbox" checked={simulationEnabled} onChange={(event) => onSimulationChange(event.target.checked)} data-testid="sync-simulation-toggle" /><span>Enable local cloud simulation after reload</span></label>
         <div className="button-row"><button className="button primary" type="button" onClick={() => void manager.process()} disabled={!snapshot.online || snapshot.processing || snapshot.pendingCount + snapshot.failedCount === 0} data-testid="sync-retry-all">{snapshot.processing ? 'Synchronizing…' : 'Retry waiting operations'}</button><button className="button secondary" type="button" onClick={() => manager.clearCompleted()} disabled={snapshot.completedCount === 0}>Clear completed</button></div>
       </section>
@@ -127,7 +127,7 @@ export function SyncRecoveryWorkspace({ manager, snapshot, simulationEnabled, on
       <section className="beta-grid two-column">
         <article className="panel beta-form-card">
           <div className="section-heading"><div><span className="eyebrow">Portable backup</span><h2>Download encrypted backup</h2></div><span className="status-chip resolved">AES-256-GCM</span></div>
-          <p>The backup includes application-owned local learning, check, proof, planning, support, and queue records. Sessions, credentials, deployment secrets, BAND tokens, and active invitation tokens are excluded.</p>
+          <p>The backup includes application-owned local learning, check, proof, planning, support, and queue records. Sessions, credentials, deployment secrets, BAND tokens, active invitation tokens, and hosted conflict diagnostics are excluded.</p>
           <label className="field"><span>Backup passphrase</span><input type="password" autoComplete="new-password" value={exportPassphrase} onChange={(event) => setExportPassphrase(event.target.value)} minLength={12} data-testid="backup-export-passphrase" /></label>
           <button className="button primary" type="button" disabled={busy || exportPassphrase.length < 12} onClick={() => void exportBackup()} data-testid="backup-export">Create encrypted backup</button>
         </article>
