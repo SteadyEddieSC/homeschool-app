@@ -15,8 +15,8 @@ test('rc.1 health and configuration remain blocked from production promotion', a
   await expect(config.json()).resolves.toMatchObject({
     productionDataEnabled: false,
     migration: { syntheticV1043Rehearsal: true, deterministicSourceMapping: true, importReceipts: true, silentCoercion: false, productionWriteEnabled: false },
-    readiness: { decision: 'not-approved', automatedPromotionAllowed: false, productionCutover: false, ownerApprovalRequired: true },
-    recovery: { vendorExitRehearsal: true, rtoRpoEvidence: true },
+    readiness: { decision: 'not-ready', productionReady: false, automatedPromotionAllowed: false, productionCutover: false, ownerApprovalRequired: true },
+    recovery: { encryptedVendorExitRehearsal: true, rtoRpoEvidence: true },
     learning: { automaticGrades: false, automaticMastery: false, automaticAttendance: false, automaticXp: false }
   });
   await expect(page.getByTestId('app-shell')).toBeVisible();
