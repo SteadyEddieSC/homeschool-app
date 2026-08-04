@@ -10,10 +10,17 @@ import {
   type TodayItem,
   type TransitionTodayItemInput
 } from '../domain/learning';
+import type { LearningStudioRepository } from '../domain/studio';
 import type {
   CreateHouseholdOperationPayload,
+  CreateKnowledgeCheckOperationPayload,
   CreateLearnerOperationPayload,
   CreateTodayItemOperationPayload,
+  CreateWeeklyPlanItemOperationPayload,
+  CreateWeeklyPlanOperationPayload,
+  ReviewEvidenceOperationPayload,
+  SubmitEvidenceOperationPayload,
+  SubmitKnowledgeAttemptOperationPayload,
   SyncOperation,
   TransitionTodayItemOperationPayload
 } from '../domain/sync';
@@ -31,6 +38,7 @@ function activeDuplicateError(): Error {
 export interface ResilientLearningRepositoryOptions {
   local: LearningMirrorRepository;
   remote?: LearningRepository | null;
+  studioRemote?: LearningStudioRepository | null;
   queue: SyncQueueManager;
   simulateRemote?: boolean;
   onlineProvider?: () => boolean;
@@ -39,6 +47,7 @@ export interface ResilientLearningRepositoryOptions {
 export class ResilientLearningRepository implements LearningRepository {
   private readonly local: LearningMirrorRepository;
   private readonly remote: LearningRepository | null;
+  private readonly studioRemote: LearningStudioRepository | null;
   private readonly queue: SyncQueueManager;
   private readonly simulateRemote: boolean;
   private readonly onlineProvider: () => boolean;
@@ -47,6 +56,7 @@ export class ResilientLearningRepository implements LearningRepository {
   constructor(options: ResilientLearningRepositoryOptions) {
     this.local = options.local;
     this.remote = options.remote ?? null;
+    this.studioRemote = options.studioRemote ?? null;
     this.queue = options.queue;
     this.simulateRemote = Boolean(options.simulateRemote);
     this.onlineProvider = options.onlineProvider ?? (() => navigator.onLine);
@@ -183,7 +193,7 @@ export class ResilientLearningRepository implements LearningRepository {
   }
 
   private hasRemoteTarget(): boolean {
-    return Boolean(this.remote || this.simulateRemote);
+    return Boolean(this.remote || this.studioRemote || this.simulateRemote);
   }
 
   private async refreshFromRemote(organizationId: string): Promise<void> {
@@ -208,13 +218,13 @@ export class ResilientLearningRepository implements LearningRepository {
   }
 
   private async executeRemote(operation: SyncOperation): Promise<void> {
-    if (this.simulateRemote && !this.remote) {
+    if (this.simulateRemote && !this.remote && !this.studioRemote) {
       await new Promise((resolve) => setTimeout(resolve, 40));
       return;
     }
-    if (!this.remote) throw new Error('Cloud synchronization is not configured.');
 
     if (operation.kind === 'create-household') {
+      if (!this.remote) throw new Error('Hosted household synchronization is not configured.');
       const payload = operation.payload as CreateHouseholdOperationPayload;
       await this.remote.createHousehold(payload.organizationId, payload.actorId, payload.name, {
         householdId: payload.householdId,
@@ -223,16 +233,97 @@ export class ResilientLearningRepository implements LearningRepository {
       return;
     }
     if (operation.kind === 'create-learner') {
+      if (!this.remote) throw new Error('Hosted learner synchronization is not configured.');
       const payload = operation.payload as CreateLearnerOperationPayload;
       await this.remote.createLearner({ ...payload, operationId: operation.id });
       return;
     }
     if (operation.kind === 'create-today-item') {
+      if (!this.remote) throw new Error('Hosted Today synchronization is not configured.');
       const payload = operation.payload as CreateTodayItemOperationPayload;
       await this.remote.createTodayItem({ ...payload, operationId: operation.id });
       return;
     }
-    const payload = operation.payload as TransitionTodayItemOperationPayload;
-    await this.remote.transitionTodayItem({ ...payload, operationId: operation.id });
+    if (operation.kind === 'transition-today-item') {
+      if (!this.remote) throw new Error('Hosted Today synchronization is not configured.');
+      const payload = operation.payload as TransitionTodayItemOperationPayload;
+      await this.remote.transitionTodayItem({ ...payload, operationId: operation.id });
+      return;
+    }
+
+    if (!this.studioRemote) throw new Error('Hosted learning-studio synchronization is not configured.');
+    if (operation.kind === 'create-knowledge-check') {
+      const payload = operation.payload as CreateKnowledgeCheckOperationPayload;
+      await this.studioRemote.createKnowledgeCheck({
+        organizationId: payload.organizationId,
+        householdId: payload.householdId,
+        learnerId: payload.learnerId,
+        todayItemId: payload.todayItemId,
+        title: payload.title,
+        questions: payload.questions,
+        createdBy: payload.createdBy,
+        checkId: payload.id,
+        operationId: operation.id
+      });
+      return;
+    }
+    if (operation.kind === 'submit-knowledge-attempt') {
+      const payload = operation.payload as SubmitKnowledgeAttemptOperationPayload;
+      await this.studioRemote.submitKnowledgeAttempt({
+        checkId: payload.checkId,
+        learnerId: payload.learnerId,
+        answers: payload.answers,
+        attemptId: payload.id,
+        operationId: operation.id
+      });
+      return;
+    }
+    if (operation.kind === 'submit-evidence') {
+      const payload = operation.payload as SubmitEvidenceOperationPayload;
+      await this.studioRemote.submitEvidence({
+        organizationId: payload.organizationId,
+        householdId: payload.householdId,
+        learnerId: payload.learnerId,
+        todayItemId: payload.todayItemId,
+        title: payload.title,
+        kind: payload.kind,
+        content: payload.content,
+        learnerNote: payload.learnerNote,
+        submissionId: payload.id,
+        operationId: operation.id
+      });
+      return;
+    }
+    if (operation.kind === 'review-evidence') {
+      const payload = operation.payload as ReviewEvidenceOperationPayload;
+      await this.studioRemote.reviewEvidence({ ...payload, operationId: operation.id });
+      return;
+    }
+    if (operation.kind === 'create-weekly-plan') {
+      const payload = operation.payload as CreateWeeklyPlanOperationPayload;
+      await this.studioRemote.createWeeklyPlan({
+        organizationId: payload.organizationId,
+        householdId: payload.householdId,
+        weekStart: payload.weekStart,
+        title: payload.title,
+        createdBy: payload.createdBy,
+        planId: payload.id,
+        operationId: operation.id
+      });
+      return;
+    }
+    const payload = operation.payload as CreateWeeklyPlanItemOperationPayload;
+    await this.studioRemote.createWeeklyPlanItem({
+      organizationId: payload.organizationId,
+      householdId: payload.householdId,
+      planId: payload.planId,
+      learnerId: payload.learnerId,
+      scheduledDate: payload.scheduledDate,
+      title: payload.title,
+      activityType: payload.activityType,
+      todayItemId: payload.todayItemId,
+      planItemId: payload.id,
+      operationId: operation.id
+    });
   }
 }
