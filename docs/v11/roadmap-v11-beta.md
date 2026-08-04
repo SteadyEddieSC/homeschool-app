@@ -25,7 +25,7 @@ Status: completed.
 
 ## v11.0.0-beta.3 — Evidence, Knowledge Checks, and Family Planning
 
-Status: current release.
+Status: completed.
 
 - deterministic multiple-choice and true/false checks;
 - informational per-question tool results;
@@ -34,28 +34,37 @@ Status: current release.
 - accepted proof completes the reviewed Today item;
 - seven-day household plans and learner-specific plan items;
 - queue and encrypted-backup coverage for beta.3 records;
-- controlled beta.2 backup import;
-- hosted beta.3 writes intentionally deferred.
+- controlled beta.2 backup import.
 
-## v11.0.0-beta.4 — Hosted Pilot and Operational Recovery
+## v11.0.0-beta.4 — Hosted Pilot Readiness and Operational Recovery
 
-Recommended next release.
+Status: current release.
 
-- create and configure the owner-controlled non-production Supabase project;
-- add hosted repositories for checks, attempts, evidence, reviews, plans, and plan items;
-- apply reviewed migrations `001–007` after a dry run;
-- deploy only the isolated v11 preview Worker through the protected manual workflow;
-- exercise interruption, retry, duplicate, backup, restore, and audit procedures;
-- collect sanitized Parent, Learner, and Administrator pilot findings;
-- resolve hosted usability and operational defects.
+- hosted Supabase repositories for household and learning-studio records;
+- stable client operation IDs and preservation of local record IDs;
+- local-first queued writes that remain disabled while signed out;
+- conflict-aware studio reconciliation with no silent overwrite;
+- non-reversible local/hosted conflict digests and explicit acknowledgement;
+- migration `008` and authenticated hosted schema-status verification;
+- secret-safe pilot doctor and protected manual deployment workflow;
+- sanitized operational diagnostic and deployment receipts;
+- encrypted backup compatibility with beta.2 and beta.3;
+- desktop, touch-tablet, Pixel 7, database, and stable-v10 regression coverage.
+
+Provider activation remains an owner action. The release is complete locally and ready for a bounded non-production pilot once the Supabase project and protected GitHub environment exist.
 
 ## v11.0.0-rc.1 — Migration Rehearsal and Production Readiness
 
+Recommended next release.
+
 - synthetic v10.43 import adapter and dry-run reports;
-- reconciliation and rollback rehearsal;
-- accessibility, mobile, privacy, authorization, audit, and rate-limit review;
-- owner-approved production checklist.
+- import reconciliation and rollback rehearsal;
+- hosted-pilot findings and defect closure;
+- accessibility, mobile, privacy, authorization, audit, backup, and rate-limit review;
+- recovery-time and recovery-point validation;
+- vendor-exit export and restore rehearsal;
+- owner-approved production checklist and explicit cutover decision.
 
 ## Recommended next action
 
-Continue beta.3 local validation. Supabase setup remains optional until the hosted beta.4 pilot.
+Continue local beta.4 validation. When convenient, create the dedicated non-production Supabase project, apply migrations `001–008` after reviewing the dry run, configure the protected `v11-preview` GitHub environment, and perform the bounded hosted pilot. No production cutover is implied.

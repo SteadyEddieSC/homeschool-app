@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { HostedPilotWorkspace } from './components/HostedPilotWorkspace';
 import { IdentityBootstrap } from './components/IdentityBootstrap';
 import { LearnersWorkspace } from './components/LearnersWorkspace';
 import { LearningStudioWorkspace } from './components/LearningStudioWorkspace';
@@ -20,8 +21,11 @@ import { LocalOrganizationRepository } from './services/local-organization';
 import { LocalLearningStudioRepository } from './services/local-studio';
 import { LocalSupportRepository } from './services/local-support';
 import { ResilientLearningRepository } from './services/resilient-learning';
+import { ResilientLearningStudioRepository } from './services/resilient-studio';
+import { StudioConflictStore } from './services/studio-conflicts';
 import { SupabaseLearningRepository } from './services/supabase-learning';
 import { SupabaseOrganizationRepository } from './services/supabase-organization';
+import { SupabaseLearningStudioRepository } from './services/supabase-studio';
 import { SupabaseSupportRepository } from './services/supabase-support';
 import { SyncQueueManager } from './services/sync-queue';
 
@@ -34,6 +38,7 @@ const localLearningRepository = new LocalLearningRepository();
 const cloudSupportRepository = supabase ? new SupabaseSupportRepository(supabase) : null;
 const cloudOrganizationRepository = supabase ? new SupabaseOrganizationRepository(supabase) : null;
 const cloudLearningRepository = supabase ? new SupabaseLearningRepository(supabase) : null;
+const cloudStudioRepository = supabase ? new SupabaseLearningStudioRepository(supabase) : null;
 const simulationEnabledAtBoot = runtimeConfiguration.mode === 'local-preview'
   && new URLSearchParams(window.location.search).get('sync-sim') === '1';
 const syncQueueManager = new SyncQueueManager({
@@ -43,13 +48,21 @@ const syncQueueManager = new SyncQueueManager({
       ? 'cloud-simulation'
       : 'local-only'
 });
+const studioConflictStore = new StudioConflictStore();
+const localStudioRepository = new LocalLearningStudioRepository(syncQueueManager);
 const resilientLearningRepository = new ResilientLearningRepository({
   local: localLearningRepository,
   remote: cloudLearningRepository,
+  studioRemote: cloudStudioRepository,
   queue: syncQueueManager,
   simulateRemote: simulationEnabledAtBoot
 });
-const learningStudioRepository = new LocalLearningStudioRepository(syncQueueManager);
+const learningStudioRepository = new ResilientLearningStudioRepository({
+  local: localStudioRepository,
+  remote: cloudStudioRepository,
+  queue: syncQueueManager,
+  conflicts: studioConflictStore
+});
 
 const NAV_ITEMS = [
   { id: 'today', label: 'Today', description: 'Assign, learn, and review', icon: '◉' },
@@ -83,13 +96,13 @@ function useOnlineStatus(): boolean {
 function GroupScreen({ role }: { role: AppRole }) {
   return (
     <div className="page-stack">
-      <section className="page-heading"><span className="eyebrow">Explicit learning authority</span><h1>Objective scoring, subjective proof, and planning remain separate decisions.</h1><p>Beta 3 adds deterministic checks and preserved evidence revisions without turning a tool result or a plan into a hidden educational outcome.</p></section>
+      <section className="page-heading"><span className="eyebrow">Hosted pilot authority</span><h1>Shared records can synchronize without changing who is allowed to decide.</h1><p>Beta 4 adds hosted repositories and conflict-aware reconciliation while preserving deterministic scoring, adult-reviewed proof, and planning-only boundaries.</p></section>
       <section className="model-grid">
-        <article className="panel model-card"><span className="model-number">01</span><h2>Tool result</h2><p>An explicit answer key can score objective questions, but the score does not create a grade, mastery, attendance, XP, or completion record.</p></article>
-        <article className="panel model-card"><span className="model-number">02</span><h2>Adult judgment</h2><p>Subjective proof is accepted or returned only by an authorized adult, with revision history and feedback preserved.</p></article>
-        <article className="panel model-card"><span className="model-number">03</span><h2>Plan, not outcome</h2><p>A weekly plan helps the household coordinate work but never silently marks an assignment complete.</p></article>
+        <article className="panel model-card"><span className="model-number">01</span><h2>Local first</h2><p>Authorized work is saved to the application-owned local mirror before a queued hosted acknowledgement is attempted.</p></article>
+        <article className="panel model-card"><span className="model-number">02</span><h2>No silent conflict</h2><p>Divergent local and hosted studio records remain local and are surfaced through non-reversible diagnostic digests.</p></article>
+        <article className="panel model-card"><span className="model-number">03</span><h2>Authority preserved</h2><p>Objective scores remain informational, subjective proof remains adult-reviewed, and plans never create completion.</p></article>
       </section>
-      <section className="panel boundary-list"><div className="section-heading"><div><span className="eyebrow">Current role</span><h2>{getRoleDefinition(role).label}</h2></div></div><ul><li>Parent-assisted learner mode hides adult navigation.</li><li>Knowledge attempts receive stable operation receipts.</li><li>Evidence returns preserve every prior submission.</li><li>Beta 3 records participate in the beta.2 encrypted local backup.</li></ul></section>
+      <section className="panel boundary-list"><div className="section-heading"><div><span className="eyebrow">Current role</span><h2>{getRoleDefinition(role).label}</h2></div></div><ul><li>Cloud processing is disabled while signed out.</li><li>Stable operation IDs prevent duplicate hosted writes.</li><li>Director and System Administrator roles do not automatically reveal household records.</li><li>Provider secrets and learner record contents are excluded from diagnostics.</li></ul></section>
     </div>
   );
 }
@@ -98,11 +111,11 @@ function SettingsOverview({ role }: { role: AppRole }) {
   const definition = getRoleDefinition(role);
   return (
     <div className="page-stack">
-      <section className="page-heading"><span className="eyebrow">Beta 3 readiness</span><h1>Family learning workflows can advance locally while Supabase remains deferred.</h1><p>Knowledge checks, evidence, revisions, and weekly plans use the same visible queue and controlled recovery boundaries introduced in beta.2.</p></section>
+      <section className="page-heading"><span className="eyebrow">Beta 4 hosted pilot readiness</span><h1>The application is ready for an owner-controlled non-production Supabase pilot.</h1><p>Hosted repositories, stable queue execution, conflict visibility, schema verification, and sanitized operational diagnostics are available without embedding provider credentials.</p></section>
       <section className="settings-grid">
-        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">S</span><div><h2>Supabase</h2><p>Optional hosted identity and database target.</p></div></div><span className={`status-chip ${runtimeConfiguration.supabaseConfigured ? 'resolved' : 'neutral'}`}>{runtimeConfiguration.supabaseConfigured ? 'Configured' : 'Deferred'}</span><p className="muted">Configured host: {runtimeConfiguration.supabaseHost || 'none'}. Local beta.3 workflows remain testable.</p></article>
-        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">K</span><div><h2>Checks &amp; proof</h2><p>Deterministic objective scoring and explicit adult proof review.</p></div></div><span className="status-chip acknowledged">Ready</span><p className="muted">No tool score or proof submission silently creates an educational outcome.</p></article>
-        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">R</span><div><h2>Recovery</h2><p>Encrypted portable backups include beta.3 local records and queue state.</p></div></div><span className="status-chip resolved">Available</span><p className="muted">Restore remains verified, previewed, and explicitly confirmed.</p></article>
+        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">S</span><div><h2>Supabase</h2><p>Optional hosted identity and database target.</p></div></div><span className={`status-chip ${runtimeConfiguration.supabaseConfigured ? 'resolved' : 'neutral'}`}>{runtimeConfiguration.supabaseConfigured ? 'Configured' : 'Activation deferred'}</span><p className="muted">Configured host: {runtimeConfiguration.supabaseHost || 'none'}. Local beta.4 workflows remain available.</p></article>
+        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">Q</span><div><h2>Queue &amp; reconciliation</h2><p>Ordered hosted writes and visible conflict digests.</p></div></div><span className="status-chip acknowledged">Ready</span><p className="muted">Hosted retries preserve local record IDs and never silently overwrite divergent studio records.</p></article>
+        <article className="panel connection-card"><div className="connection-heading"><span className="connection-icon">R</span><div><h2>Operational recovery</h2><p>Encrypted portable backup, restore preview, and sanitized pilot diagnostics.</p></div></div><span className="status-chip resolved">Available</span><p className="muted">Provider credentials, sessions, queue payloads, and learner content remain excluded from diagnostics.</p></article>
       </section>
       <section className="panel permission-summary"><h2>Current access</h2><p>{definition.description}</p><div className="permission-chips">{definition.capabilities.map((capability) => <span key={capability}>{capability}</span>)}</div></section>
     </div>
@@ -228,7 +241,7 @@ export default function BetaApp() {
           {screen === 'learners' && hasCapability(role, 'manage-household-learners') && <LearnersWorkspace organizationId={organizationId} actorId={actorId} repository={learningRepository} onBeginHandoff={setHandoffLearnerId} />}
           {screen === 'members' && hasCapability(role, 'manage-group-settings') && <MembersWorkspace organizationId={organizationId} organizationName={organizationName} repository={organizationRepository} />}
           {screen === 'support' && <SupportWorkspace actor={actor} repository={supportRepository} />}
-          {screen === 'settings' && <div className="settings-release-stack"><SettingsOverview role={role} /><SyncRecoveryWorkspace manager={syncQueueManager} snapshot={syncSnapshot} simulationEnabled={simulationEnabledAtBoot} onSimulationChange={changeSimulation} onRestoreApplied={() => window.location.reload()} /></div>}
+          {screen === 'settings' && <div className="settings-release-stack"><SettingsOverview role={role} /><SyncRecoveryWorkspace manager={syncQueueManager} snapshot={syncSnapshot} simulationEnabled={simulationEnabledAtBoot} onSimulationChange={changeSimulation} onRestoreApplied={() => window.location.reload()} /><HostedPilotWorkspace organizationId={organizationId} identityActive={Boolean(cloud.identity)} syncSnapshot={syncSnapshot} conflictStore={studioConflictStore} /></div>}
         </main>
       </div>
 

@@ -35,6 +35,8 @@ jobs:
       VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
       VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
       V11_PREVIEW_URL: ${{ vars.V11_PREVIEW_URL }}
+      PILOT_TEST_EMAIL: ${{ secrets.PILOT_TEST_EMAIL }}
+      PILOT_TEST_PASSWORD: ${{ secrets.PILOT_TEST_PASSWORD }}
       EXPECTED_WORKER_NAME: beaufort-learning-harbor-v11-preview
     steps:
       - uses: actions/checkout@v4
@@ -45,8 +47,12 @@ jobs:
         run: npm install --no-package-lock
       - name: Validate source and production build
         run: npm run verify
-      - name: Validate protected deployment configuration
+      - name: Validate protected provider configuration
+        run: npm run pilot:doctor
+      - name: Validate protected deployment boundary
         run: npm run check:deploy-readiness
+      - name: Verify reviewed schema on the non-production Supabase project
+        run: npm run pilot:verify-schema
       - name: Deploy isolated v11 preview Worker
         run: npx wrangler deploy --config wrangler.jsonc
       - name: Verify deployed health boundary
@@ -58,11 +64,11 @@ jobs:
           import { readFile } from 'node:fs/promises';
           const health = JSON.parse(await readFile('deployment-health.json', 'utf8'));
           if (health.ok !== true) throw new Error('Preview health endpoint did not return ok=true');
-          if (health.release !== '11.0.0-beta.3') throw new Error(`Unexpected deployed release: ${health.release}`);
+          if (health.release !== '11.0.0-beta.4') throw new Error(`Unexpected deployed release: ${health.release}`);
           if (health.service !== process.env.EXPECTED_WORKER_NAME) throw new Error(`Unexpected Worker service: ${health.service}`);
           console.log('Deployed preview health verified.');
           NODE
-      - name: Verify evidence and planning configuration
+      - name: Verify hosted-pilot capability boundary
         run: |
           curl --fail --silent --show-error --retry 8 --retry-delay 5 \
             "${V11_PREVIEW_URL%/}/api/config" \
@@ -70,13 +76,18 @@ jobs:
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const config = JSON.parse(await readFile('deployment-config.json', 'utf8'));
+          if (config.productionDataEnabled !== false) throw new Error('Preview must not enable production data');
           if (config.learning?.deterministicObjectiveScoring !== true) throw new Error('Deterministic objective scoring is not active');
           if (config.learning?.explicitEvidenceReview !== true) throw new Error('Explicit evidence review is not active');
-          if (config.learning?.weeklyHouseholdPlanning !== true) throw new Error('Weekly household planning is not active');
           if (config.learning?.automaticGrades !== false) throw new Error('Automatic grades must remain disabled');
           if (config.resilience?.orderedMutationQueue !== true) throw new Error('Ordered mutation queue is not active');
+          if (config.resilience?.clientRecordIdsPreserved !== true) throw new Error('Client record ID preservation is not active');
+          if (config.resilience?.conflictAwareStudioReconciliation !== true) throw new Error('Conflict-aware studio reconciliation is not active');
+          if (config.resilience?.silentConflictOverwrite !== false) throw new Error('Silent conflict overwrite must remain disabled');
           if (config.resilience?.encryptedPortableBackup !== true) throw new Error('Encrypted portable backup is not active');
-          if (config.resilience?.beta2BackupImport !== true) throw new Error('Beta 2 backup compatibility is not active');
+          if (config.hostedPilot?.schemaStatusRpc !== true) throw new Error('Hosted schema status capability is not active');
+          if (config.hostedPilot?.providerActivationRequired !== true) throw new Error('Provider activation boundary is missing');
+          if (config.hostedPilot?.automaticDeployment !== false) throw new Error('Automatic deployment must remain disabled');
           NODE
       - name: Create deployment receipt
         run: |
@@ -84,9 +95,11 @@ jobs:
           import { readFile, writeFile } from 'node:fs/promises';
           const health = JSON.parse(await readFile('deployment-health.json', 'utf8'));
           const configuration = JSON.parse(await readFile('deployment-config.json', 'utf8'));
+          const schema = JSON.parse(await readFile('remote-schema-report.json', 'utf8'));
+          const doctor = JSON.parse(await readFile('pilot-doctor-report.json', 'utf8'));
           const receipt = {
             schema: 'beaufort-learning-harbor-v11-preview-deployment-receipt-v1',
-            release: '11.0.0-beta.3',
+            release: '11.0.0-beta.4',
             worker: process.env.EXPECTED_WORKER_NAME,
             previewUrl: process.env.V11_PREVIEW_URL,
             commit: process.env.GITHUB_SHA,
@@ -95,17 +108,26 @@ jobs:
             deployedAt: new Date().toISOString(),
             health,
             learning: configuration.learning,
-            resilience: configuration.resilience
+            resilience: configuration.resilience,
+            hostedPilot: configuration.hostedPilot,
+            remoteSchema: schema,
+            doctor: {
+              ready: doctor.ready,
+              hosts: doctor.hosts,
+              migrations: doctor.migrations
+            }
           };
           await writeFile('deployment-receipt.json', `${JSON.stringify(receipt, null, 2)}\n`);
           NODE
-      - name: Upload deployment receipt
+      - name: Upload sanitized deployment receipt
         uses: actions/upload-artifact@v4
         with:
-          name: beaufort-learning-harbor-v11.0.0-beta.3-deployment-receipt
+          name: beaufort-learning-harbor-v11.0.0-beta.4-deployment-receipt
           path: |
             v11/deployment-health.json
             v11/deployment-config.json
             v11/deployment-receipt.json
+            v11/pilot-doctor-report.json
+            v11/remote-schema-report.json
           if-no-files-found: error
           retention-days: 90

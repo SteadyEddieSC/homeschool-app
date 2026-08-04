@@ -10,7 +10,8 @@ import {
   type EvidenceSubmission,
   type KnowledgeAttempt,
   type KnowledgeCheck,
-  type LearningStudioRepository,
+  type LearningStudioMirrorRepository,
+  type LearningStudioSnapshot,
   type ReviewEvidenceInput,
   type SubmitEvidenceInput,
   type SubmitKnowledgeAttemptInput,
@@ -28,13 +29,8 @@ interface Receipt {
   recordId: string;
 }
 
-interface LocalStudioState {
+interface LocalStudioState extends LearningStudioSnapshot {
   schema: typeof STATE_SCHEMA;
-  knowledgeChecks: KnowledgeCheck[];
-  knowledgeAttempts: KnowledgeAttempt[];
-  evidenceSubmissions: EvidenceSubmission[];
-  weeklyPlans: WeeklyPlan[];
-  weeklyPlanItems: WeeklyPlanItem[];
   receipts: Record<string, Receipt>;
 }
 
@@ -57,7 +53,9 @@ function loadState(): LocalStudioState {
         receipts: parsed.receipts && typeof parsed.receipts === 'object' ? parsed.receipts : {}
       };
     }
-  } catch { /* Damaged local preview records are replaced rather than merged. */ }
+  } catch {
+    // Damaged local preview records are replaced rather than merged or transmitted.
+  }
   const state = emptyState();
   saveState(state);
   return state;
@@ -66,15 +64,35 @@ function saveState(state: LocalStudioState): void { localStorage.setItem(STORAGE
 function canonicalFingerprint(kind: string, value: unknown): string { return `${kind}:${JSON.stringify(value)}`; }
 function duplicateError(): Error { return new Error('This learning action is already waiting to synchronize. Retry or cancel the existing operation instead of creating a duplicate.'); }
 
-export class LocalLearningStudioRepository implements LearningStudioRepository {
+export class LocalLearningStudioRepository implements LearningStudioMirrorRepository {
   constructor(private readonly queue: SyncQueueManager) {}
+
+  async readOrganizationSnapshot(organizationId: string): Promise<LearningStudioSnapshot> {
+    const state = loadState();
+    return clone({
+      knowledgeChecks: state.knowledgeChecks.filter((record) => record.organizationId === organizationId),
+      knowledgeAttempts: state.knowledgeAttempts.filter((record) => record.organizationId === organizationId),
+      evidenceSubmissions: state.evidenceSubmissions.filter((record) => record.organizationId === organizationId),
+      weeklyPlans: state.weeklyPlans.filter((record) => record.organizationId === organizationId),
+      weeklyPlanItems: state.weeklyPlanItems.filter((record) => record.organizationId === organizationId)
+    });
+  }
+
+  replaceOrganizationSnapshot(organizationId: string, snapshot: LearningStudioSnapshot): void {
+    const state = loadState();
+    state.knowledgeChecks = [...state.knowledgeChecks.filter((record) => record.organizationId !== organizationId), ...clone(snapshot.knowledgeChecks)];
+    state.knowledgeAttempts = [...state.knowledgeAttempts.filter((record) => record.organizationId !== organizationId), ...clone(snapshot.knowledgeAttempts)];
+    state.evidenceSubmissions = [...state.evidenceSubmissions.filter((record) => record.organizationId !== organizationId), ...clone(snapshot.evidenceSubmissions)];
+    state.weeklyPlans = [...state.weeklyPlans.filter((record) => record.organizationId !== organizationId), ...clone(snapshot.weeklyPlans)];
+    state.weeklyPlanItems = [...state.weeklyPlanItems.filter((record) => record.organizationId !== organizationId), ...clone(snapshot.weeklyPlanItems)];
+    saveState(state);
+  }
 
   async listKnowledgeChecks(organizationId: string, learnerId?: string): Promise<KnowledgeCheck[]> {
     return clone(loadState().knowledgeChecks.filter((check) => check.organizationId === organizationId && (!learnerId || check.learnerId === learnerId)).sort((left, right) => right.createdAt.localeCompare(left.createdAt)));
   }
 
   async createKnowledgeCheck(input: CreateKnowledgeCheckInput): Promise<KnowledgeCheck> {
-    this.assertHostedBoundary();
     const state = loadState();
     const operationId = input.operationId ?? crypto.randomUUID();
     const receipt = state.receipts[operationId];
@@ -103,7 +121,6 @@ export class LocalLearningStudioRepository implements LearningStudioRepository {
   }
 
   async submitKnowledgeAttempt(input: SubmitKnowledgeAttemptInput): Promise<KnowledgeAttempt> {
-    this.assertHostedBoundary();
     const state = loadState();
     const operationId = input.operationId ?? crypto.randomUUID();
     const receipt = state.receipts[operationId];
@@ -131,7 +148,6 @@ export class LocalLearningStudioRepository implements LearningStudioRepository {
   }
 
   async submitEvidence(input: SubmitEvidenceInput): Promise<EvidenceSubmission> {
-    this.assertHostedBoundary();
     const state = loadState();
     const operationId = input.operationId ?? crypto.randomUUID();
     const receipt = state.receipts[operationId];
@@ -157,7 +173,6 @@ export class LocalLearningStudioRepository implements LearningStudioRepository {
   }
 
   async reviewEvidence(input: ReviewEvidenceInput): Promise<EvidenceSubmission> {
-    this.assertHostedBoundary();
     const state = loadState();
     const operationId = input.operationId ?? crypto.randomUUID();
     const receipt = state.receipts[operationId];
@@ -186,7 +201,6 @@ export class LocalLearningStudioRepository implements LearningStudioRepository {
   }
 
   async createWeeklyPlan(input: CreateWeeklyPlanInput): Promise<WeeklyPlan> {
-    this.assertHostedBoundary();
     const state = loadState();
     const operationId = input.operationId ?? crypto.randomUUID();
     const receipt = state.receipts[operationId];
@@ -212,7 +226,6 @@ export class LocalLearningStudioRepository implements LearningStudioRepository {
   }
 
   async createWeeklyPlanItem(input: CreateWeeklyPlanItemInput): Promise<WeeklyPlanItem> {
-    this.assertHostedBoundary();
     const state = loadState();
     const operationId = input.operationId ?? crypto.randomUUID();
     const receipt = state.receipts[operationId];
@@ -237,13 +250,19 @@ export class LocalLearningStudioRepository implements LearningStudioRepository {
     return clone(item);
   }
 
-  private ensureNotQueued(fingerprint: string): void { if (this.hasRemoteTarget() && this.queue.hasActiveFingerprint(fingerprint)) throw duplicateError(); }
-  private enqueue(input: EnqueueSyncOperationInput): void { if (!this.hasRemoteTarget()) return; this.queue.enqueue(input); void this.queue.process(); }
-  private assertHostedBoundary(): void {
-    const mode = this.queue.getSnapshot().mode;
-    if (mode === 'cloud-connected' || mode === 'cloud-ready') throw new Error('Hosted beta.3 learning-studio writes are deferred to beta.4. Use Local preview or Cloud simulation for this release.');
+  private ensureNotQueued(fingerprint: string): void {
+    if (this.hasRemoteTarget() && this.queue.hasActiveFingerprint(fingerprint)) throw duplicateError();
   }
-  private hasRemoteTarget(): boolean { return this.queue.getSnapshot().mode === 'cloud-simulation'; }
+
+  private enqueue(input: EnqueueSyncOperationInput): void {
+    if (!this.hasRemoteTarget()) return;
+    this.queue.enqueue(input);
+    void this.queue.process();
+  }
+
+  private hasRemoteTarget(): boolean {
+    return ['cloud-simulation', 'cloud-connected', 'cloud-ready'].includes(this.queue.getSnapshot().mode);
+  }
 }
 
 export const LOCAL_STUDIO_STORAGE_KEY = STORAGE_KEY;

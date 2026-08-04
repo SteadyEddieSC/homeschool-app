@@ -8,7 +8,7 @@ interface Env {
   APP_RELEASE?: string;
 }
 
-const RELEASE = '11.0.0-beta.3';
+const RELEASE = '11.0.0-beta.4';
 const SERVICE = 'beaufort-learning-harbor-v11-preview';
 
 function securityHeaders(headers = new Headers()): Headers {
@@ -73,16 +73,29 @@ export default {
           localMirror: true,
           orderedMutationQueue: true,
           idempotentOperationReceipts: true,
+          clientRecordIdsPreserved: true,
           retryAndCancelControls: true,
           syncDisabledWhileSignedOut: true,
+          conflictAwareStudioReconciliation: true,
+          silentConflictOverwrite: false,
           encryptedPortableBackup: true,
-          beta3RecordsIncludedInBackup: true,
-          beta2BackupImport: true,
+          beta4RecordsIncludedInBackup: true,
+          beta2AndBeta3BackupImport: true,
           restorePreviewRequired: true,
+          sanitizedPilotDiagnostics: true,
           automaticCloudBackup: false
         },
+        hostedPilot: {
+          studioRepositories: true,
+          schemaStatusRpc: true,
+          secretSafeDoctor: true,
+          authenticatedRemoteVerification: true,
+          providerActivationRequired: true,
+          automaticDeployment: false,
+          productionCutover: false
+        },
         integrations: {
-          supabase: 'optional-browser-configured',
+          supabase: 'owner-configured-non-production',
           band: 'not-configured'
         }
       });

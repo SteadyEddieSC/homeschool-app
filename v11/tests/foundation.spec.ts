@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises';
 import { expect, test, type Page } from '@playwright/test';
 
 async function openDestination(page: Page, label: string): Promise<void> {
@@ -33,7 +34,7 @@ async function assignItem(page: Page, title: string, type: 'learn' | 'practice' 
   await page.getByTestId('assignment-title').fill(title);
   await page.getByTestId('assignment-type').selectOption(type);
   await page.getByTestId('create-assignment').click();
-  await expect(page.getByText(new RegExp(`was assigned to Synthetic Learner`))).toBeVisible();
+  await expect(page.getByText(new RegExp('was assigned to Synthetic Learner'))).toBeVisible();
   return page.evaluate((itemTitle) => {
     const state = JSON.parse(localStorage.getItem('beaufortLearningHarbor.v11.beta1.learning') ?? '{}') as {
       todayItems?: Array<{ id: string; title: string }>;
@@ -52,19 +53,20 @@ test.beforeEach(async ({ page }) => {
   await resetPreview(page);
 });
 
-test('beta.3 renders without credentials and exposes explicit learning boundaries', async ({ page, request }) => {
+test('beta.4 renders without credentials and exposes hosted-pilot safety boundaries', async ({ page, request }) => {
   const health = await request.get('/api/health');
   expect(health.ok()).toBe(true);
   await expect(health.json()).resolves.toMatchObject({
     ok: true,
     service: 'beaufort-learning-harbor-v11-preview',
-    release: '11.0.0-beta.3',
+    release: '11.0.0-beta.4',
     environment: 'preview'
   });
 
   const config = await request.get('/api/config');
   expect(config.ok()).toBe(true);
   await expect(config.json()).resolves.toMatchObject({
+    productionDataEnabled: false,
     learning: {
       parentManagedLearners: true,
       deterministicObjectiveScoring: true,
@@ -79,9 +81,20 @@ test('beta.3 renders without credentials and exposes explicit learning boundarie
     resilience: {
       localMirror: true,
       orderedMutationQueue: true,
+      clientRecordIdsPreserved: true,
+      conflictAwareStudioReconciliation: true,
+      silentConflictOverwrite: false,
       encryptedPortableBackup: true,
-      beta2BackupImport: true,
-      restorePreviewRequired: true
+      beta2AndBeta3BackupImport: true,
+      restorePreviewRequired: true,
+      sanitizedPilotDiagnostics: true
+    },
+    hostedPilot: {
+      studioRepositories: true,
+      schemaStatusRpc: true,
+      providerActivationRequired: true,
+      automaticDeployment: false,
+      productionCutover: false
     }
   });
 
@@ -179,7 +192,7 @@ test('objective checks, proof revisions, adult decisions, and weekly plans form 
   await expect(page.getByText('Tool-scored result: 1/1 (100%).')).toBeVisible();
 });
 
-test('beta.3 cloud simulation queues studio operations once and reconnects in order', async ({ page, context }) => {
+test('beta.4 cloud simulation queues studio operations once and reconnects in order', async ({ page, context }) => {
   await resetPreview(page, '/?sync-sim=1');
   await context.setOffline(true);
   await page.waitForFunction(() => navigator.onLine === false);
@@ -201,7 +214,65 @@ test('beta.3 cloud simulation queues studio operations once and reconnects in or
   await expect(page.getByTestId('sync-indicator')).toHaveText('Synced');
 });
 
-test('encrypted backup includes beta.3 learning records and requires preview confirmation', async ({ page }) => {
+test('hosted pilot remains explicitly deferred without provider configuration and diagnostics are sanitized', async ({ page }) => {
+  await openDestination(page, 'Sync');
+  await expect(page.getByTestId('hosted-pilot-workspace')).toBeVisible();
+  await expect(page.getByTestId('pilot-overall-status')).toHaveText('Activation deferred');
+  await expect(page.getByTestId('pilot-provider-status')).toHaveText('Not configured');
+  await expect(page.getByTestId('pilot-conflict-count')).toHaveText('0');
+
+  const downloadPromise = page.waitForEvent('download');
+  await page.getByTestId('download-pilot-diagnostics').click();
+  const download = await downloadPromise;
+  const diagnosticsPath = await download.path();
+  expect(diagnosticsPath).not.toBeNull();
+  const report = JSON.parse(await readFile(diagnosticsPath!, 'utf8')) as {
+    release?: string;
+    queue?: { operations?: Array<Record<string, unknown>> };
+    reconciliation?: unknown;
+  };
+  expect(report.release).toBe('11.0.0-beta.4');
+  expect(report.queue).toBeDefined();
+  expect(report.reconciliation).toBeDefined();
+  for (const operation of report.queue?.operations ?? []) {
+    expect(operation).not.toHaveProperty('payload');
+    expect(operation).not.toHaveProperty('lastError');
+  }
+  const serialized = JSON.stringify(report);
+  expect(serialized).not.toContain('Synthetic Learner');
+  expect(serialized).not.toContain('PRIVATE INTERNAL SYNTHETIC NOTE');
+});
+
+test('divergent hosted records are visible and acknowledgeable without exposing record content', async ({ page }) => {
+  await page.evaluate(() => {
+    localStorage.setItem('beaufortLearningHarbor.v11.beta4.studioConflicts', JSON.stringify({
+      schema: 'beaufort-learning-harbor-hosted-pilot-state-v1',
+      conflicts: [{
+        id: 'knowledge-check:synthetic-check:11111111:22222222',
+        organizationId: 'preview-organization',
+        entityType: 'knowledge-check',
+        recordId: 'synthetic-check-record',
+        summary: 'Knowledge check synthetic-',
+        localDigest: '11111111',
+        remoteDigest: '22222222',
+        detectedAt: '2026-08-04T12:00:00.000Z',
+        status: 'open'
+      }],
+      refreshes: {}
+    }));
+  });
+  await page.reload();
+  await openDestination(page, 'Sync');
+  await expect(page.getByTestId('pilot-conflict-count')).toHaveText('1');
+  const conflict = page.getByTestId('pilot-conflict-knowledge-check:synthetic-check:11111111:22222222');
+  await expect(conflict).toContainText('local 11111111 / hosted 22222222');
+  await expect(conflict).not.toContainText('question');
+  await page.getByTestId('acknowledge-conflict-knowledge-check:synthetic-check:11111111:22222222').click();
+  await expect(conflict).toContainText('acknowledged');
+  await expect(page.getByTestId('pilot-conflict-count')).toHaveText('0');
+});
+
+test('encrypted backup includes beta.4 learning records and requires preview confirmation', async ({ page }) => {
   await createSyntheticHouseholdAndLearner(page);
   await assignItem(page, 'Synthetic backup quiz', 'quiz');
   await openDestination(page, 'Plan');
@@ -220,6 +291,7 @@ test('encrypted backup includes beta.3 learning records and requires preview con
   await page.getByTestId('backup-restore-passphrase').fill(passphrase);
   await page.getByTestId('backup-inspect').click();
   const preview = page.getByTestId('restore-preview');
+  await expect(preview).toContainText('11.0.0-beta.4 backup');
   await expect(preview).toContainText('Knowledge checks1');
   await expect(preview).toContainText('Households1');
   await expect(page.getByTestId('backup-apply')).toBeDisabled();

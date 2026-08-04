@@ -1,0 +1,70 @@
+.hosted-pilot-panel {
+  display: grid;
+  gap: 1rem;
+}
+
+.pilot-metric-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.85rem;
+}
+
+.pilot-conflict-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pilot-conflict {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border-color, rgba(106, 122, 140, 0.3));
+  border-radius: 0.8rem;
+  background: color-mix(in srgb, var(--panel-background, #ffffff) 94%, transparent);
+}
+
+.pilot-conflict > div {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.pilot-conflict span,
+.pilot-conflict code {
+  font-size: 0.78rem;
+}
+
+.pilot-conflict code {
+  overflow-wrap: anywhere;
+}
+
+.status-chip.failed {
+  background: color-mix(in srgb, #b42318 14%, transparent);
+  color: #b42318;
+}
+
+@media (max-width: 1000px) {
+  .pilot-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pilot-conflict {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+}
+
+@media (max-width: 640px) {
+  .pilot-metric-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pilot-conflict {
+    grid-template-columns: minmax(0, 1fr);
+    align-items: stretch;
+  }
+
+  .pilot-conflict .button {
+    width: 100%;
+  }
+}

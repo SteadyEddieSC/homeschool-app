@@ -22,10 +22,10 @@ function decodeJwtRole(value: string): string {
 
 const supabaseUrl = String(import.meta.env.VITE_SUPABASE_URL ?? '').trim();
 const publishableKey = String(import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ?? '').trim();
-const serviceRoleDetected = decodeJwtRole(publishableKey) === 'service_role';
+const privilegedBrowserKeyDetected = publishableKey.startsWith('sb_secret_') || decodeJwtRole(publishableKey) === 'service_role';
 
-if (serviceRoleDetected) {
-  throw new Error('A Supabase service-role key must never be exposed to the browser.');
+if (privilegedBrowserKeyDetected) {
+  throw new Error('A Supabase secret or service-role key must never be exposed to the browser.');
 }
 
 const parsedSupabaseUrl = (() => {
@@ -41,7 +41,7 @@ const parsedSupabaseUrl = (() => {
 })();
 
 export const runtimeConfiguration: RuntimeConfiguration = Object.freeze({
-  release: '11.0.0-beta.2',
+  release: '11.0.0-beta.4',
   environment: String(import.meta.env.VITE_APP_ENV ?? 'preview'),
   supabaseConfigured: Boolean(parsedSupabaseUrl && publishableKey),
   supabaseHost: parsedSupabaseUrl?.hostname ?? '',

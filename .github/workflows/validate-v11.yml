@@ -40,6 +40,35 @@ jobs:
           node-version: 22
       - run: npm install --no-package-lock
       - run: npm run verify
+      - name: Verify the unconfigured pilot doctor fails safely
+        run: |
+          set +e
+          npm run pilot:doctor
+          code=$?
+          set -e
+          if [ "$code" -ne 2 ]; then
+            echo "Expected missing-provider exit code 2, received $code"
+            exit 1
+          fi
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const report = JSON.parse(await readFile('pilot-doctor-report.json', 'utf8'));
+          if (report.release !== '11.0.0-beta.4') throw new Error('Unexpected pilot doctor release');
+          if (report.ready !== false) throw new Error('Unconfigured CI must not report pilot ready');
+          if (!Array.isArray(report.missing) || report.missing.length === 0) throw new Error('Missing provider configuration was not reported');
+          if (!Array.isArray(report.unsafe) || report.unsafe.length !== 0) throw new Error('Unconfigured CI should be missing, not unsafe');
+          const text = JSON.stringify(report);
+          for (const forbidden of ['password', 'service_role', 'sb_secret_', 'access_token']) {
+            if (text.toLowerCase().includes(forbidden)) throw new Error(`Pilot doctor report leaked forbidden material: ${forbidden}`);
+          }
+          NODE
+      - name: Upload safe pilot doctor report
+        uses: actions/upload-artifact@v4
+        with:
+          name: v11-beta4-pilot-doctor-unconfigured
+          path: v11/pilot-doctor-report.json
+          if-no-files-found: error
+          retention-days: 14
 
   database:
     runs-on: ubuntu-latest
@@ -60,7 +89,7 @@ jobs:
         run: npm run db:start
       - name: Rebuild database from migrations
         run: npm run db:reset
-      - name: Run identity, family, studio, idempotency, and RLS database tests
+      - name: Run identity, family, studio, hosted-pilot, idempotency, and RLS database tests
         run: npm run db:test
       - name: Stop local Supabase stack
         if: always()
@@ -90,7 +119,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: v11-beta3-playwright-${{ matrix.project }}
+          name: v11-beta4-playwright-${{ matrix.project }}
           path: |
             v11/playwright-report/
             v11/test-results/
@@ -113,7 +142,7 @@ jobs:
       - name: Upload validated v11 preview build
         uses: actions/upload-artifact@v4
         with:
-          name: beaufort-learning-harbor-v11.0.0-beta.3-preview
+          name: beaufort-learning-harbor-v11.0.0-beta.4-preview
           path: v11/dist/
           if-no-files-found: error
           retention-days: 30
