@@ -73,7 +73,9 @@ test('production-ready request is downgraded and sanitized reports omit learner 
   const receiptPath = await (await receiptDownload).path();
   const receipt = JSON.parse(await readFile(receiptPath!, 'utf8')) as Record<string, unknown>;
   const receiptText = JSON.stringify(receipt);
-  for (const forbidden of ['Synthetic Learner','Synthetic Harbor Household','Synthetic model explanation','password','payload','sb_secret_','service_role']) expect(receiptText).not.toContain(forbidden);
+  for (const forbidden of ['Synthetic Learner','Synthetic Harbor Household','Synthetic model explanation','password','sb_secret_','service_role']) expect(receiptText).not.toContain(forbidden);
+  expect(receipt).not.toHaveProperty('payload');
+  for (const operation of (receipt.operationReceipts as Array<Record<string, unknown>> | undefined) ?? []) expect(operation).not.toHaveProperty('payload');
   const readinessDownload = page.waitForEvent('download');
   await page.getByTestId('download-readiness-report').click();
   const readinessPath = await (await readinessDownload).path();
