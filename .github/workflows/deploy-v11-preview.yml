@@ -15,7 +15,6 @@ on:
 concurrency:
   group: deploy-v11-preview
   cancel-in-progress: false
-
 permissions:
   contents: read
 
@@ -45,51 +44,41 @@ jobs:
           node-version: 22
       - name: Install exact preview dependencies
         run: npm install --no-package-lock
-      - name: Validate source and production build
+      - name: Validate source, migration rehearsal, readiness evidence, and build
         run: npm run verify
       - name: Validate protected provider configuration
         run: npm run pilot:doctor
       - name: Validate protected deployment boundary
         run: npm run check:deploy-readiness
-      - name: Verify reviewed schema on the non-production Supabase project
+      - name: Verify migrations 001-009 on the non-production Supabase project
         run: npm run pilot:verify-schema
       - name: Deploy isolated v11 preview Worker
         run: npx wrangler deploy --config wrangler.jsonc
       - name: Verify deployed health boundary
         run: |
-          curl --fail --silent --show-error --retry 8 --retry-delay 5 \
-            "${V11_PREVIEW_URL%/}/api/health" \
-            --output deployment-health.json
+          curl --fail --silent --show-error --retry 8 --retry-delay 5 "${V11_PREVIEW_URL%/}/api/health" --output deployment-health.json
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const health = JSON.parse(await readFile('deployment-health.json', 'utf8'));
           if (health.ok !== true) throw new Error('Preview health endpoint did not return ok=true');
-          if (health.release !== '11.0.0-beta.4') throw new Error(`Unexpected deployed release: ${health.release}`);
+          if (health.release !== '11.0.0-rc.1') throw new Error(`Unexpected deployed release: ${health.release}`);
           if (health.service !== process.env.EXPECTED_WORKER_NAME) throw new Error(`Unexpected Worker service: ${health.service}`);
-          console.log('Deployed preview health verified.');
           NODE
-      - name: Verify hosted-pilot capability boundary
+      - name: Verify release-candidate capability boundary
         run: |
-          curl --fail --silent --show-error --retry 8 --retry-delay 5 \
-            "${V11_PREVIEW_URL%/}/api/config" \
-            --output deployment-config.json
+          curl --fail --silent --show-error --retry 8 --retry-delay 5 "${V11_PREVIEW_URL%/}/api/config" --output deployment-config.json
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const config = JSON.parse(await readFile('deployment-config.json', 'utf8'));
           if (config.productionDataEnabled !== false) throw new Error('Preview must not enable production data');
-          if (config.learning?.deterministicObjectiveScoring !== true) throw new Error('Deterministic objective scoring is not active');
-          if (config.learning?.explicitEvidenceReview !== true) throw new Error('Explicit evidence review is not active');
-          if (config.learning?.automaticGrades !== false) throw new Error('Automatic grades must remain disabled');
-          if (config.resilience?.orderedMutationQueue !== true) throw new Error('Ordered mutation queue is not active');
-          if (config.resilience?.clientRecordIdsPreserved !== true) throw new Error('Client record ID preservation is not active');
-          if (config.resilience?.conflictAwareStudioReconciliation !== true) throw new Error('Conflict-aware studio reconciliation is not active');
-          if (config.resilience?.silentConflictOverwrite !== false) throw new Error('Silent conflict overwrite must remain disabled');
-          if (config.resilience?.encryptedPortableBackup !== true) throw new Error('Encrypted portable backup is not active');
-          if (config.hostedPilot?.schemaStatusRpc !== true) throw new Error('Hosted schema status capability is not active');
-          if (config.hostedPilot?.providerActivationRequired !== true) throw new Error('Provider activation boundary is missing');
-          if (config.hostedPilot?.automaticDeployment !== false) throw new Error('Automatic deployment must remain disabled');
+          if (config.learning?.deterministicObjectiveScoring !== true || config.learning?.explicitEvidenceReview !== true) throw new Error('Learning authority boundaries are missing');
+          if (config.learning?.automaticGrades !== false || config.learning?.automaticMastery !== false || config.learning?.automaticAttendance !== false || config.learning?.automaticXp !== false) throw new Error('Automatic outcomes must remain disabled');
+          if (config.resilience?.orderedMutationQueue !== true || config.resilience?.clientRecordIdsPreserved !== true || config.resilience?.conflictAwareStudioReconciliation !== true || config.resilience?.silentConflictOverwrite !== false) throw new Error('Synchronization boundaries are missing');
+          if (config.migration?.syntheticV1043Rehearsal !== true || config.migration?.strictParser !== true || config.migration?.liveMigrationEnabled !== false || config.migration?.productionWriteEnabled !== false) throw new Error('Migration rehearsal boundaries are missing');
+          if (config.readiness?.decision !== 'not-ready' || config.readiness?.productionReady !== false || config.readiness?.productionCutover !== false || config.readiness?.automatedPromotionAllowed !== false) throw new Error('Readiness must remain owner-blocked');
+          if (config.hostedPilot?.automaticDeployment !== false || config.hostedPilot?.providerActivationRequired !== true) throw new Error('Provider activation boundary is missing');
           NODE
-      - name: Create deployment receipt
+      - name: Create sanitized deployment receipt
         run: |
           node --input-type=module <<'NODE'
           import { readFile, writeFile } from 'node:fs/promises';
@@ -98,31 +87,29 @@ jobs:
           const schema = JSON.parse(await readFile('remote-schema-report.json', 'utf8'));
           const doctor = JSON.parse(await readFile('pilot-doctor-report.json', 'utf8'));
           const receipt = {
-            schema: 'beaufort-learning-harbor-v11-preview-deployment-receipt-v1',
-            release: '11.0.0-beta.4',
+            schema: 'beaufort-learning-harbor-v11-preview-deployment-receipt-v2',
+            release: '11.0.0-rc.1',
             worker: process.env.EXPECTED_WORKER_NAME,
-            previewUrl: process.env.V11_PREVIEW_URL,
+            previewHost: new URL(process.env.V11_PREVIEW_URL).hostname,
             commit: process.env.GITHUB_SHA,
             runId: process.env.GITHUB_RUN_ID,
             runAttempt: process.env.GITHUB_RUN_ATTEMPT,
             deployedAt: new Date().toISOString(),
             health,
-            learning: configuration.learning,
-            resilience: configuration.resilience,
+            migration: configuration.migration,
+            recovery: configuration.recovery,
+            readiness: configuration.readiness,
             hostedPilot: configuration.hostedPilot,
             remoteSchema: schema,
-            doctor: {
-              ready: doctor.ready,
-              hosts: doctor.hosts,
-              migrations: doctor.migrations
-            }
+            doctor: { ready: doctor.ready, hosts: doctor.hosts, migrations: doctor.migrations, productionCutoverApproved: false },
+            exclusions: ['credentials and sessions', 'learner names and work', 'queue payloads', 'raw error text']
           };
           await writeFile('deployment-receipt.json', `${JSON.stringify(receipt, null, 2)}\n`);
           NODE
       - name: Upload sanitized deployment receipt
         uses: actions/upload-artifact@v4
         with:
-          name: beaufort-learning-harbor-v11.0.0-beta.4-deployment-receipt
+          name: beaufort-learning-harbor-v11.0.0-rc.1-deployment-receipt
           path: |
             v11/deployment-health.json
             v11/deployment-config.json
