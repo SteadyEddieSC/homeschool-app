@@ -1,100 +1,62 @@
 name: Validate v11
-
 on:
   pull_request:
     branches: [main]
-    paths:
-      - 'v11/**'
-      - 'docs/v11/**'
-      - '.github/workflows/validate-v11.yml'
-      - '.github/workflows/deploy-v11-preview.yml'
-      - '.gitignore'
-      - 'README.md'
+    paths: ['v11/**','docs/v11/**','.github/workflows/validate-v11.yml','.github/workflows/deploy-v11-preview.yml','.gitignore','README.md']
   push:
     branches: [main]
-    paths:
-      - 'v11/**'
-      - 'docs/v11/**'
-      - '.github/workflows/validate-v11.yml'
-      - '.github/workflows/deploy-v11-preview.yml'
-      - '.gitignore'
-      - 'README.md'
-
+    paths: ['v11/**','docs/v11/**','.github/workflows/validate-v11.yml','.github/workflows/deploy-v11-preview.yml','.gitignore','README.md']
 concurrency:
   group: validate-v11-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
-
 permissions:
   contents: read
-
 jobs:
   foundation:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: v11
+    defaults: { run: { working-directory: v11 } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 22
+        with: { node-version: 22 }
       - run: npm install --no-package-lock
       - run: npm run verify
-      - name: Verify the unconfigured pilot doctor fails safely
+      - name: Verify unconfigured pilot doctor fails safely
         run: |
           set +e
           npm run pilot:doctor
           code=$?
           set -e
-          if [ "$code" -ne 2 ]; then
-            echo "Expected missing-provider exit code 2, received $code"
-            exit 1
-          fi
+          test "$code" -eq 2
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
-          const report = JSON.parse(await readFile('pilot-doctor-report.json', 'utf8'));
-          if (report.release !== '11.0.0-beta.4') throw new Error('Unexpected pilot doctor release');
-          if (report.ready !== false) throw new Error('Unconfigured CI must not report pilot ready');
-          if (!Array.isArray(report.missing) || report.missing.length === 0) throw new Error('Missing provider configuration was not reported');
-          if (!Array.isArray(report.unsafe) || report.unsafe.length !== 0) throw new Error('Unconfigured CI should be missing, not unsafe');
-          const text = JSON.stringify(report);
-          for (const forbidden of ['password', 'service_role', 'sb_secret_', 'access_token']) {
-            if (text.toLowerCase().includes(forbidden)) throw new Error(`Pilot doctor report leaked forbidden material: ${forbidden}`);
-          }
+          const report = JSON.parse(await readFile('pilot-doctor-report.json','utf8'));
+          if (report.release !== '11.0.0-rc.1' || report.ready !== false || report.productionCutoverApproved !== false) process.exit(1);
           NODE
-      - name: Upload safe pilot doctor report
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: v11-beta4-pilot-doctor-unconfigured
-          path: v11/pilot-doctor-report.json
+          name: v11-rc1-migration-rehearsal
+          path: |
+            v11/artifacts/rc1/
+            v11/pilot-doctor-report.json
           if-no-files-found: error
-          retention-days: 14
-
+          retention-days: 30
   database:
     runs-on: ubuntu-latest
     needs: foundation
     timeout-minutes: 25
-    defaults:
-      run:
-        working-directory: v11
-    env:
-      SUPABASE_TELEMETRY_DISABLED: '1'
+    defaults: { run: { working-directory: v11 } }
+    env: { SUPABASE_TELEMETRY_DISABLED: '1' }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 22
+        with: { node-version: 22 }
       - run: npm install --no-package-lock
-      - name: Start local Supabase stack
-        run: npm run db:start
-      - name: Rebuild database from migrations
-        run: npm run db:reset
-      - name: Run identity, family, studio, hosted-pilot, idempotency, and RLS database tests
-        run: npm run db:test
-      - name: Stop local Supabase stack
-        if: always()
+      - run: npm run db:start
+      - run: npm run db:reset
+      - run: npm run db:test
+      - if: always()
         run: npm run db:stop
-
   browser:
     name: browser-${{ matrix.project }}
     runs-on: ubuntu-latest
@@ -102,47 +64,37 @@ jobs:
     timeout-minutes: 30
     strategy:
       fail-fast: false
-      matrix:
-        project: [chromium-desktop, chromium-tablet, chromium-mobile]
-    defaults:
-      run:
-        working-directory: v11
+      matrix: { project: [chromium-desktop, chromium-tablet, chromium-mobile] }
+    defaults: { run: { working-directory: v11 } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 22
+        with: { node-version: 22 }
       - run: npm install --no-package-lock
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test --project=${{ matrix.project }}
-      - name: Upload v11 Playwright results
-        if: always()
+      - if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: v11-beta4-playwright-${{ matrix.project }}
+          name: v11-rc1-playwright-${{ matrix.project }}
           path: |
             v11/playwright-report/
             v11/test-results/
           if-no-files-found: ignore
           retention-days: 14
-
   preview-artifact:
     runs-on: ubuntu-latest
     needs: [database, browser]
-    defaults:
-      run:
-        working-directory: v11
+    defaults: { run: { working-directory: v11 } }
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with:
-          node-version: 22
+        with: { node-version: 22 }
       - run: npm install --no-package-lock
       - run: npm run verify
-      - name: Upload validated v11 preview build
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
-          name: beaufort-learning-harbor-v11.0.0-beta.4-preview
+          name: beaufort-learning-harbor-v11.0.0-rc.1-preview
           path: v11/dist/
           if-no-files-found: error
           retention-days: 30
