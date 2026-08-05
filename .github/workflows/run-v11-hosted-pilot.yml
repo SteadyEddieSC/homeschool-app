@@ -90,8 +90,8 @@ jobs:
         run: npm install --no-package-lock
       - name: Install hosted Chromium
         run: npx playwright install --with-deps chromium
-      - name: Validate protected provider configuration
-        run: npm run pilot:doctor
+      - name: Validate protected browser configuration
+        run: npm run pilot:doctor:browser
       - name: Verify protected hosted schema
         run: npm run pilot:verify-schema
       - name: Run hosted browser resilience pilot
