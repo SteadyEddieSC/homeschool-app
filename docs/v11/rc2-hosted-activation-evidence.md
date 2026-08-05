@@ -21,16 +21,16 @@ Exact repository branch at activation: `release/v11.0.0-rc.2-hosted-pilot`.
 
 The repository-owned migration sequence was applied in reviewed order through:
 
-- identity and organization foundation;
-- access hardening;
-- identity bootstrap and one-time invitation controls;
-- invitation cryptographic hardening;
-- parent-managed learners and explicit adult-reviewed Today transitions;
-- stable operation IDs and idempotent Today receipts;
-- objective checks, subjective evidence review, and seven-day planning;
-- hosted client-record-ID preservation and schema-status RPC;
-- synthetic-only migration rehearsal and owner-blocked readiness metadata;
-- hosted ACL hardening discovered during provider activation.
+- `202608030001_v11_foundation.sql`;
+- `202608030002_v11_access_hardening.sql`;
+- `202608030003_v11_identity_bootstrap.sql`;
+- `202608030004_v11_invite_crypto_hardening.sql`;
+- `202608030005_v11_parent_managed_learning.sql`;
+- `202608030006_v11_idempotent_sync.sql`;
+- `202608040007_v11_learning_studio.sql`;
+- `202608040008_v11_hosted_pilot.sql`;
+- `202608040009_v11_migration_rehearsal.sql`;
+- `202608050010_v11_hosted_acl_hardening.sql`.
 
 After activation:
 
@@ -40,25 +40,41 @@ After activation:
 - anonymous executable security-definer functions: 0;
 - directly executable trigger-only functions for authenticated users: 0;
 - legacy knowledge-attempt RPC available to authenticated clients: false;
-- current client-record-ID-preserving knowledge-attempt RPC available to authenticated clients: true.
+- current client-record-ID-preserving knowledge-attempt RPC available to authenticated clients: true;
+- authenticated sanitized ACL-status RPC available: true;
+- anonymous ACL-status RPC available: false.
 
 ### Hosted defect discovered and closed
 
 The provider initially assigned direct anonymous or inherited `PUBLIC` execute access to public-schema security-definer functions despite earlier migrations revoking `PUBLIC` on selected callable functions. Internal authentication checks prevented unauthenticated business actions, but the exposed RPC surface violated least privilege and produced Supabase security warnings.
 
-The repository-owned hosted ACL hardening migration now:
+The repository-owned migration `202608050010_v11_hosted_acl_hardening.sql` now:
 
+- runs after hosted migration `008` and release-candidate migration `009`;
 - revokes function execution from both `PUBLIC` and `anon` across the public schema;
 - preserves only explicit authenticated application RPC grants;
 - removes direct authenticated execution from trigger-only functions;
 - disables the superseded knowledge-attempt RPC;
-- fixes the mutable search path on `set_updated_at()`.
+- preserves the current client-record-ID-aware scoring RPC;
+- fixes the mutable search path on `set_updated_at()`;
+- provides `hosted_acl_status()` for sanitized authenticated verification.
 
 Direct post-migration ACL inspection verified the corrected state above.
 
+### Repository regression coverage
+
+The RC.2 branch now includes:
+
+- `hosted_acl_test.sql` for local pgTAP verification;
+- learning-studio tests that use `submit_knowledge_attempt_v2`;
+- pilot-doctor checks requiring migration `010` while retaining migration `009` release-candidate evidence;
+- protected remote verification of migrations `008`, `009`, and `010`;
+- RC.2 provider-evidence validation covering the ACL state;
+- deployment workflow and hosted-preview runbook updates through migrations `001–010`.
+
 ## Remaining Gate B work
 
-This evidence does not complete Gate B. Still required:
+The Supabase database portion of Gate B is complete. Still required:
 
 - protected GitHub environment `v11-preview`;
 - protected publishable Supabase value and synthetic verifier credentials;
