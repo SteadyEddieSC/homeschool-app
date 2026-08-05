@@ -60,7 +60,7 @@ jobs:
           const text = JSON.stringify(report).toLowerCase();
           for (const forbidden of ['password', 'service_role', 'sb_secret_', 'access_token']) if (text.includes(forbidden)) throw new Error(`Pilot doctor leaked forbidden material: ${forbidden}`);
           NODE
-      - name: Upload sanitized rc.1 foundation evidence
+      - name: Upload sanitized rc.1 and RC.2 foundation evidence
         uses: actions/upload-artifact@v4
         with:
           name: v11-rc1-migration-rehearsal
@@ -68,6 +68,7 @@ jobs:
             v11/test-results/rc1/migration-rehearsal-report.json
             v11/test-results/rc1/production-readiness-report.json
             v11/test-results/rc1/vendor-exit-rehearsal-report.json
+            v11/test-results/rc2/rc2-repository-evidence.json
             v11/pilot-doctor-report.json
           if-no-files-found: error
           retention-days: 30
