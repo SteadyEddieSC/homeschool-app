@@ -46,15 +46,16 @@ npm run db:stop
 
 Expected local boundaries:
 
-- migrations rebuild from `001–009`;
+- migrations rebuild from `001–010`;
 - migration `009` remains synthetic-rehearsal-only;
+- migration `010` removes anonymous and inherited public RPC execution and disables superseded browser RPCs;
 - live migration is disabled;
 - production data is disabled;
 - production cutover is not approved;
 - owner approval remains required;
 - the stable v10.43 workflow is unchanged and separately green.
 
-## 3. Link and review migrations `001–009`
+## 3. Link and review migrations `001–010`
 
 From the owner-controlled environment:
 
@@ -67,7 +68,7 @@ npx supabase db push --dry-run
 Review the complete dry run. It must end at:
 
 ```text
-202608040009_v11_migration_rehearsal.sql
+202608050010_v11_hosted_acl_hardening.sql
 ```
 
 Do not continue when the target project is uncertain, the migration order differs, an unexpected destructive statement appears, or the output references a production project.
@@ -78,7 +79,7 @@ Only after review:
 npx supabase db push
 ```
 
-Migration `008` provides the hosted-pilot repository/RPC baseline. Migration `009` adds synthetic-only migration-rehearsal receipts and authenticated release-candidate readiness status while keeping live migration, production data, and cutover disabled.
+Migration `008` provides the hosted-pilot repository/RPC baseline. Migration `009` adds synthetic-only migration-rehearsal receipts and authenticated release-candidate readiness status while keeping live migration, production data, and cutover disabled. Migration `010` removes anonymous and inherited `PUBLIC` function execution, removes direct browser execution from trigger-only and superseded functions, and exposes only a sanitized authenticated ACL status check.
 
 ## 4. Configure authentication and sender boundaries
 
@@ -100,7 +101,8 @@ In the dedicated non-production project:
 Create one disposable adult account containing no family information. It exists only so the protected deployment workflow can authenticate and call:
 
 - `hosted_pilot_schema_status()` from migration `008`;
-- `release_candidate_readiness_status()` from migration `009`.
+- `release_candidate_readiness_status()` from migration `009`;
+- `hosted_acl_status()` from migration `010`.
 
 Store its credentials only as protected GitHub environment secrets:
 
@@ -154,7 +156,7 @@ From the protected environment containing provider values:
 npm run pilot:doctor
 ```
 
-The doctor checks configuration presence, URL/host boundaries, browser-key privilege, migration ordering, and Worker isolation. It writes `pilot-doctor-report.json` without printing or storing secret values.
+The doctor checks configuration presence, URL/host boundaries, browser-key privilege, migration ordering through `010`, and Worker isolation. It writes `pilot-doctor-report.json` without printing or storing secret values.
 
 Expected outcomes:
 
@@ -177,12 +179,13 @@ The verifier:
 - authenticates with the publishable browser key;
 - calls `hosted_pilot_schema_status()` and verifies the beta.4/migration-008 hosted baseline;
 - calls `release_candidate_readiness_status()` and verifies the RC.1/migration-009 boundary;
+- calls `hosted_acl_status()` and verifies migration `010`, zero anonymous security-definer RPC access, zero authenticated trigger-function RPC access, disabled legacy scoring, and enabled client-ID-preserving scoring;
 - confirms production data, live migration, and production cutover remain disabled;
 - confirms owner approval remains required;
 - writes sanitized `remote-schema-report.json`;
 - signs out and does not persist the session.
 
-Do not continue when either RPC is missing, the release/migration markers differ, privileged browser credentials are detected, or a production/cutover flag is enabled.
+Do not continue when any RPC is missing, the release/migration markers differ, privileged browser credentials are detected, anonymous or trigger-function execution remains enabled, the superseded scoring RPC remains enabled, or a production/cutover flag is enabled.
 
 ## 9. Configure the isolated Cloudflare preview
 
@@ -215,7 +218,7 @@ The workflow performs, in order:
 2. TypeScript, architecture/boundary, migration rehearsal, readiness, recovery, and production-build validation;
 3. pilot doctor validation;
 4. protected deployment-boundary validation;
-5. authenticated remote schema verification for migrations `008` and `009`;
+5. authenticated remote schema verification for migrations `008`, `009`, and `010`;
 6. deployment only to the isolated v11 preview Worker;
 7. `/api/health` verification for the exact release;
 8. `/api/config` verification for authority, synchronization, migration, recovery, hosted-pilot, and no-production boundaries;
