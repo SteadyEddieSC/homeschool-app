@@ -61,7 +61,7 @@ const redirectPath = path.join(root, '.wrangler/deploy/config.json');
 let redirect;
 try { redirect = JSON.parse(await readFile(redirectPath, 'utf8')); }
 catch { fail('Cloudflare Vite generated deployment redirect is missing or invalid; run the production build first'); }
-if (!redirect || typeof redirect.configPath !== 'string' || Object.keys(redirect).length !== 1) fail('Cloudflare Vite deployment redirect has an unexpected shape');
+if (!redirect || typeof redirect.configPath !== 'string' || !redirect.configPath.trim()) fail('Cloudflare Vite deployment redirect is missing configPath');
 
 const generatedConfigPath = path.resolve(path.dirname(redirectPath), redirect.configPath);
 const generatedRelative = path.relative(root, generatedConfigPath).replaceAll('\\', '/');
