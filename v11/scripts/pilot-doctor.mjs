@@ -18,7 +18,8 @@ if (previewUrl && (!previewUrl.startsWith('https://') || !safeHost(previewUrl)))
 if (account && !/^[a-f0-9]{32}$/i.test(account)) unsafe.push('Cloudflare account ID format is unexpected');
 const migrations = (await readdir(path.join(root, 'supabase/migrations'))).filter((name) => name.endsWith('.sql')).sort();
 const latest = migrations.at(-1) ?? '';
-if (latest !== '202608040009_v11_migration_rehearsal.sql') unsafe.push(`latest migration is ${latest || 'missing'}, expected migration 009`);
+if (latest !== '202608050010_v11_hosted_acl_hardening.sql') unsafe.push(`latest migration is ${latest || 'missing'}, expected migration 010`);
+if (!migrations.includes('202608040009_v11_migration_rehearsal.sql')) unsafe.push('migration 009 release-candidate rehearsal is missing');
 const wrangler = await readFile(path.join(root, 'wrangler.jsonc'), 'utf8');
 if (!wrangler.includes('"name": "beaufort-learning-harbor-v11-preview"')) unsafe.push('Wrangler target is not isolated');
 if (!wrangler.includes('"APP_RELEASE": "11.0.0-rc.1"')) unsafe.push('Wrangler release does not match rc.1');
@@ -27,7 +28,7 @@ const report = {
   ready: missing.length === 0 && unsafe.length === 0,
   providerConfiguration: Object.fromEntries(requiredEnvironment.map((name) => [name, present(name)])),
   hosts: { supabase: safeHost(supabaseUrl) || null, preview: safeHost(previewUrl) || null },
-  migrations: { count: migrations.length, latest },
+  migrations: { count: migrations.length, latest, releaseCandidate: '202608040009_v11_migration_rehearsal.sql', hostedAclHardening: '202608050010_v11_hosted_acl_hardening.sql' },
   migrationRehearsalRequired: true, productionCutoverApproved: false, missing, unsafe
 };
 await writeFile(reportPath, `${JSON.stringify(report, null, 2)}\n`);
