@@ -8,8 +8,9 @@ const mode = process.argv[2] ?? 'repository';
 const currentRelease = '11.0.0-rc.1';
 const targetRelease = '11.0.0-rc.2';
 const expectedWorker = 'beaufort-learning-harbor-v11-preview';
-const expectedMigrationFile = '202608040009_v11_migration_rehearsal.sql';
+const expectedMigrationFile = '202608050010_v11_hosted_acl_hardening.sql';
 const expectedMigrationMarker = '202608040009';
+const expectedAclMarker = '202608050010';
 const outputDirectory = path.join(root, 'test-results/rc2');
 
 function assert(condition, message) {
@@ -67,7 +68,8 @@ async function validateRepositoryMode() {
   const migrationNames = (await readdir(path.join(root, 'supabase/migrations')))
     .filter((name) => name.endsWith('.sql'))
     .sort();
-  assert(migrationNames.at(-1) === expectedMigrationFile, 'migration 009 must remain the latest reviewed migration');
+  assert(migrationNames.at(-1) === expectedMigrationFile, 'migration 010 hosted ACL hardening must be the latest reviewed migration');
+  assert(migrationNames.includes('202608040009_v11_migration_rehearsal.sql'), 'migration 009 release-candidate rehearsal must remain present');
 
   const wrangler = await readFile(path.join(root, 'wrangler.jsonc'), 'utf8');
   assert(wrangler.includes(`"name": "${expectedWorker}"`), 'Wrangler must target the isolated v11 preview Worker');
@@ -79,13 +81,14 @@ async function validateRepositoryMode() {
   assert(!/\npush:\s*\n/.test(deployWorkflow), 'preview deployment must not run automatically on push');
   assert(deployWorkflow.includes('npm run rc2:evidence:provider'), 'protected deployment must validate and package RC.2 provider evidence');
   assert(deployWorkflow.includes(expectedWorker), 'protected deployment must use the isolated v11 Worker');
+  assert(deployWorkflow.includes('migrations 001-010'), 'protected deployment must verify migrations through hosted ACL hardening');
 
   const plan = await readFile(path.join(repositoryRoot, 'docs/v11/rc2-hosted-pilot-plan.md'), 'utf8');
   for (const marker of ['Gate A — Repository activation readiness', 'Gate B — Owner-created provider activation', 'Gate C — Synthetic hosted pilot and defect closure', 'Gate D — Exact-head RC.2 candidate', '## Stop conditions']) {
     assert(plan.includes(marker), `RC.2 plan is missing ${marker}`);
   }
   const runbook = await readFile(path.join(repositoryRoot, 'docs/v11/hosted-preview-runbook.md'), 'utf8');
-  assert(runbook.includes('migrations `001–009`'), 'hosted runbook must cover migrations 001–009');
+  assert(runbook.includes('migrations `001–010`'), 'hosted runbook must cover migrations 001–010');
   assert(runbook.includes(currentRelease), 'hosted runbook must identify the current rc.1 baseline');
   assert(runbook.includes(targetRelease), 'hosted runbook must identify the gated RC.2 target');
 
@@ -143,12 +146,13 @@ async function validateProviderMode() {
   assert(doctor.release === currentRelease && doctor.ready === true, 'pilot doctor must be ready for rc.1');
   assert(Array.isArray(doctor.missing) && doctor.missing.length === 0, 'pilot doctor still reports missing provider configuration');
   assert(Array.isArray(doctor.unsafe) && doctor.unsafe.length === 0, 'pilot doctor reports unsafe provider configuration');
-  assert(doctor.migrations?.latest === expectedMigrationFile, 'pilot doctor did not verify migration 009');
+  assert(doctor.migrations?.latest === expectedMigrationFile, 'pilot doctor did not verify migration 010');
+  assert(doctor.migrations?.releaseCandidate === '202608040009_v11_migration_rehearsal.sql', 'pilot doctor did not preserve migration 009 release-candidate evidence');
   assert(doctor.productionCutoverApproved === false, 'pilot doctor must keep production cutover disabled');
   assert(Object.values(doctor.providerConfiguration ?? {}).every((value) => value === true), 'not every required provider setting is present');
   assert(doctor.hosts?.supabase && doctor.hosts?.preview && doctor.hosts.supabase !== doctor.hosts.preview, 'Supabase and preview hosts must be present and separate');
 
-  assert(remote.schema === 'beaufort-learning-harbor-remote-schema-report-v2', 'remote schema report version is unexpected');
+  assert(remote.schema === 'beaufort-learning-harbor-remote-schema-report-v3', 'remote schema report version is unexpected');
   assert(remote.release === currentRelease && remote.migration === expectedMigrationMarker, 'remote schema is not rc.1 migration 009');
   assert(remote.authenticated === true, 'remote schema verification was not authenticated');
   assert(remote.hostedPilotBaseline?.release === '11.0.0-beta.4' && remote.hostedPilotBaseline?.migration === '202608040008', 'migration 008 hosted baseline is missing');
@@ -158,6 +162,11 @@ async function validateProviderMode() {
   assert(remote.releaseCandidate?.productionDataEnabled === false, 'remote schema unexpectedly enables production data');
   assert(remote.releaseCandidate?.productionCutoverApproved === false, 'remote schema unexpectedly approves cutover');
   assert(remote.releaseCandidate?.ownerApprovalRequired === true, 'remote schema must preserve owner approval');
+  assert(remote.aclHardening?.migration === expectedAclMarker, 'remote ACL hardening is not migration 010');
+  assert(remote.aclHardening?.anonymousSecurityDefinerExecutable === 0, 'anonymous security-definer RPC execution remains enabled');
+  assert(remote.aclHardening?.authenticatedTriggerFunctionsExecutable === 0, 'trigger-only functions remain browser-callable');
+  assert(remote.aclHardening?.legacyScoringRpcExecutable === false, 'superseded scoring RPC remains enabled');
+  assert(remote.aclHardening?.currentScoringRpcExecutable === true, 'current client-ID-preserving scoring RPC is unavailable');
 
   assert(health.ok === true && health.release === currentRelease && health.service === expectedWorker, 'deployed health boundary is not the isolated rc.1 preview');
   assert(config.productionDataEnabled === false, 'deployed config unexpectedly enables production data');
@@ -184,7 +193,7 @@ async function validateProviderMode() {
     workflowRun: { id: String(receipt.runId), attempt: String(receipt.runAttempt) },
     state: 'provider-activation-evidenced-pilot-required',
     hosts: { supabase: doctor.hosts.supabase, preview: doctor.hosts.preview },
-    migrations: { hostedBaseline: '202608040008', releaseCandidate: expectedMigrationMarker },
+    migrations: { hostedBaseline: '202608040008', releaseCandidate: expectedMigrationMarker, aclHardening: expectedAclMarker },
     evidenceDigests: {
       pilotDoctor: digest(doctor),
       remoteSchema: digest(remote),
