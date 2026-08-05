@@ -20,11 +20,10 @@ for (const marker of [
   "const scope = process.argv[2] ?? 'deployment'",
   "deployment:",
   "browser:",
-  "'PILOT_TEST_EMAIL'",
-  "'PILOT_TEST_PASSWORD'",
   "scope === 'deployment'",
   'Unsupported hosted-pilot doctor scope'
 ]) assert(doctor.includes(marker), `pilot doctor is missing ${marker}`);
+assert(!doctor.includes('PILOT_TEST_EMAIL') && !doctor.includes('PILOT_TEST_PASSWORD'), 'pilot doctor must remain blind to protected synthetic credentials');
 
 const nodeTypeScript = JSON.parse(await readFile(path.join(root, 'tsconfig.node.json'), 'utf8'));
 const nodeIncludes = Array.isArray(nodeTypeScript.include) ? nodeTypeScript.include : [];
@@ -97,4 +96,4 @@ assert(!browserJob.includes('CLOUDFLARE_API_TOKEN'), 'hosted browser job must no
 assert(!workflow.includes('wrangler deploy'), 'Gate C pilot workflow must not redeploy Cloudflare');
 assert(!workflow.includes('supabase db push'), 'Gate C pilot workflow must not mutate provider schema');
 
-console.log('Gate C hosted browser resilience guard passed: least-privilege browser doctor, TypeScript-covered exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, no Cloudflare credentials, and no schema push.');
+console.log('Gate C hosted browser resilience guard passed: credential-blind least-privilege browser doctor, TypeScript-covered exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, no Cloudflare credentials, and no schema push.');
