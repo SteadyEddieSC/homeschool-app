@@ -9,10 +9,22 @@ function assert(condition, message) {
 }
 
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
+assert(pkg.scripts?.['pilot:doctor:browser'] === 'node scripts/pilot-doctor.mjs browser', 'least-privilege browser doctor is not wired exactly');
 assert(pkg.scripts?.['pilot:test-browser-resilience'] === 'playwright test --config=playwright.hosted.config.ts', 'hosted Playwright script is not wired exactly');
 assert(pkg.scripts?.['pilot:validate-browser-resilience'] === 'node scripts/validate-hosted-browser-resilience.mjs', 'hosted evidence validator is not wired exactly');
 assert(pkg.scripts?.['check:hosted-browser-resilience'] === 'node scripts/check-hosted-browser-resilience.mjs', 'hosted browser guard is not wired exactly');
 assert(String(pkg.scripts?.verify ?? '').includes('npm run check:hosted-browser-resilience'), 'npm run verify must include the hosted browser guard');
+
+const doctor = await readFile(path.join(root, 'scripts/pilot-doctor.mjs'), 'utf8');
+for (const marker of [
+  "const scope = process.argv[2] ?? 'deployment'",
+  "deployment:",
+  "browser:",
+  "'PILOT_TEST_EMAIL'",
+  "'PILOT_TEST_PASSWORD'",
+  "scope === 'deployment'",
+  'Unsupported hosted-pilot doctor scope'
+]) assert(doctor.includes(marker), `pilot doctor is missing ${marker}`);
 
 const nodeTypeScript = JSON.parse(await readFile(path.join(root, 'tsconfig.node.json'), 'utf8'));
 const nodeIncludes = Array.isArray(nodeTypeScript.include) ? nodeTypeScript.include : [];
@@ -71,12 +83,18 @@ for (const marker of [
   'hosted-browser-resilience:',
   'needs: core-synthetic-pilot',
   'npx playwright install --with-deps chromium',
+  'npm run pilot:doctor:browser',
   'npm run pilot:test-browser-resilience',
   'npm run pilot:validate-browser-resilience',
   'rc2-hosted-browser-resilience-evidence.json',
   "github.ref != 'refs/heads/main'"
 ]) assert(workflow.includes(marker), `hosted pilot workflow is missing ${marker}`);
+
+const browserJob = workflow.split('  hosted-browser-resilience:')[1] ?? '';
+assert(browserJob.length > 0, 'hosted browser workflow job is missing');
+assert(!browserJob.includes('CLOUDFLARE_ACCOUNT_ID'), 'hosted browser job must not receive the Cloudflare account ID');
+assert(!browserJob.includes('CLOUDFLARE_API_TOKEN'), 'hosted browser job must not receive the Cloudflare API token');
 assert(!workflow.includes('wrangler deploy'), 'Gate C pilot workflow must not redeploy Cloudflare');
 assert(!workflow.includes('supabase db push'), 'Gate C pilot workflow must not mutate provider schema');
 
-console.log('Gate C hosted browser resilience guard passed: TypeScript-covered exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, and no schema push.');
+console.log('Gate C hosted browser resilience guard passed: least-privilege browser doctor, TypeScript-covered exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, no Cloudflare credentials, and no schema push.');
