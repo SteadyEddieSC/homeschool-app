@@ -66,11 +66,17 @@ select lives_ok($$
   )
 $$, 'Parent can create a knowledge check');
 
-select lives_ok($$ select public.submit_knowledge_attempt(
-  '45000000-0000-0000-0000-000000000001', '[0]'::jsonb, '46000000-0000-0000-0000-000000000001'
+select lives_ok($$ select public.submit_knowledge_attempt_v2(
+  '45000000-0000-0000-0000-000000000001',
+  '[0]'::jsonb,
+  '46000000-0000-0000-0000-000000000001',
+  '46100000-0000-0000-0000-000000000001'
 ) $$, 'First deterministic knowledge attempt succeeds');
-select lives_ok($$ select public.submit_knowledge_attempt(
-  '45000000-0000-0000-0000-000000000001', '[0]'::jsonb, '46000000-0000-0000-0000-000000000001'
+select lives_ok($$ select public.submit_knowledge_attempt_v2(
+  '45000000-0000-0000-0000-000000000001',
+  '[0]'::jsonb,
+  '46000000-0000-0000-0000-000000000001',
+  '46100000-0000-0000-0000-000000000001'
 ) $$, 'Retrying the same knowledge operation is idempotent');
 select is((select count(*)::integer from public.knowledge_attempts where client_operation_id = '46000000-0000-0000-0000-000000000001'), 1, 'Knowledge retry creates one attempt');
 select is((select correct_count from public.knowledge_attempts where client_operation_id = '46000000-0000-0000-0000-000000000001'), 1, 'Knowledge answer key is scored on the server');
