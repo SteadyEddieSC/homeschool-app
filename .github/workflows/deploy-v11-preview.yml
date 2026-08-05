@@ -50,7 +50,7 @@ jobs:
         run: npm run pilot:doctor
       - name: Validate protected deployment boundary
         run: npm run check:deploy-readiness
-      - name: Verify migrations 001-009 on the non-production Supabase project
+      - name: Verify migrations 001-010 on the non-production Supabase project
         run: npm run pilot:verify-schema
       - name: Deploy isolated v11 preview Worker
         run: npx wrangler deploy --config wrangler.jsonc
