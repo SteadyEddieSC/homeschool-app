@@ -167,6 +167,7 @@ const report = {
     subsequentOperations: [] as number[]
   },
   diagnosticsDigest: null as string | null,
+  completedAt: null as string | null,
   cleanup: {
     syntheticOrganizationDeleted: false,
     browserSignedOut: false,
