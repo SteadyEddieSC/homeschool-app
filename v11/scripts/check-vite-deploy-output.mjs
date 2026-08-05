@@ -18,8 +18,8 @@ export async function validateViteDeployOutput(root = process.cwd()) {
     fail('generated deployment redirect is missing or invalid; run the production build first');
   }
 
-  if (!redirect || typeof redirect.configPath !== 'string' || Object.keys(redirect).length !== 1) {
-    fail('generated deployment redirect has an unexpected shape');
+  if (!redirect || typeof redirect.configPath !== 'string' || !redirect.configPath.trim()) {
+    fail('generated deployment redirect is missing configPath');
   }
 
   const generatedConfigPath = path.resolve(path.dirname(redirectPath), redirect.configPath);
