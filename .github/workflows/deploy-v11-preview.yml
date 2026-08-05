@@ -48,12 +48,12 @@ jobs:
         run: npm run verify
       - name: Validate protected provider configuration
         run: npm run pilot:doctor
-      - name: Validate protected deployment boundary
+      - name: Validate protected deployment boundary and generated Cloudflare output
         run: npm run check:deploy-readiness
       - name: Verify migrations 001-010 on the non-production Supabase project
         run: npm run pilot:verify-schema
-      - name: Deploy isolated v11 preview Worker
-        run: npx wrangler deploy --config wrangler.jsonc
+      - name: Deploy isolated v11 preview Worker from Cloudflare Vite output
+        run: npx wrangler deploy
       - name: Verify deployed health boundary
         run: |
           curl --fail --silent --show-error --retry 8 --retry-delay 5 "${V11_PREVIEW_URL%/}/api/health" --output deployment-health.json
