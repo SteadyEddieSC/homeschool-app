@@ -64,3 +64,47 @@ jobs:
             v11/test-results/rc2/rc2-hosted-pilot-core-evidence.json
           if-no-files-found: warn
           retention-days: 90
+
+  hosted-browser-resilience:
+    if: ${{ inputs.confirmation == 'RUN_V11_SYNTHETIC_PILOT' }}
+    needs: core-synthetic-pilot
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: v11-preview
+    defaults:
+      run:
+        working-directory: v11
+    env:
+      VITE_APP_ENV: preview
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      V11_PREVIEW_URL: ${{ vars.V11_PREVIEW_URL }}
+      PILOT_TEST_EMAIL: ${{ secrets.PILOT_TEST_EMAIL }}
+      PILOT_TEST_PASSWORD: ${{ secrets.PILOT_TEST_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install exact pilot dependencies
+        run: npm install --no-package-lock
+      - name: Install hosted Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Validate protected provider configuration
+        run: npm run pilot:doctor
+      - name: Verify protected hosted schema
+        run: npm run pilot:verify-schema
+      - name: Run hosted browser resilience pilot
+        run: npm run pilot:test-browser-resilience
+      - name: Validate sanitized hosted browser resilience evidence
+        run: npm run pilot:validate-browser-resilience
+      - name: Upload sanitized hosted browser resilience evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beaufort-learning-harbor-v11.0.0-rc.1-hosted-browser-resilience
+          path: |
+            v11/hosted-browser-resilience-report.json
+            v11/test-results/rc2/rc2-hosted-browser-resilience-evidence.json
+          if-no-files-found: warn
+          retention-days: 90
