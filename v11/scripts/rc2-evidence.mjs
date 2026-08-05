@@ -25,6 +25,21 @@ function digest(value) {
   return createHash('sha256').update(JSON.stringify(value)).digest('hex');
 }
 
+function isSensitiveFieldName(key) {
+  const normalized = key.replace(/[-_]/g, '').toLowerCase();
+  return [
+    'password',
+    'secret',
+    'token',
+    'credential',
+    'session',
+    'email',
+    'emailaddress',
+    'accountid',
+    'projectref'
+  ].some((suffix) => normalized.endsWith(suffix));
+}
+
 function assertSanitized(label, value) {
   const text = JSON.stringify(value);
   const forbiddenValuePatterns = [
@@ -43,7 +58,7 @@ function assertSanitized(label, value) {
     if (!node || typeof node !== 'object') return;
     for (const [key, child] of Object.entries(node)) {
       const next = `${location}.${key}`;
-      if (/(password|secret|token|credential|session|email|account[_-]?id|project[_-]?ref)/i.test(key)) {
+      if (isSensitiveFieldName(key)) {
         assert(child === null || typeof child === 'boolean', `${next} must contain only a boolean/null presence indicator`);
       }
       walk(child, next);
@@ -64,6 +79,15 @@ async function validateRepositoryMode() {
   assert(pkg.scripts?.['rc2:evidence:repository'] === 'node scripts/rc2-evidence.mjs repository', 'repository evidence script is not wired exactly');
   assert(pkg.scripts?.['rc2:evidence:provider'] === 'node scripts/rc2-evidence.mjs provider', 'provider evidence script is not wired exactly');
   assert(String(pkg.scripts?.verify ?? '').includes('npm run rc2:evidence:repository'), 'npm run verify must include the repository RC.2 evidence gate');
+
+  assertSanitized('sanitizer-capability-fixture', { identity: { emailConfirmation: 'provider-configured' } });
+  let rejectedEmailAddress = false;
+  try {
+    assertSanitized('sanitizer-email-fixture', { recipientEmail: 'synthetic@example.invalid' });
+  } catch {
+    rejectedEmailAddress = true;
+  }
+  assert(rejectedEmailAddress, 'sanitizer must reject actual email-address fields while allowing email capability metadata');
 
   const migrationNames = (await readdir(path.join(root, 'supabase/migrations')))
     .filter((name) => name.endsWith('.sql'))
