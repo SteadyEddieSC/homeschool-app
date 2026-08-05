@@ -128,19 +128,31 @@ export class SupabaseLearningRepository implements LearningRepository {
     name: string,
     options: CreateHouseholdOptions = {}
   ): Promise<HouseholdSummary> {
+    const householdId = options.householdId ?? crypto.randomUUID();
+    const operationId = options.operationId ?? crypto.randomUUID();
     const record = {
-      id: options.householdId,
+      id: householdId,
       organization_id: organizationId,
       name: normalizeHouseholdName(name),
       created_by: actorId,
-      client_operation_id: options.operationId
+      client_operation_id: operationId
     };
-    const query = options.operationId
-      ? this.client.from('households').upsert(record, { onConflict: 'client_operation_id' })
-      : this.client.from('households').insert(record);
-    const result = await query.select('id, organization_id, name, created_at').single();
-    if (result.error) throw result.error;
-    return householdFromRow(result.data as HouseholdRow);
+
+    const write = await this.client
+      .from('households')
+      .upsert(record, { onConflict: 'client_operation_id' });
+    if (write.error) throw write.error;
+
+    // The insert trigger establishes the creator's household relationship.
+    // Read the row in a separate statement so RLS evaluates after that trigger
+    // has completed instead of during INSERT ... RETURNING.
+    const visible = await this.client
+      .from('households')
+      .select('id, organization_id, name, created_at')
+      .eq('client_operation_id', operationId)
+      .single();
+    if (visible.error) throw visible.error;
+    return householdFromRow(visible.data as HouseholdRow);
   }
 
   async listLearners(organizationId: string): Promise<LearnerProfile[]> {
