@@ -9,6 +9,7 @@ on:
       - '.github/ISSUE_TEMPLATE/v11-rc2-hosted-pilot-defect.yml'
       - '.github/workflows/validate-v11.yml'
       - '.github/workflows/deploy-v11-preview.yml'
+      - '.github/workflows/run-v11-hosted-pilot.yml'
       - '.gitignore'
       - 'README.md'
   push:
@@ -19,6 +20,7 @@ on:
       - '.github/ISSUE_TEMPLATE/v11-rc2-hosted-pilot-defect.yml'
       - '.github/workflows/validate-v11.yml'
       - '.github/workflows/deploy-v11-preview.yml'
+      - '.github/workflows/run-v11-hosted-pilot.yml'
       - '.gitignore'
       - 'README.md'
 
