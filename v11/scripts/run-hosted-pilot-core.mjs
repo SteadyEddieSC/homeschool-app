@@ -172,6 +172,13 @@ try {
   organizationId = bootstrap.organization_id;
   report.invitations.organizationBootstrap = true;
 
+  const organizationRole = await expectSuccess(
+    'organization role verification',
+    client.rpc('current_org_role', { target_organization: organizationId })
+  );
+  assert(organizationRole === 'group-admin', 'organization bootstrap did not establish the synthetic Group Administrator membership');
+  report.invitations.groupAdministratorMembership = true;
+
   await expectDenied(
     'System Administrator invitation',
     client.rpc('create_organization_invite', {
@@ -205,16 +212,24 @@ try {
   report.invitations.revocation = true;
   report.invitations.revokedRedemptionDenied = true;
 
-  const household = firstRow(await expectSuccess(
-    'synthetic household creation',
+  const householdId = randomUUID();
+  await expectSuccess(
+    'synthetic household insertion',
     client.from('households').insert({
+      id: householdId,
       organization_id: organizationId,
       name: 'Synthetic RC2 Household',
       created_by: userId,
       client_operation_id: randomUUID()
-    }).select('id').single()
+    })
+  );
+  const household = firstRow(await expectSuccess(
+    'synthetic household visibility',
+    client.from('households').select('id').eq('id', householdId).single()
   ));
-  assert(household?.id, 'synthetic household creation returned no record');
+  assert(household?.id === householdId, 'synthetic household was not visible after insertion');
+  report.today.householdInsertMinimal = true;
+  report.today.householdVisibleAfterInsert = true;
 
   const learner = firstRow(await expectSuccess(
     'synthetic learner creation',
