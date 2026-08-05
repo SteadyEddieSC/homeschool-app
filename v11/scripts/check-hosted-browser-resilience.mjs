@@ -14,6 +14,11 @@ assert(pkg.scripts?.['pilot:validate-browser-resilience'] === 'node scripts/vali
 assert(pkg.scripts?.['check:hosted-browser-resilience'] === 'node scripts/check-hosted-browser-resilience.mjs', 'hosted browser guard is not wired exactly');
 assert(String(pkg.scripts?.verify ?? '').includes('npm run check:hosted-browser-resilience'), 'npm run verify must include the hosted browser guard');
 
+const nodeTypeScript = JSON.parse(await readFile(path.join(root, 'tsconfig.node.json'), 'utf8'));
+const nodeIncludes = Array.isArray(nodeTypeScript.include) ? nodeTypeScript.include : [];
+assert(nodeIncludes.includes('playwright.hosted.config.ts'), 'hosted Playwright configuration is outside TypeScript validation');
+assert(nodeIncludes.includes('hosted-tests'), 'hosted browser tests are outside TypeScript validation');
+
 const repository = await readFile(path.join(root, 'src/services/supabase-learning.ts'), 'utf8');
 for (const marker of [
   "const householdId = options.householdId ?? crypto.randomUUID()",
@@ -68,9 +73,10 @@ for (const marker of [
   'npx playwright install --with-deps chromium',
   'npm run pilot:test-browser-resilience',
   'npm run pilot:validate-browser-resilience',
-  'rc2-hosted-browser-resilience-evidence.json'
+  'rc2-hosted-browser-resilience-evidence.json',
+  "github.ref != 'refs/heads/main'"
 ]) assert(workflow.includes(marker), `hosted pilot workflow is missing ${marker}`);
 assert(!workflow.includes('wrangler deploy'), 'Gate C pilot workflow must not redeploy Cloudflare');
 assert(!workflow.includes('supabase db push'), 'Gate C pilot workflow must not mutate provider schema');
 
-console.log('Gate C hosted browser resilience guard passed: exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, and no schema push.');
+console.log('Gate C hosted browser resilience guard passed: TypeScript-covered exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, and no schema push.');
