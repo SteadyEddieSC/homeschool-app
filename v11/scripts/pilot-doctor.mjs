@@ -15,9 +15,7 @@ const requiredEnvironmentByScope = {
   browser: [
     'VITE_SUPABASE_URL',
     'VITE_SUPABASE_PUBLISHABLE_KEY',
-    'V11_PREVIEW_URL',
-    'PILOT_TEST_EMAIL',
-    'PILOT_TEST_PASSWORD'
+    'V11_PREVIEW_URL'
   ]
 };
 
