@@ -44,8 +44,19 @@ try {
   if (value.live_migration_enabled !== false || value.production_data_enabled !== false || value.production_cutover_approved !== false) throw new Error('Remote rc.1 unexpectedly enables live migration, production data, or cutover');
   if (value.owner_approval_required !== true) throw new Error('Owner approval boundary is missing');
 
+  const acl = await client.rpc('hosted_acl_status');
+  if (acl.error) throw acl.error;
+  const aclValue = acl.data;
+  if (!aclValue || typeof aclValue !== 'object') throw new Error('Hosted ACL status returned an invalid payload');
+  if (aclValue.release !== '11.0.0-rc.1' || aclValue.migration !== '202608050010') throw new Error('Remote hosted ACL hardening is not migration 010');
+  if (aclValue.anonymous_security_definer_executable !== 0) throw new Error('Anonymous security-definer RPC execution remains enabled');
+  if (aclValue.authenticated_trigger_functions_executable !== 0) throw new Error('Trigger-only functions remain browser-callable');
+  if (aclValue.legacy_scoring_rpc_executable !== false) throw new Error('Superseded scoring RPC remains enabled');
+  if (aclValue.current_scoring_rpc_executable !== true) throw new Error('Current client-ID-preserving scoring RPC is unavailable');
+  if (aclValue.production_data_enabled !== false || aclValue.production_cutover_approved !== false) throw new Error('ACL status unexpectedly enables production data or cutover');
+
   const report = {
-    schema: 'beaufort-learning-harbor-remote-schema-report-v2',
+    schema: 'beaufort-learning-harbor-remote-schema-report-v3',
     release: value.release,
     migration: value.migration,
     checkedAt: new Date().toISOString(),
@@ -58,6 +69,13 @@ try {
       productionDataEnabled: false,
       productionCutoverApproved: false,
       ownerApprovalRequired: true
+    },
+    aclHardening: {
+      migration: aclValue.migration,
+      anonymousSecurityDefinerExecutable: 0,
+      authenticatedTriggerFunctionsExecutable: 0,
+      legacyScoringRpcExecutable: false,
+      currentScoringRpcExecutable: true
     }
   };
   await writeFile(path.join(process.cwd(), 'remote-schema-report.json'), `${JSON.stringify(report, null, 2)}\n`);
