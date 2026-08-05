@@ -53,10 +53,33 @@ jobs:
       - name: Verify migrations 001-010 on the non-production Supabase project
         run: npm run pilot:verify-schema
       - name: Deploy isolated v11 preview Worker from Cloudflare Vite output
-        run: npx wrangler deploy
+        id: cloudflare-deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: v11
+          wranglerVersion: 4.114.0
+          command: deploy
+      - name: Record authoritative deployed preview origin
+        env:
+          CLOUDFLARE_DEPLOYMENT_URL: ${{ steps.cloudflare-deploy.outputs.deployment-url }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFile } from 'node:fs/promises';
+          const raw = String(process.env.CLOUDFLARE_DEPLOYMENT_URL ?? '').trim();
+          if (!raw) throw new Error('Cloudflare deployment did not return an authoritative deployment URL');
+          const deployed = new URL(raw);
+          const configured = new URL(process.env.V11_PREVIEW_URL);
+          if (deployed.protocol !== 'https:' || !deployed.hostname.endsWith('.workers.dev')) throw new Error('Cloudflare returned an unexpected deployment origin');
+          if (!deployed.hostname.startsWith(`${process.env.EXPECTED_WORKER_NAME}.`)) throw new Error(`Cloudflare deployed an unexpected Worker hostname: ${deployed.hostname}`);
+          if (configured.origin !== deployed.origin) throw new Error(`Configured V11_PREVIEW_URL (${configured.origin}) does not match Cloudflare's deployed origin (${deployed.origin})`);
+          await appendFile(process.env.GITHUB_ENV, `DEPLOYED_PREVIEW_URL=${deployed.origin}\n`);
+          console.log(`Authoritative deployed preview origin: ${deployed.origin}`);
+          NODE
       - name: Verify deployed health boundary
         run: |
-          curl --fail --silent --show-error --retry 8 --retry-delay 5 "${V11_PREVIEW_URL%/}/api/health" --output deployment-health.json
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 --connect-timeout 10 --max-time 20 "${DEPLOYED_PREVIEW_URL%/}/api/health" --output deployment-health.json
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const health = JSON.parse(await readFile('deployment-health.json', 'utf8'));
@@ -66,7 +89,7 @@ jobs:
           NODE
       - name: Verify release-candidate capability boundary
         run: |
-          curl --fail --silent --show-error --retry 8 --retry-delay 5 "${V11_PREVIEW_URL%/}/api/config" --output deployment-config.json
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 --connect-timeout 10 --max-time 20 "${DEPLOYED_PREVIEW_URL%/}/api/config" --output deployment-config.json
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const config = JSON.parse(await readFile('deployment-config.json', 'utf8'));
@@ -90,7 +113,7 @@ jobs:
             schema: 'beaufort-learning-harbor-v11-preview-deployment-receipt-v2',
             release: '11.0.0-rc.1',
             worker: process.env.EXPECTED_WORKER_NAME,
-            previewHost: new URL(process.env.V11_PREVIEW_URL).hostname,
+            previewHost: new URL(process.env.DEPLOYED_PREVIEW_URL).hostname,
             commit: process.env.GITHUB_SHA,
             runId: process.env.GITHUB_RUN_ID,
             runAttempt: process.env.GITHUB_RUN_ATTEMPT,
