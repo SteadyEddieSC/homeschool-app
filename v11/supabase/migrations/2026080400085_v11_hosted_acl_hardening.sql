@@ -1,9 +1,9 @@
 begin;
 
--- Supabase grants exposed-schema functions to anon by default. The earlier
--- migrations revoke PUBLIC and then grant authenticated access, but a hosted
--- project can still retain a direct anon EXECUTE grant. Remove that grant from
--- every public function before the hosted pilot begins.
+-- Supabase exposes public-schema functions through PostgREST and may retain
+-- direct anon grants in addition to PostgreSQL's default PUBLIC execute grant.
+-- Remove both paths before the hosted pilot begins. Authenticated application
+-- RPCs are granted explicitly by the reviewed migrations that define them.
 do $$
 declare
   target record;
@@ -14,7 +14,7 @@ begin
     join pg_namespace n on n.oid = p.pronamespace
     where n.nspname = 'public'
   loop
-    execute format('revoke execute on function %s from anon', target.signature);
+    execute format('revoke execute on function %s from public, anon', target.signature);
   end loop;
 end
 $$;
