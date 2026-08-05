@@ -21,6 +21,7 @@
     "rc2:evidence:repository": "node scripts/rc2-evidence.mjs repository",
     "rc2:evidence:provider": "node scripts/rc2-evidence.mjs provider",
     "pilot:doctor": "node scripts/pilot-doctor.mjs",
+    "pilot:doctor:browser": "node scripts/pilot-doctor.mjs browser",
     "pilot:verify-schema": "node scripts/verify-remote-schema.mjs",
     "pilot:run-core": "node scripts/run-hosted-pilot-core.mjs",
     "pilot:validate-core": "node scripts/validate-hosted-pilot-core.mjs",
