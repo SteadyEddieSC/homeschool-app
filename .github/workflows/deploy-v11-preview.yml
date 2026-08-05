@@ -106,6 +106,8 @@ jobs:
           };
           await writeFile('deployment-receipt.json', `${JSON.stringify(receipt, null, 2)}\n`);
           NODE
+      - name: Validate and summarize RC.2 provider evidence
+        run: npm run rc2:evidence:provider
       - name: Upload sanitized deployment receipt
         uses: actions/upload-artifact@v4
         with:
@@ -116,5 +118,6 @@ jobs:
             v11/deployment-receipt.json
             v11/pilot-doctor-report.json
             v11/remote-schema-report.json
+            v11/test-results/rc2/rc2-provider-evidence.json
           if-no-files-found: error
           retention-days: 90
