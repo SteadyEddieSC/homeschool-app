@@ -34,14 +34,24 @@ if (parsedPreview.pathname !== '/' && parsedPreview.pathname !== '') fail('V11_P
 if (parsedPreview.hostname === parsedSupabase.hostname) fail('Preview and Supabase origins must remain separate');
 
 const migrations = (await readdir(path.join(process.cwd(), 'supabase/migrations'))).filter((name) => name.endsWith('.sql')).sort();
-if (migrations.at(-1) !== '202608040009_v11_migration_rehearsal.sql') fail('migration 009 is not the latest reviewed migration');
-const migration009 = await readFile(path.join(process.cwd(), 'supabase/migrations/202608040009_v11_migration_rehearsal.sql'), 'utf8');
+const migration009Name = '202608040009_v11_migration_rehearsal.sql';
+const migration010Name = '202608050010_v11_hosted_acl_hardening.sql';
+if (migrations.at(-1) !== migration010Name) fail('migration 010 hosted ACL hardening is not the latest reviewed migration');
+if (!migrations.includes(migration009Name)) fail('migration 009 release-candidate rehearsal is missing');
+
+const migration009 = await readFile(path.join(process.cwd(), 'supabase/migrations', migration009Name), 'utf8');
 if (!migration009.includes('release_candidate_readiness_status')) fail('migration 009 is missing the authenticated readiness status RPC');
 if (!migration009.includes("'live_migration_enabled', false") || !migration009.includes("'production_cutover_approved', false")) fail('migration 009 does not keep live migration and cutover disabled');
+
+const migration010 = await readFile(path.join(process.cwd(), 'supabase/migrations', migration010Name), 'utf8');
+if (!migration010.includes('hosted_acl_status')) fail('migration 010 is missing the authenticated hosted ACL status RPC');
+if (!migration010.includes("execute format('revoke execute on function %s from public'")) fail('migration 010 does not revoke inherited PUBLIC function execution');
+if (!migration010.includes("execute format('revoke execute on function %s from anon'")) fail('migration 010 does not revoke direct anonymous function execution');
+if (!migration010.includes('revoke execute on function public.submit_knowledge_attempt(uuid, jsonb, uuid) from authenticated')) fail('migration 010 does not disable the superseded scoring RPC');
 
 const wrangler = await readFile(path.join(process.cwd(), 'wrangler.jsonc'), 'utf8');
 if (!wrangler.includes('"name": "beaufort-learning-harbor-v11-preview"')) fail('Wrangler is not targeting the isolated v11 preview Worker');
 if (wrangler.includes('"name": "beaufort-learning-harbor"')) fail('Wrangler unexpectedly targets the v10 production Worker');
 if (!wrangler.includes('"APP_RELEASE": "11.0.0-rc.1"')) fail('Wrangler release does not match rc.1');
 
-console.log('Preview deployment readiness passed for rc.1. Configuration and migrations 001-009 are structurally valid; this command does not deploy or modify a provider project.');
+console.log('Preview deployment readiness passed for rc.1. Configuration and migrations 001-010 are structurally valid; migration 009 keeps production boundaries disabled and migration 010 enforces hosted RPC least privilege. This command does not deploy or modify a provider project.');
