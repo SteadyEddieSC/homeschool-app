@@ -57,14 +57,17 @@ for (const marker of [
 
 const timeoutTest = await readFile(path.join(root, 'tests/sync-queue-timeout.spec.ts'), 'utf8');
 for (const marker of [
+  "const moduleUrl = '/src/services/sync-queue.ts'",
   'operationTimeoutMs: 100',
   'await new Promise<void>(() => undefined)',
   "status: 'failed'",
   'Synchronization timed out. Retry when the connection is stable.',
   "manager.retry('synthetic-operation-one')",
-  "toBe('0:0:2:false')",
-  "attempts: 2"
+  'snapshot.completedCount === 2',
+  'snapshot.processing === false',
+  'attempts: 2'
 ]) assert(timeoutTest.includes(marker), `queue timeout regression is missing ${marker}`);
+assert(!timeoutTest.includes("from '../src/services/sync-queue'"), 'queue timeout regression must not import application source into the Node TypeScript project');
 
 const diagnostics = await readFile(path.join(root, 'src/components/HostedPilotWorkspace.tsx'), 'utf8');
 for (const marker of [
