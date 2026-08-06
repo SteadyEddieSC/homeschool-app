@@ -18,8 +18,8 @@ assert(String(pkg.scripts?.verify ?? '').includes('npm run check:hosted-browser-
 const doctor = await readFile(path.join(root, 'scripts/pilot-doctor.mjs'), 'utf8');
 for (const marker of [
   "const scope = process.argv[2] ?? 'deployment'",
-  "deployment:",
-  "browser:",
+  'deployment:',
+  'browser:',
   "scope === 'deployment'",
   'Unsupported hosted-pilot doctor scope'
 ]) assert(doctor.includes(marker), `pilot doctor is missing ${marker}`);
@@ -29,16 +29,42 @@ const nodeTypeScript = JSON.parse(await readFile(path.join(root, 'tsconfig.node.
 const nodeIncludes = Array.isArray(nodeTypeScript.include) ? nodeTypeScript.include : [];
 assert(nodeIncludes.includes('playwright.hosted.config.ts'), 'hosted Playwright configuration is outside TypeScript validation');
 assert(nodeIncludes.includes('hosted-tests'), 'hosted browser tests are outside TypeScript validation');
+assert(nodeIncludes.includes('tests'), 'queue timeout regression is outside TypeScript validation');
 
 const repository = await readFile(path.join(root, 'src/services/supabase-learning.ts'), 'utf8');
 for (const marker of [
   "const householdId = options.householdId ?? crypto.randomUUID()",
-  "const operationId = options.operationId ?? crypto.randomUUID()",
+  "const learnerId = input.learnerId ?? crypto.randomUUID()",
+  "const itemId = input.itemId ?? crypto.randomUUID()",
   ".upsert(record, { onConflict: 'client_operation_id' })",
   ".eq('client_operation_id', operationId)",
-  'Read the row in a separate statement'
-]) assert(repository.includes(marker), `hosted household repository is missing ${marker}`);
-assert(!repository.includes("const result = await query.select('id, organization_id, name, created_at').single()"), 'hosted household repository still combines write and returned-row visibility');
+  'Read in a separate statement'
+]) assert(repository.includes(marker), `hosted learning repository is missing ${marker}`);
+assert(!repository.includes('await query.select(learnerColumns).single()'), 'learner write still combines mutation and returned-row visibility');
+assert(!repository.includes('await query.select(todayColumns).single()'), 'Today write still combines mutation and returned-row visibility');
+assert(repository.match(/\.from\('learners'\)[\s\S]*?\.upsert\(record, \{ onConflict: 'client_operation_id' \}\)[\s\S]*?\.from\('learners'\)[\s\S]*?\.eq\('client_operation_id', operationId\)/), 'learner write/read phases are not both present');
+assert(repository.match(/\.from\('learner_today_items'\)[\s\S]*?\.upsert\(record, \{ onConflict: 'client_operation_id' \}\)[\s\S]*?\.from\('learner_today_items'\)[\s\S]*?\.eq\('client_operation_id', operationId\)/), 'Today write/read phases are not both present');
+
+const queueSource = await readFile(path.join(root, 'src/services/sync-queue.ts'), 'utf8');
+for (const marker of [
+  'DEFAULT_OPERATION_TIMEOUT_MS = 20_000',
+  'operationTimeoutMs?: number',
+  'this.operationTimeoutMs = Math.max(100',
+  'await this.executeWithDeadline(operation)',
+  'Promise.race([this.executor(operation), deadline])',
+  'Synchronization timed out. Retry when the connection is stable.'
+]) assert(queueSource.includes(marker), `bounded queue execution is missing ${marker}`);
+
+const timeoutTest = await readFile(path.join(root, 'tests/sync-queue-timeout.spec.ts'), 'utf8');
+for (const marker of [
+  'operationTimeoutMs: 100',
+  'await new Promise<void>(() => undefined)',
+  "status: 'failed'",
+  'Synchronization timed out. Retry when the connection is stable.',
+  "manager.retry('synthetic-operation-one')",
+  "toBe('0:0:2:false')",
+  "attempts: 2"
+]) assert(timeoutTest.includes(marker), `queue timeout regression is missing ${marker}`);
 
 const diagnostics = await readFile(path.join(root, 'src/components/HostedPilotWorkspace.tsx'), 'utf8');
 for (const marker of [
@@ -96,4 +122,4 @@ assert(!browserJob.includes('CLOUDFLARE_API_TOKEN'), 'hosted browser job must no
 assert(!workflow.includes('wrangler deploy'), 'Gate C pilot workflow must not redeploy Cloudflare');
 assert(!workflow.includes('supabase db push'), 'Gate C pilot workflow must not mutate provider schema');
 
-console.log('Gate C hosted browser resilience guard passed: credential-blind least-privilege browser doctor, TypeScript-covered exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, no Cloudflare credentials, and no schema push.');
+console.log('Gate C hosted browser resilience guard passed: credential-blind browser doctor, two-phase idempotent learning writes, bounded timeout and retry coverage, exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, no Cloudflare credentials, and no schema push.');
