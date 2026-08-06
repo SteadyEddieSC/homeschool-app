@@ -106,6 +106,7 @@ function todayItemFromRow(row: TodayItemRow): TodayItem {
   };
 }
 
+const householdColumns = 'id, organization_id, name, created_at';
 const learnerColumns = 'id, organization_id, household_id, preferred_name, pronouns, grade_band, avatar_key, access_mode, status, created_at, updated_at';
 const todayColumns = 'id, organization_id, household_id, learner_id, title, instructions, activity_type, due_date, status, learner_note, review_feedback, assigned_by, reviewed_by, completed_at, created_at, updated_at';
 
@@ -115,7 +116,7 @@ export class SupabaseLearningRepository implements LearningRepository {
   async listHouseholds(organizationId: string): Promise<HouseholdSummary[]> {
     const result = await this.client
       .from('households')
-      .select('id, organization_id, name, created_at')
+      .select(householdColumns)
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: true });
     if (result.error) throw result.error;
@@ -143,12 +144,11 @@ export class SupabaseLearningRepository implements LearningRepository {
       .upsert(record, { onConflict: 'client_operation_id' });
     if (write.error) throw write.error;
 
-    // The insert trigger establishes the creator's household relationship.
-    // Read the row in a separate statement so RLS evaluates after that trigger
-    // has completed instead of during INSERT ... RETURNING.
+    // Read in a separate statement so trigger-created relationships and RLS
+    // visibility are evaluated after the idempotent write has completed.
     const visible = await this.client
       .from('households')
-      .select('id, organization_id, name, created_at')
+      .select(householdColumns)
       .eq('client_operation_id', operationId)
       .single();
     if (visible.error) throw visible.error;
@@ -166,8 +166,10 @@ export class SupabaseLearningRepository implements LearningRepository {
   }
 
   async createLearner(input: CreateLearnerInput): Promise<LearnerProfile> {
+    const learnerId = input.learnerId ?? crypto.randomUUID();
+    const operationId = input.operationId ?? crypto.randomUUID();
     const record = {
-      id: input.learnerId,
+      id: learnerId,
       organization_id: input.organizationId,
       household_id: input.householdId,
       preferred_name: normalizePreferredName(input.preferredName),
@@ -176,14 +178,21 @@ export class SupabaseLearningRepository implements LearningRepository {
       avatar_key: input.avatar,
       access_mode: 'parent-assisted',
       status: 'active',
-      client_operation_id: input.operationId
+      client_operation_id: operationId
     };
-    const query = input.operationId
-      ? this.client.from('learners').upsert(record, { onConflict: 'client_operation_id' })
-      : this.client.from('learners').insert(record);
-    const result = await query.select(learnerColumns).single();
-    if (result.error) throw result.error;
-    return learnerFromRow(result.data as unknown as LearnerRow);
+
+    const write = await this.client
+      .from('learners')
+      .upsert(record, { onConflict: 'client_operation_id' });
+    if (write.error) throw write.error;
+
+    const visible = await this.client
+      .from('learners')
+      .select(learnerColumns)
+      .eq('client_operation_id', operationId)
+      .single();
+    if (visible.error) throw visible.error;
+    return learnerFromRow(visible.data as unknown as LearnerRow);
   }
 
   async listTodayItems(organizationId: string, learnerId?: string): Promise<TodayItem[]> {
@@ -200,8 +209,10 @@ export class SupabaseLearningRepository implements LearningRepository {
   }
 
   async createTodayItem(input: CreateTodayItemInput): Promise<TodayItem> {
+    const itemId = input.itemId ?? crypto.randomUUID();
+    const operationId = input.operationId ?? crypto.randomUUID();
     const record = {
-      id: input.itemId,
+      id: itemId,
       organization_id: input.organizationId,
       household_id: input.householdId,
       learner_id: input.learnerId,
@@ -211,14 +222,21 @@ export class SupabaseLearningRepository implements LearningRepository {
       activity_type: input.activityType,
       due_date: input.dueDate,
       status: 'assigned',
-      client_operation_id: input.operationId
+      client_operation_id: operationId
     };
-    const query = input.operationId
-      ? this.client.from('learner_today_items').upsert(record, { onConflict: 'client_operation_id' })
-      : this.client.from('learner_today_items').insert(record);
-    const result = await query.select(todayColumns).single();
-    if (result.error) throw result.error;
-    return todayItemFromRow(result.data as unknown as TodayItemRow);
+
+    const write = await this.client
+      .from('learner_today_items')
+      .upsert(record, { onConflict: 'client_operation_id' });
+    if (write.error) throw write.error;
+
+    const visible = await this.client
+      .from('learner_today_items')
+      .select(todayColumns)
+      .eq('client_operation_id', operationId)
+      .single();
+    if (visible.error) throw visible.error;
+    return todayItemFromRow(visible.data as unknown as TodayItemRow);
   }
 
   async transitionTodayItem(input: TransitionTodayItemInput): Promise<TodayItem> {
