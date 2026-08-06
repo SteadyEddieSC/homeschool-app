@@ -1,43 +1,38 @@
 import { expect, test } from '@playwright/test';
-import { SyncQueueManager } from '../src/services/sync-queue';
 
-class MemoryStorage implements Storage {
-  private readonly values = new Map<string, string>();
+test('an unresolved operation times out visibly and ordered processing continues after retry', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
 
-  get length(): number {
-    return this.values.size;
-  }
+  const result = await page.evaluate(async () => {
+    const moduleUrl = '/src/services/sync-queue.ts';
+    const queueModule = await import(/* @vite-ignore */ moduleUrl) as {
+      SyncQueueManager: new (options: {
+        mode: 'cloud-connected';
+        onlineProvider: () => boolean;
+        operationTimeoutMs: number;
+      }) => {
+        setExecutor(executor: (operation: { kind: string }) => Promise<void>): void;
+        enqueue(input: Record<string, unknown>): unknown;
+        process(): Promise<void>;
+        retry(operationId: string): void;
+        getSnapshot(): {
+          pendingCount: number;
+          failedCount: number;
+          completedCount: number;
+          processing: boolean;
+          operations: Array<{
+            id: string;
+            kind: string;
+            status: string;
+            attempts: number;
+            lastError: string;
+          }>;
+        };
+      };
+    };
 
-  clear(): void {
-    this.values.clear();
-  }
-
-  getItem(key: string): string | null {
-    return this.values.get(key) ?? null;
-  }
-
-  key(index: number): string | null {
-    return [...this.values.keys()][index] ?? null;
-  }
-
-  removeItem(key: string): void {
-    this.values.delete(key);
-  }
-
-  setItem(key: string, value: string): void {
-    this.values.set(key, value);
-  }
-}
-
-test('an unresolved operation times out visibly and ordered processing continues after retry', async () => {
-  const originalStorage = globalThis.localStorage;
-  Object.defineProperty(globalThis, 'localStorage', {
-    configurable: true,
-    value: new MemoryStorage()
-  });
-
-  try {
-    const manager = new SyncQueueManager({
+    const manager = new queueModule.SyncQueueManager({
       mode: 'cloud-connected',
       onlineProvider: () => true,
       operationTimeoutMs: 100
@@ -76,42 +71,65 @@ test('an unresolved operation times out visibly and ordered processing continues
       }
     });
 
+    async function waitFor(predicate: () => boolean, timeoutMs = 3_000): Promise<void> {
+      const startedAt = Date.now();
+      while (!predicate()) {
+        if (Date.now() - startedAt > timeoutMs) throw new Error('Timed out waiting for the synthetic queue state.');
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+    }
+
     void manager.process();
-    await expect.poll(() => manager.getSnapshot().failedCount).toBe(1);
+    await waitFor(() => manager.getSnapshot().failedCount === 1);
     const timedOut = manager.getSnapshot();
-    expect(timedOut.pendingCount).toBe(1);
-    expect(timedOut.operations.find((operation) => operation.id === 'synthetic-operation-one')).toMatchObject({
-      status: 'failed',
-      attempts: 1,
-      lastError: 'Synchronization timed out. Retry when the connection is stable.'
-    });
-    expect(timedOut.operations.find((operation) => operation.id === 'synthetic-operation-two')).toMatchObject({
-      status: 'pending',
-      attempts: 0
-    });
 
     manager.retry('synthetic-operation-one');
-    await expect.poll(() => {
+    await waitFor(() => {
       const snapshot = manager.getSnapshot();
-      return `${snapshot.pendingCount}:${snapshot.failedCount}:${snapshot.completedCount}:${snapshot.processing}`;
-    }).toBe('0:0:2:false');
+      return snapshot.pendingCount === 0
+        && snapshot.failedCount === 0
+        && snapshot.completedCount === 2
+        && snapshot.processing === false;
+    });
 
-    const completed = manager.getSnapshot();
-    expect(completed.operations.find((operation) => operation.id === 'synthetic-operation-one')).toMatchObject({
-      status: 'completed',
-      attempts: 2,
-      lastError: ''
-    });
-    expect(completed.operations.find((operation) => operation.id === 'synthetic-operation-two')).toMatchObject({
-      status: 'completed',
-      attempts: 1,
-      lastError: ''
-    });
-    expect(completedKinds).toEqual(['create-household', 'create-household']);
-  } finally {
-    Object.defineProperty(globalThis, 'localStorage', {
-      configurable: true,
-      value: originalStorage
-    });
-  }
+    return {
+      timedOut: {
+        pendingCount: timedOut.pendingCount,
+        failedCount: timedOut.failedCount,
+        first: timedOut.operations.find((operation) => operation.id === 'synthetic-operation-one'),
+        second: timedOut.operations.find((operation) => operation.id === 'synthetic-operation-two')
+      },
+      completed: manager.getSnapshot(),
+      completedKinds
+    };
+  });
+
+  expect(result.timedOut.pendingCount).toBe(1);
+  expect(result.timedOut.failedCount).toBe(1);
+  expect(result.timedOut.first).toMatchObject({
+    status: 'failed',
+    attempts: 1,
+    lastError: 'Synchronization timed out. Retry when the connection is stable.'
+  });
+  expect(result.timedOut.second).toMatchObject({
+    status: 'pending',
+    attempts: 0
+  });
+  expect(result.completed).toMatchObject({
+    pendingCount: 0,
+    failedCount: 0,
+    completedCount: 2,
+    processing: false
+  });
+  expect(result.completed.operations.find((operation) => operation.id === 'synthetic-operation-one')).toMatchObject({
+    status: 'completed',
+    attempts: 2,
+    lastError: ''
+  });
+  expect(result.completed.operations.find((operation) => operation.id === 'synthetic-operation-two')).toMatchObject({
+    status: 'completed',
+    attempts: 1,
+    lastError: ''
+  });
+  expect(result.completedKinds).toEqual(['create-household', 'create-household']);
 });
