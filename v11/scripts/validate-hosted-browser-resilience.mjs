@@ -37,6 +37,11 @@ if (process.env.GITHUB_RUN_ID) assert(String(report.workflowRun) === String(proc
 for (const [key, value] of Object.entries(report.coverage ?? {})) assert(value === true, `coverage ${key} was not evidenced`);
 assert(report.counts?.activeOperations === 4, 'four ordered active operations were not evidenced');
 assert(report.counts?.cancelledOperations === 1, 'one explicit cancellation was not evidenced');
+assert(
+  Number.isInteger(report.counts?.hostedHouseholdsAfterForcedFailure)
+    && [0, 1].includes(report.counts.hostedHouseholdsAfterForcedFailure),
+  'ambiguous household commit count is missing or unsafe'
+);
 assert(report.counts?.hostedHouseholds === 1, 'hosted household count is unexpected');
 assert(report.counts?.hostedLearners === 1, 'hosted learner count is unexpected');
 assert(report.counts?.hostedTodayItems === 1, 'cancelled Today item reached the hosted database or the expected item is missing');
