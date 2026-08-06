@@ -139,6 +139,16 @@ export class SupabaseLearningRepository implements LearningRepository {
       client_operation_id: operationId
     };
 
+    // A request can commit even when the browser loses its response. Resolve the
+    // stable operation first so retry does not depend on an UPDATE conflict path.
+    const existingHousehold = await this.client
+      .from('households')
+      .select(householdColumns)
+      .eq('client_operation_id', operationId)
+      .maybeSingle();
+    if (existingHousehold.error) throw existingHousehold.error;
+    if (existingHousehold.data) return householdFromRow(existingHousehold.data as HouseholdRow);
+
     const write = await this.client
       .from('households')
       .upsert(record, { onConflict: 'client_operation_id' });
@@ -180,6 +190,14 @@ export class SupabaseLearningRepository implements LearningRepository {
       status: 'active',
       client_operation_id: operationId
     };
+
+    const existingLearner = await this.client
+      .from('learners')
+      .select(learnerColumns)
+      .eq('client_operation_id', operationId)
+      .maybeSingle();
+    if (existingLearner.error) throw existingLearner.error;
+    if (existingLearner.data) return learnerFromRow(existingLearner.data as unknown as LearnerRow);
 
     const write = await this.client
       .from('learners')
@@ -224,6 +242,14 @@ export class SupabaseLearningRepository implements LearningRepository {
       status: 'assigned',
       client_operation_id: operationId
     };
+
+    const existingTodayItem = await this.client
+      .from('learner_today_items')
+      .select(todayColumns)
+      .eq('client_operation_id', operationId)
+      .maybeSingle();
+    if (existingTodayItem.error) throw existingTodayItem.error;
+    if (existingTodayItem.data) return todayItemFromRow(existingTodayItem.data as unknown as TodayItemRow);
 
     const write = await this.client
       .from('learner_today_items')
