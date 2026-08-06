@@ -133,3 +133,57 @@ test('an unresolved operation times out visibly and ordered processing continues
   });
   expect(result.completedKinds).toEqual(['create-household', 'create-household']);
 });
+
+test('structured hosted authorization errors are sanitized before queue storage', async ({ page }) => {
+  await page.goto('/');
+  await page.evaluate(() => localStorage.clear());
+
+  const result = await page.evaluate(async () => {
+    const moduleUrl = '/src/services/sync-queue.ts';
+    const queueModule = await import(/* @vite-ignore */ moduleUrl) as {
+      SyncQueueManager: new (options: {
+        mode: 'cloud-connected';
+        onlineProvider: () => boolean;
+        operationTimeoutMs: number;
+      }) => {
+        setExecutor(executor: () => Promise<void>): void;
+        enqueue(input: Record<string, unknown>): unknown;
+        process(): Promise<void>;
+        getSnapshot(): {
+          failedCount: number;
+          operations: Array<{ id: string; status: string; attempts: number; lastError: string }>;
+        };
+      };
+    };
+
+    const manager = new queueModule.SyncQueueManager({
+      mode: 'cloud-connected',
+      onlineProvider: () => true,
+      operationTimeoutMs: 1_000
+    });
+    manager.setExecutor(async () => {
+      throw {
+        code: '42501',
+        message: 'raw row-level provider detail must not be stored',
+        details: 'private table and policy information'
+      };
+    });
+    manager.enqueue({
+      id: 'synthetic-authorization-operation',
+      kind: 'create-household',
+      fingerprint: 'synthetic-authorization-fingerprint',
+      payload: { synthetic: true }
+    });
+    await manager.process();
+    return manager.getSnapshot();
+  });
+
+  expect(result.failedCount).toBe(1);
+  expect(result.operations.find((operation) => operation.id === 'synthetic-authorization-operation')).toMatchObject({
+    status: 'failed',
+    attempts: 1,
+    lastError: 'Hosted synchronization was not authorized. Confirm access and retry.'
+  });
+  expect(JSON.stringify(result)).not.toContain('raw row-level provider detail');
+  expect(JSON.stringify(result)).not.toContain('private table and policy information');
+});
