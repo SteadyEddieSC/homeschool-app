@@ -106,6 +106,11 @@ function todayItemFromRow(row: TodayItemRow): TodayItem {
   };
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object' || !('code' in error)) return false;
+  return String((error as { code?: unknown }).code ?? '') === '23505';
+}
+
 const householdColumns = 'id, organization_id, name, created_at';
 const learnerColumns = 'id, organization_id, household_id, preferred_name, pronouns, grade_band, avatar_key, access_mode, status, created_at, updated_at';
 const todayColumns = 'id, organization_id, household_id, learner_id, title, instructions, activity_type, due_date, status, learner_note, review_feedback, assigned_by, reviewed_by, completed_at, created_at, updated_at';
@@ -140,7 +145,8 @@ export class SupabaseLearningRepository implements LearningRepository {
     };
 
     // A request can commit even when the browser loses its response. Resolve the
-    // stable operation first so retry does not depend on an UPDATE conflict path.
+    // stable operation first, then use ordinary INSERT authority only. A 23505
+    // can occur when another attempt committed between the pre-read and insert.
     const existingHousehold = await this.client
       .from('households')
       .select(householdColumns)
@@ -149,13 +155,11 @@ export class SupabaseLearningRepository implements LearningRepository {
     if (existingHousehold.error) throw existingHousehold.error;
     if (existingHousehold.data) return householdFromRow(existingHousehold.data as HouseholdRow);
 
-    const write = await this.client
-      .from('households')
-      .upsert(record, { onConflict: 'client_operation_id', ignoreDuplicates: true });
-    if (write.error) throw write.error;
+    const write = await this.client.from('households').insert(record);
+    if (write.error && !isUniqueViolation(write.error)) throw write.error;
 
     // Read in a separate statement so trigger-created relationships and RLS
-    // visibility are evaluated after the idempotent write has completed.
+    // visibility are evaluated after the idempotent insert has completed.
     const visible = await this.client
       .from('households')
       .select(householdColumns)
@@ -199,10 +203,8 @@ export class SupabaseLearningRepository implements LearningRepository {
     if (existingLearner.error) throw existingLearner.error;
     if (existingLearner.data) return learnerFromRow(existingLearner.data as unknown as LearnerRow);
 
-    const write = await this.client
-      .from('learners')
-      .upsert(record, { onConflict: 'client_operation_id', ignoreDuplicates: true });
-    if (write.error) throw write.error;
+    const write = await this.client.from('learners').insert(record);
+    if (write.error && !isUniqueViolation(write.error)) throw write.error;
 
     const visible = await this.client
       .from('learners')
@@ -251,10 +253,8 @@ export class SupabaseLearningRepository implements LearningRepository {
     if (existingTodayItem.error) throw existingTodayItem.error;
     if (existingTodayItem.data) return todayItemFromRow(existingTodayItem.data as unknown as TodayItemRow);
 
-    const write = await this.client
-      .from('learner_today_items')
-      .upsert(record, { onConflict: 'client_operation_id', ignoreDuplicates: true });
-    if (write.error) throw write.error;
+    const write = await this.client.from('learner_today_items').insert(record);
+    if (write.error && !isUniqueViolation(write.error)) throw write.error;
 
     const visible = await this.client
       .from('learner_today_items')
