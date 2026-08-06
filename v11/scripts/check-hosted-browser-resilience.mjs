@@ -29,21 +29,26 @@ const nodeTypeScript = JSON.parse(await readFile(path.join(root, 'tsconfig.node.
 const nodeIncludes = Array.isArray(nodeTypeScript.include) ? nodeTypeScript.include : [];
 assert(nodeIncludes.includes('playwright.hosted.config.ts'), 'hosted Playwright configuration is outside TypeScript validation');
 assert(nodeIncludes.includes('hosted-tests'), 'hosted browser tests are outside TypeScript validation');
-assert(nodeIncludes.includes('tests'), 'queue timeout regression is outside TypeScript validation');
+assert(nodeIncludes.includes('tests'), 'queue and idempotency regressions are outside TypeScript validation');
 
 const repository = await readFile(path.join(root, 'src/services/supabase-learning.ts'), 'utf8');
 for (const marker of [
   "const householdId = options.householdId ?? crypto.randomUUID()",
   "const learnerId = input.learnerId ?? crypto.randomUUID()",
   "const itemId = input.itemId ?? crypto.randomUUID()",
-  ".upsert(record, { onConflict: 'client_operation_id' })",
+  'existingHousehold',
+  'existingLearner',
+  'existingTodayItem',
+  '.maybeSingle()',
+  ".upsert(record, { onConflict: 'client_operation_id', ignoreDuplicates: true })",
   ".eq('client_operation_id', operationId)",
   'Read in a separate statement'
 ]) assert(repository.includes(marker), `hosted learning repository is missing ${marker}`);
 assert(!repository.includes('await query.select(learnerColumns).single()'), 'learner write still combines mutation and returned-row visibility');
 assert(!repository.includes('await query.select(todayColumns).single()'), 'Today write still combines mutation and returned-row visibility');
-assert(repository.match(/\.from\('learners'\)[\s\S]*?\.upsert\(record, \{ onConflict: 'client_operation_id' \}\)[\s\S]*?\.from\('learners'\)[\s\S]*?\.eq\('client_operation_id', operationId\)/), 'learner write/read phases are not both present');
-assert(repository.match(/\.from\('learner_today_items'\)[\s\S]*?\.upsert\(record, \{ onConflict: 'client_operation_id' \}\)[\s\S]*?\.from\('learner_today_items'\)[\s\S]*?\.eq\('client_operation_id', operationId\)/), 'Today write/read phases are not both present');
+assert(repository.match(/const existingHousehold[\s\S]*?\.maybeSingle\(\)[\s\S]*?if \(existingHousehold\.data\)[\s\S]*?\.from\('households'\)[\s\S]*?ignoreDuplicates: true[\s\S]*?\.from\('households'\)[\s\S]*?\.single\(\)/), 'household ambiguous-write read/do-nothing/read sequence is missing');
+assert(repository.match(/const existingLearner[\s\S]*?\.maybeSingle\(\)[\s\S]*?if \(existingLearner\.data\)[\s\S]*?\.from\('learners'\)[\s\S]*?ignoreDuplicates: true[\s\S]*?\.from\('learners'\)[\s\S]*?\.single\(\)/), 'learner ambiguous-write read/do-nothing/read sequence is missing');
+assert(repository.match(/const existingTodayItem[\s\S]*?\.maybeSingle\(\)[\s\S]*?if \(existingTodayItem\.data\)[\s\S]*?\.from\('learner_today_items'\)[\s\S]*?ignoreDuplicates: true[\s\S]*?\.from\('learner_today_items'\)[\s\S]*?\.single\(\)/), 'Today ambiguous-write read/do-nothing/read sequence is missing');
 
 const queueSource = await readFile(path.join(root, 'src/services/sync-queue.ts'), 'utf8');
 for (const marker of [
@@ -52,8 +57,14 @@ for (const marker of [
   'this.operationTimeoutMs = Math.max(100',
   'await this.executeWithDeadline(operation)',
   'Promise.race([this.executor(operation), deadline])',
-  'Synchronization timed out. Retry when the connection is stable.'
-]) assert(queueSource.includes(marker), `bounded queue execution is missing ${marker}`);
+  'safeProviderCode',
+  'Synchronization timed out. Retry when the connection is stable.',
+  'Synchronization failed because the network connection was interrupted.',
+  'Hosted synchronization was not authorized.',
+  'Hosted provider rejected synchronization',
+  'Synchronization failed. Retry or contact support.'
+]) assert(queueSource.includes(marker), `bounded or sanitized queue execution is missing ${marker}`);
+assert(!queueSource.includes('structured.details'), 'queue sanitizer must not retain structured provider details');
 
 const timeoutTest = await readFile(path.join(root, 'tests/sync-queue-timeout.spec.ts'), 'utf8');
 for (const marker of [
@@ -65,9 +76,23 @@ for (const marker of [
   "manager.retry('synthetic-operation-one')",
   'snapshot.completedCount === 2',
   'snapshot.processing === false',
-  'attempts: 2'
-]) assert(timeoutTest.includes(marker), `queue timeout regression is missing ${marker}`);
+  'attempts: 2',
+  "code: '42501'",
+  'Hosted synchronization was not authorized. Confirm access and retry.',
+  "not.toContain('raw row-level provider detail')",
+  "not.toContain('private table and policy information')"
+]) assert(timeoutTest.includes(marker), `queue timeout or sanitizer regression is missing ${marker}`);
 assert(!timeoutTest.includes("from '../src/services/sync-queue'"), 'queue timeout regression must not import application source into the Node TypeScript project');
+
+const idempotencyTest = await readFile(path.join(root, 'tests/supabase-learning-idempotency.spec.ts'), 'utf8');
+for (const marker of [
+  "const moduleUrl = '/src/services/supabase-learning.ts'",
+  'ambiguous hosted create responses',
+  'operation-household',
+  'operation-learner',
+  'operation-today',
+  'expect(result.writes).toEqual([])'
+]) assert(idempotencyTest.includes(marker), `ambiguous hosted create regression is missing ${marker}`);
 
 const diagnostics = await readFile(path.join(root, 'src/components/HostedPilotWorkspace.tsx'), 'utf8');
 for (const marker of [
@@ -93,8 +118,12 @@ for (const marker of [
   'cancel-operation-',
   "route.abort('internetdisconnected')",
   'maxAdditionalRecoveries = 3',
+  'maxAttemptsPerOperation = 3',
+  'retrySettleDelayMs = 1_000',
   'waitForQueuePause',
   'drainQueueWithExplicitRetries',
+  'Hosted queue operation reached the bounded per-operation attempt limit.',
+  'hostedHouseholdsAfterForcedFailure',
   'boundedFailureRecovery',
   'recoveredFailures',
   'stopSnapshot',
@@ -111,6 +140,8 @@ assert(!testSource.includes('console.log(pilotEmail)') && !testSource.includes('
 const validator = await readFile(path.join(root, 'scripts/validate-hosted-browser-resilience.mjs'), 'utf8');
 for (const marker of [
   'hosted-browser-resilience-evidence-v2',
+  'hostedHouseholdsAfterForcedFailure',
+  'ambiguous household commit count is missing or unsafe',
   'recoveredFailures',
   'maxAttempts <= 3',
   'stopSnapshot === null',
@@ -140,4 +171,4 @@ assert(!browserJob.includes('CLOUDFLARE_API_TOKEN'), 'hosted browser job must no
 assert(!workflow.includes('wrangler deploy'), 'Gate C pilot workflow must not redeploy Cloudflare');
 assert(!workflow.includes('supabase db push'), 'Gate C pilot workflow must not mutate provider schema');
 
-console.log('Gate C hosted browser resilience guard passed: credential-blind browser doctor, two-phase idempotent learning writes, bounded product deadlines, bounded explicit pilot recoveries, sanitized stop evidence, exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, no Cloudflare credentials, and no schema push.');
+console.log('Gate C hosted browser resilience guard passed: credential-blind browser doctor, ambiguous-write read/do-nothing/read recovery, sanitized structured provider errors, bounded product deadlines, strict per-operation retry limits, sanitized stop evidence, exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, no Cloudflare credentials, and no schema push.');
