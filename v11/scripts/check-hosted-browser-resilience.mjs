@@ -81,7 +81,7 @@ assert(!diagnostics.includes('id: operation.id'), 'diagnostics still include raw
 assert(!diagnostics.includes('recordId: conflict.recordId'), 'diagnostics still include raw record IDs');
 
 const config = await readFile(path.join(root, 'playwright.hosted.config.ts'), 'utf8');
-for (const marker of ["testDir: './hosted-tests'", "trace: 'off'", "screenshot: 'off'", "video: 'off'", "name: 'hosted-chromium-desktop'"]) {
+for (const marker of ["testDir: './hosted-tests'", 'timeout: 300_000', "trace: 'off'", "screenshot: 'off'", "video: 'off'", "name: 'hosted-chromium-desktop'"]) {
   assert(config.includes(marker), `hosted Playwright config is missing ${marker}`);
 }
 assert(!config.includes('webServer:'), 'hosted Playwright must target the protected deployed origin, not start a local server');
@@ -92,6 +92,12 @@ for (const marker of [
   'already waiting to synchronize',
   'cancel-operation-',
   "route.abort('internetdisconnected')",
+  'maxAdditionalRecoveries = 3',
+  'waitForQueuePause',
+  'drainQueueWithExplicitRetries',
+  'boundedFailureRecovery',
+  'recoveredFailures',
+  'stopSnapshot',
   "name: 'Retry'",
   'Synthetic Local Divergence',
   'pilot-conflict-count',
@@ -99,12 +105,21 @@ for (const marker of [
   'syntheticOrganizationDeleted',
   'productionCutoverApproved: false'
 ]) assert(testSource.includes(marker), `hosted browser test is missing ${marker}`);
+assert(!testSource.includes("toHaveText('0', { timeout: 30_000 })"), 'hosted browser test still uses the brittle fixed queue-drain assertion');
 assert(!testSource.includes('console.log(pilotEmail)') && !testSource.includes('console.log(pilotPassword)'), 'hosted browser test must not log protected credentials');
 
 const validator = await readFile(path.join(root, 'scripts/validate-hosted-browser-resilience.mjs'), 'utf8');
-for (const marker of ['hosted-browser-resilience-evidence-v1', 'UUID', 'email address', 'Cloudflare token', 'syntheticOrganizationDeleted', 'full-gate-c-incomplete']) {
-  assert(validator.includes(marker), `hosted browser validator is missing ${marker}`);
-}
+for (const marker of [
+  'hosted-browser-resilience-evidence-v2',
+  'recoveredFailures',
+  'maxAttempts <= 3',
+  'stopSnapshot === null',
+  'UUID',
+  'email address',
+  'Cloudflare token',
+  'syntheticOrganizationDeleted',
+  'full-gate-c-incomplete'
+]) assert(validator.includes(marker), `hosted browser validator is missing ${marker}`);
 
 const workflow = await readFile(path.join(repositoryRoot, '.github/workflows/run-v11-hosted-pilot.yml'), 'utf8');
 for (const marker of [
@@ -125,4 +140,4 @@ assert(!browserJob.includes('CLOUDFLARE_API_TOKEN'), 'hosted browser job must no
 assert(!workflow.includes('wrangler deploy'), 'Gate C pilot workflow must not redeploy Cloudflare');
 assert(!workflow.includes('supabase db push'), 'Gate C pilot workflow must not mutate provider schema');
 
-console.log('Gate C hosted browser resilience guard passed: credential-blind browser doctor, two-phase idempotent learning writes, bounded timeout and retry coverage, exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, no Cloudflare credentials, and no schema push.');
+console.log('Gate C hosted browser resilience guard passed: credential-blind browser doctor, two-phase idempotent learning writes, bounded product deadlines, bounded explicit pilot recoveries, sanitized stop evidence, exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, no Cloudflare credentials, and no schema push.');
