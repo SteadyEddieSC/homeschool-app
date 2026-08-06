@@ -28,7 +28,7 @@ function assertSanitized(value, location = 'report') {
 }
 
 assertSanitized(report);
-assert(report.schema === 'beaufort-learning-harbor-hosted-browser-resilience-v1', 'report schema is unexpected');
+assert(report.schema === 'beaufort-learning-harbor-hosted-browser-resilience-v2', 'report schema is unexpected');
 assert(report.release === '11.0.0-rc.1', 'report release is unexpected');
 assert(report.state === 'hosted-browser-resilience-complete-additional-gate-c-evidence-required', 'hosted browser resilience pilot did not complete');
 if (process.env.GITHUB_SHA) assert(report.commit === process.env.GITHUB_SHA, 'report commit does not match the exact workflow head');
@@ -42,9 +42,27 @@ assert(report.counts?.hostedLearners === 1, 'hosted learner count is unexpected'
 assert(report.counts?.hostedTodayItems === 1, 'cancelled Today item reached the hosted database or the expected item is missing');
 assert(report.counts?.hostedKnowledgeChecks === 1, 'hosted knowledge-check count is unexpected');
 assert(report.counts?.openConflictsBeforeAcknowledgement === 1, 'visible conflict was not evidenced');
-assert(report.attempts?.firstOperation === 2, 'the failed first operation was not explicitly retried once');
-assert(Array.isArray(report.attempts?.subsequentOperations) && report.attempts.subsequentOperations.length === 3, 'subsequent ordered attempts are incomplete');
-assert(report.attempts.subsequentOperations.every((attempt) => attempt === 1), 'a subsequent operation was duplicated or retried unexpectedly');
+
+const byKind = report.attempts?.byKind;
+assert(Array.isArray(byKind) && byKind.length === 4, 'per-kind attempt evidence is incomplete');
+assert(byKind.map((entry) => entry.kind).join(',') === 'create-household,create-learner,create-today-item,create-knowledge-check', 'operation order is unexpected');
+assert(byKind.every((entry) => Number.isInteger(entry.attempts) && entry.attempts >= 1 && entry.attempts <= 3), 'an operation exceeded the bounded attempt limit');
+assert(byKind[0].attempts >= 2, 'the forced household failure was not explicitly retried');
+assert(report.attempts?.maxAttempts === Math.max(...byKind.map((entry) => entry.attempts)), 'maximum attempt evidence is inconsistent');
+assert(report.attempts.maxAttempts <= 3, 'maximum attempts exceeded the release-candidate boundary');
+
+const recoveredFailures = report.attempts?.recoveredFailures;
+assert(Array.isArray(recoveredFailures) && recoveredFailures.length >= 1 && recoveredFailures.length <= 4, 'bounded recovered-failure evidence is missing or excessive');
+assert(report.attempts?.totalRecoveries === recoveredFailures.length, 'recovery count is inconsistent');
+assert(recoveredFailures[0]?.kind === 'create-household', 'the forced first failure was not the household write');
+const allowedCategories = new Set(['timeout', 'network', 'authorization', 'provider', 'other']);
+for (const recovery of recoveredFailures) {
+  assert(typeof recovery.kind === 'string' && recovery.kind.length > 0, 'recovered failure kind is missing');
+  assert(allowedCategories.has(recovery.category), 'recovered failure category is unsafe or unsupported');
+  assert(Number.isInteger(recovery.attemptsBeforeRetry) && recovery.attemptsBeforeRetry >= 1 && recovery.attemptsBeforeRetry <= 2, 'recovered failure attempt evidence is unexpected');
+}
+assert(report.stopSnapshot === null, 'successful evidence must not retain a stop snapshot');
+
 assert(/^[0-9a-f]{64}$/.test(String(report.diagnosticsDigest ?? '')), 'sanitized diagnostics digest is missing');
 assert(report.cleanup?.syntheticOrganizationDeleted === true, 'synthetic organization cleanup was not evidenced');
 assert(report.cleanup?.browserSignedOut === true, 'browser sign-out was not evidenced');
@@ -55,7 +73,7 @@ for (const key of ['realFamilyDataAuthorized', 'liveMigrationEnabled', 'producti
 }
 
 const evidence = {
-  schema: 'beaufort-learning-harbor-rc2-hosted-browser-resilience-evidence-v1',
+  schema: 'beaufort-learning-harbor-rc2-hosted-browser-resilience-evidence-v2',
   release: report.release,
   checkedAt: new Date().toISOString(),
   commit: report.commit,
@@ -87,4 +105,4 @@ const evidence = {
 assertSanitized(evidence, 'evidence');
 await mkdir(outputDirectory, { recursive: true });
 await writeFile(path.join(outputDirectory, 'rc2-hosted-browser-resilience-evidence.json'), `${JSON.stringify(evidence, null, 2)}\n`);
-console.log(JSON.stringify({ schema: evidence.schema, state: evidence.state, coverage: evidence.coverage, cleanup: evidence.cleanup }, null, 2));
+console.log(JSON.stringify({ schema: evidence.schema, state: evidence.state, coverage: evidence.coverage, attempts: evidence.attempts, cleanup: evidence.cleanup }, null, 2));
