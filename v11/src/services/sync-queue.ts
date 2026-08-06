@@ -16,6 +16,11 @@ interface StoredQueueState {
   operations: SyncOperation[];
 }
 
+interface StructuredSyncError {
+  code?: unknown;
+  message?: unknown;
+}
+
 function now(): string {
   return new Date().toISOString();
 }
@@ -49,9 +54,46 @@ function saveState(state: StoredQueueState): void {
   }));
 }
 
+function structuredError(error: unknown): StructuredSyncError {
+  if (!error || typeof error !== 'object') return {};
+  return error as StructuredSyncError;
+}
+
+function safeProviderCode(error: unknown): string {
+  const code = String(structuredError(error).code ?? '').trim().toUpperCase();
+  return /^[A-Z0-9_-]{1,20}$/.test(code) ? code : '';
+}
+
 function safeError(error: unknown): string {
-  if (error instanceof Error) return error.message.slice(0, 500);
-  return 'Synchronization failed.';
+  const structured = structuredError(error);
+  const message = error instanceof Error
+    ? error.message
+    : typeof structured.message === 'string'
+      ? structured.message
+      : '';
+  const code = safeProviderCode(error);
+  const normalized = `${code} ${message}`.toLowerCase();
+
+  if (message === 'Synchronization timed out. Retry when the connection is stable.' || normalized.includes('timed out')) {
+    return 'Synchronization timed out. Retry when the connection is stable.';
+  }
+  if (normalized.includes('failed to fetch') || normalized.includes('network') || normalized.includes('internet')) {
+    return 'Synchronization failed because the network connection was interrupted. Retry when the connection is stable.';
+  }
+  if (
+    code === '42501'
+    || normalized.includes('permission')
+    || normalized.includes('row-level')
+    || normalized.includes('not authorized')
+    || normalized.includes('unauthorized')
+    || normalized.includes('forbidden')
+  ) {
+    return 'Hosted synchronization was not authorized. Confirm access and retry.';
+  }
+  if (message === 'Synchronization executor is unavailable.') return message;
+  if (/^Hosted [A-Za-z -]+ synchronization is not configured\.$/.test(message)) return message;
+  if (code) return `Hosted provider rejected synchronization (${code}). Retry or contact support.`;
+  return 'Synchronization failed. Retry or contact support.';
 }
 
 function timeoutError(): Error {
