@@ -151,7 +151,7 @@ export class SupabaseLearningRepository implements LearningRepository {
 
     const write = await this.client
       .from('households')
-      .upsert(record, { onConflict: 'client_operation_id' });
+      .upsert(record, { onConflict: 'client_operation_id', ignoreDuplicates: true });
     if (write.error) throw write.error;
 
     // Read in a separate statement so trigger-created relationships and RLS
@@ -201,7 +201,7 @@ export class SupabaseLearningRepository implements LearningRepository {
 
     const write = await this.client
       .from('learners')
-      .upsert(record, { onConflict: 'client_operation_id' });
+      .upsert(record, { onConflict: 'client_operation_id', ignoreDuplicates: true });
     if (write.error) throw write.error;
 
     const visible = await this.client
@@ -253,7 +253,7 @@ export class SupabaseLearningRepository implements LearningRepository {
 
     const write = await this.client
       .from('learner_today_items')
-      .upsert(record, { onConflict: 'client_operation_id' });
+      .upsert(record, { onConflict: 'client_operation_id', ignoreDuplicates: true });
     if (write.error) throw write.error;
 
     const visible = await this.client
