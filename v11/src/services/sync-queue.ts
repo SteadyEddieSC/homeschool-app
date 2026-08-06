@@ -8,6 +8,7 @@ import {
 
 const STORAGE_KEY = 'beaufortLearningHarbor.v11.beta2.syncQueue';
 const MAX_OPERATIONS = 250;
+const DEFAULT_OPERATION_TIMEOUT_MS = 20_000;
 
 interface StoredQueueState {
   schema: 'beaufort-learning-harbor-sync-queue-v1';
@@ -53,9 +54,14 @@ function safeError(error: unknown): string {
   return 'Synchronization failed.';
 }
 
+function timeoutError(): Error {
+  return new Error('Synchronization timed out. Retry when the connection is stable.');
+}
+
 export interface SyncQueueManagerOptions {
   mode: SyncQueueSnapshot['mode'];
   onlineProvider?: () => boolean;
+  operationTimeoutMs?: number;
 }
 
 export class SyncQueueManager {
@@ -65,10 +71,12 @@ export class SyncQueueManager {
   private executor: SyncOperationExecutor | null = null;
   private mode: SyncQueueSnapshot['mode'];
   private readonly onlineProvider: () => boolean;
+  private readonly operationTimeoutMs: number;
 
   constructor(options: SyncQueueManagerOptions) {
     this.mode = options.mode;
     this.onlineProvider = options.onlineProvider ?? (() => navigator.onLine);
+    this.operationTimeoutMs = Math.max(100, options.operationTimeoutMs ?? DEFAULT_OPERATION_TIMEOUT_MS);
   }
 
   setMode(mode: SyncQueueSnapshot['mode']): void {
@@ -163,7 +171,7 @@ export class SyncQueueManager {
         this.emit();
 
         try {
-          await this.executor(operation);
+          await this.executeWithDeadline(operation);
           const latest = loadState();
           const completed = latest.operations.find((candidate) => candidate.id === operation.id);
           if (completed) {
@@ -227,6 +235,19 @@ export class SyncQueueManager {
   reset(): void {
     saveState(emptyState());
     this.emit();
+  }
+
+  private async executeWithDeadline(operation: SyncOperation): Promise<void> {
+    if (!this.executor) throw new Error('Synchronization executor is unavailable.');
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    const deadline = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(timeoutError()), this.operationTimeoutMs);
+    });
+    try {
+      await Promise.race([this.executor(operation), deadline]);
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
   }
 
   private emit(): void {
