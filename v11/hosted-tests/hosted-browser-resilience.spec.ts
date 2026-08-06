@@ -10,6 +10,8 @@ const syntheticSlugPrefix = 'rc2-browser-';
 const queueStorageKey = 'beaufortLearningHarbor.v11.beta2.syncQueue';
 const studioStorageKey = 'beaufortLearningHarbor.v11.beta3.studio';
 const maxAdditionalRecoveries = 3;
+const maxAttemptsPerOperation = 3;
+const retrySettleDelayMs = 1_000;
 
 type FailureCategory = 'none' | 'timeout' | 'network' | 'authorization' | 'provider' | 'other';
 type QueueMetadata = Array<{
@@ -178,6 +180,9 @@ async function drainQueueWithExplicitRetries(page: Page): Promise<{
 
     const failed = unresolved.find((operation) => operation.status === 'failed');
     if (!failed) throw new Error('Hosted queue paused without a completed or visible failed operation.');
+    if (failed.attempts >= maxAttemptsPerOperation) {
+      throw new Error('Hosted queue operation reached the bounded per-operation attempt limit.');
+    }
     if (recoveries.length >= maxAdditionalRecoveries) {
       throw new Error('Hosted queue exceeded the bounded explicit-retry limit.');
     }
@@ -187,6 +192,7 @@ async function drainQueueWithExplicitRetries(page: Page): Promise<{
       category: failed.failureCategory,
       attemptsBeforeRetry: failed.attempts
     });
+    await page.waitForTimeout(Math.min(4_000, retrySettleDelayMs * failed.attempts));
     await page.getByTestId(`sync-operation-${failed.id}`).getByRole('button', { name: 'Retry', exact: true }).click();
   }
 }
@@ -223,6 +229,7 @@ const report = {
   counts: {
     activeOperations: 0,
     cancelledOperations: 0,
+    hostedHouseholdsAfterForcedFailure: -1,
     hostedHouseholds: 0,
     hostedLearners: 0,
     hostedTodayItems: 0,
@@ -314,6 +321,10 @@ test('hosted browser queue retries in order and surfaces conflicts without leaki
     report.coverage.firstWriteFailureVisible = true;
 
     await context.unroute(householdPattern, failFirstHouseholdWrite);
+    await page.waitForTimeout(retrySettleDelayMs);
+    report.counts.hostedHouseholdsAfterForcedFailure = await exactCount(observer, 'households', organizationId);
+    expect([0, 1]).toContain(report.counts.hostedHouseholdsAfterForcedFailure);
+
     const failedQueue = await queueMetadata(page);
     const householdOperation = failedQueue.find((operation) => operation.kind === 'create-household');
     expect(householdOperation?.status).toBe('failed');
@@ -341,7 +352,7 @@ test('hosted browser queue retries in order and surfaces conflicts without leaki
       'create-knowledge-check'
     ]);
     expect(active.every((operation) => operation.status === 'completed')).toBe(true);
-    expect(active.every((operation) => operation.attempts >= 1 && operation.attempts <= 3)).toBe(true);
+    expect(active.every((operation) => operation.attempts >= 1 && operation.attempts <= maxAttemptsPerOperation)).toBe(true);
     expect(active[0]?.attempts).toBeGreaterThanOrEqual(2);
     expect(cancelledOperations).toHaveLength(1);
     expect(cancelledOperations[0]?.attempts).toBe(0);
