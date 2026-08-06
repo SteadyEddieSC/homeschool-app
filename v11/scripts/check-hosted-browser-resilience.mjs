@@ -40,15 +40,20 @@ for (const marker of [
   'existingLearner',
   'existingTodayItem',
   '.maybeSingle()',
-  ".upsert(record, { onConflict: 'client_operation_id', ignoreDuplicates: true })",
+  'isUniqueViolation',
+  "String((error as { code?: unknown }).code ?? '') === '23505'",
+  ".from('households').insert(record)",
+  ".from('learners').insert(record)",
+  ".from('learner_today_items').insert(record)",
   ".eq('client_operation_id', operationId)",
   'Read in a separate statement'
 ]) assert(repository.includes(marker), `hosted learning repository is missing ${marker}`);
+assert(!repository.includes('.upsert('), 'hosted learning create recovery must not request PostgREST upsert/conflict-resolution authority');
 assert(!repository.includes('await query.select(learnerColumns).single()'), 'learner write still combines mutation and returned-row visibility');
 assert(!repository.includes('await query.select(todayColumns).single()'), 'Today write still combines mutation and returned-row visibility');
-assert(repository.match(/const existingHousehold[\s\S]*?\.maybeSingle\(\)[\s\S]*?if \(existingHousehold\.data\)[\s\S]*?\.from\('households'\)[\s\S]*?ignoreDuplicates: true[\s\S]*?\.from\('households'\)[\s\S]*?\.single\(\)/), 'household ambiguous-write read/do-nothing/read sequence is missing');
-assert(repository.match(/const existingLearner[\s\S]*?\.maybeSingle\(\)[\s\S]*?if \(existingLearner\.data\)[\s\S]*?\.from\('learners'\)[\s\S]*?ignoreDuplicates: true[\s\S]*?\.from\('learners'\)[\s\S]*?\.single\(\)/), 'learner ambiguous-write read/do-nothing/read sequence is missing');
-assert(repository.match(/const existingTodayItem[\s\S]*?\.maybeSingle\(\)[\s\S]*?if \(existingTodayItem\.data\)[\s\S]*?\.from\('learner_today_items'\)[\s\S]*?ignoreDuplicates: true[\s\S]*?\.from\('learner_today_items'\)[\s\S]*?\.single\(\)/), 'Today ambiguous-write read/do-nothing/read sequence is missing');
+assert(repository.match(/const existingHousehold[\s\S]*?\.maybeSingle\(\)[\s\S]*?if \(existingHousehold\.data\)[\s\S]*?\.from\('households'\)\.insert\(record\)[\s\S]*?isUniqueViolation\(write\.error\)[\s\S]*?\.from\('households'\)[\s\S]*?\.single\(\)/), 'household ambiguous-write read/insert/23505/read sequence is missing');
+assert(repository.match(/const existingLearner[\s\S]*?\.maybeSingle\(\)[\s\S]*?if \(existingLearner\.data\)[\s\S]*?\.from\('learners'\)\.insert\(record\)[\s\S]*?isUniqueViolation\(write\.error\)[\s\S]*?\.from\('learners'\)[\s\S]*?\.single\(\)/), 'learner ambiguous-write read/insert/23505/read sequence is missing');
+assert(repository.match(/const existingTodayItem[\s\S]*?\.maybeSingle\(\)[\s\S]*?if \(existingTodayItem\.data\)[\s\S]*?\.from\('learner_today_items'\)\.insert\(record\)[\s\S]*?isUniqueViolation\(write\.error\)[\s\S]*?\.from\('learner_today_items'\)[\s\S]*?\.single\(\)/), 'Today ambiguous-write read/insert/23505/read sequence is missing');
 
 const queueSource = await readFile(path.join(root, 'src/services/sync-queue.ts'), 'utf8');
 for (const marker of [
@@ -88,11 +93,15 @@ const idempotencyTest = await readFile(path.join(root, 'tests/supabase-learning-
 for (const marker of [
   "const moduleUrl = '/src/services/supabase-learning.ts'",
   'ambiguous hosted create responses',
+  'ordinary insert authority',
+  "code: '23505'",
   'operation-household',
   'operation-learner',
   'operation-today',
-  'expect(result.writes).toEqual([])'
-]) assert(idempotencyTest.includes(marker), `ambiguous hosted create regression is missing ${marker}`);
+  'Unexpected upsert',
+  'expect(result.writes).toEqual([])',
+  "expect(result.writes).toEqual(['households', 'learners', 'learner_today_items'])"
+]) assert(idempotencyTest.includes(marker), `insert-only hosted create regression is missing ${marker}`);
 
 const diagnostics = await readFile(path.join(root, 'src/components/HostedPilotWorkspace.tsx'), 'utf8');
 for (const marker of [
@@ -171,4 +180,4 @@ assert(!browserJob.includes('CLOUDFLARE_API_TOKEN'), 'hosted browser job must no
 assert(!workflow.includes('wrangler deploy'), 'Gate C pilot workflow must not redeploy Cloudflare');
 assert(!workflow.includes('supabase db push'), 'Gate C pilot workflow must not mutate provider schema');
 
-console.log('Gate C hosted browser resilience guard passed: credential-blind browser doctor, ambiguous-write read/do-nothing/read recovery, sanitized structured provider errors, bounded product deadlines, strict per-operation retry limits, sanitized stop evidence, exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, no Cloudflare credentials, and no schema push.');
+console.log('Gate C hosted browser resilience guard passed: credential-blind browser doctor, insert-only ambiguous-write read/insert/23505/read recovery, sanitized structured provider errors, bounded product deadlines, strict per-operation retry limits, sanitized stop evidence, exact deployed origin, offline queue ordering, visible failure/retry/cancel, duplicate prevention, explicit conflict handling, digested diagnostics, synthetic cleanup, no deployment, no Cloudflare credentials, and no schema push.');
