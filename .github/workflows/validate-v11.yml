@@ -99,6 +99,20 @@ jobs:
         run: npm run db:reset
       - name: Run identity, family, studio, hosted-pilot, ACL, migration, idempotency, audit, and RLS tests
         run: npm run db:test
+      - name: Run local Auth confirmation, recovery, and rate-limit pilot
+        run: npm run pilot:test-local-auth-email-recovery
+      - name: Validate sanitized local Auth email/recovery evidence
+        run: npm run pilot:validate-local-auth-email-recovery
+      - name: Upload sanitized local Auth email/recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v11-rc2-local-auth-email-recovery
+          path: |
+            v11/local-auth-email-recovery-report.json
+            v11/test-results/rc2/rc2-local-auth-email-recovery-evidence.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Stop local Supabase stack
         if: always()
         run: npm run db:stop
