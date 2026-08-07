@@ -10,7 +10,7 @@ function assert(condition, message) {
 
 const pkg = JSON.parse(await readFile(path.join(root, 'package.json'), 'utf8'));
 assert(pkg.scripts?.['pilot:doctor:browser'] === 'node scripts/pilot-doctor.mjs browser', 'least-privilege browser doctor is not wired exactly');
-assert(pkg.scripts?.['pilot:test-browser-resilience'] === 'playwright test --config=playwright.hosted.config.ts', 'hosted Playwright script is not wired exactly');
+assert(pkg.scripts?.['pilot:test-browser-resilience'] === 'playwright test hosted-tests/hosted-browser-resilience.spec.ts --config=playwright.hosted.config.ts', 'hosted Playwright script is not wired exactly');
 assert(pkg.scripts?.['pilot:validate-browser-resilience'] === 'node scripts/validate-hosted-browser-resilience.mjs', 'hosted evidence validator is not wired exactly');
 assert(pkg.scripts?.['check:hosted-browser-resilience'] === 'node scripts/check-hosted-browser-resilience.mjs', 'hosted browser guard is not wired exactly');
 assert(String(pkg.scripts?.verify ?? '').includes('npm run check:hosted-browser-resilience'), 'npm run verify must include the hosted browser guard');
