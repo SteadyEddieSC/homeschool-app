@@ -461,8 +461,11 @@ test('hosted multi-account invitation redemption and browser authorization stay 
     if (await countRows(admin.client, 'learners', { organization_id: secondOrganizationId }) !== 0) {
       throw new Error('Primary Group Administrator could read a learner from an unrelated organization');
     }
-    if (primaryParentLearnerId && await countRows(parent.client, 'learners', { id: primaryParentLearnerId }) !== 0) {
-      throw new Error('Second Group Administrator retained learner visibility into the prior organization');
+    // Household membership is intentionally separate from organization role membership.
+    // The Parent may retain its own prior household relationship, but must not gain
+    // visibility into an unrelated learner merely because it now administers another group.
+    if (primaryAdminLearnerId && await countRows(parent.client, 'learners', { id: primaryAdminLearnerId }) !== 0) {
+      throw new Error('Second Group Administrator could read an unrelated learner in the prior organization');
     }
     report.counts.parentVisibleLearnersSecondGroup = await countRows(parent.client, 'learners', { organization_id: secondOrganizationId });
     if (report.counts.parentVisibleLearnersSecondGroup !== 1) throw new Error('Second organization Group Administrator could not see its own synthetic learner');
