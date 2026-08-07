@@ -108,3 +108,51 @@ jobs:
             v11/test-results/rc2/rc2-hosted-browser-resilience-evidence.json
           if-no-files-found: warn
           retention-days: 90
+
+  hosted-multi-account-authorization:
+    if: ${{ inputs.confirmation == 'RUN_V11_SYNTHETIC_PILOT' && github.ref != 'refs/heads/main' }}
+    needs: hosted-browser-resilience
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: v11-preview
+    defaults:
+      run:
+        working-directory: v11
+    env:
+      VITE_APP_ENV: preview
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      V11_PREVIEW_URL: ${{ vars.V11_PREVIEW_URL }}
+      PILOT_TEST_EMAIL: ${{ secrets.PILOT_TEST_EMAIL }}
+      PILOT_TEST_PASSWORD: ${{ secrets.PILOT_TEST_PASSWORD }}
+      PILOT_PARENT_EMAIL: ${{ secrets.PILOT_PARENT_EMAIL }}
+      PILOT_PARENT_PASSWORD: ${{ secrets.PILOT_PARENT_PASSWORD }}
+      PILOT_DIRECTOR_EMAIL: ${{ secrets.PILOT_DIRECTOR_EMAIL }}
+      PILOT_DIRECTOR_PASSWORD: ${{ secrets.PILOT_DIRECTOR_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install exact pilot dependencies
+        run: npm install --no-package-lock
+      - name: Install hosted Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Validate protected browser configuration
+        run: npm run pilot:doctor:browser
+      - name: Verify protected hosted schema
+        run: npm run pilot:verify-schema
+      - name: Run hosted multi-account invitation and authorization pilot
+        run: npm run pilot:test-multi-account-authorization
+      - name: Validate sanitized hosted multi-account authorization evidence
+        run: npm run pilot:validate-multi-account-authorization
+      - name: Upload sanitized hosted multi-account authorization evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beaufort-learning-harbor-v11.0.0-rc.1-hosted-multi-account-authorization
+          path: |
+            v11/hosted-multi-account-authorization-report.json
+            v11/test-results/rc2/rc2-hosted-multi-account-authorization-evidence.json
+          if-no-files-found: warn
+          retention-days: 90
