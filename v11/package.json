@@ -26,7 +26,7 @@
     "pilot:verify-schema": "node scripts/verify-remote-schema.mjs",
     "pilot:run-core": "node scripts/run-hosted-pilot-core.mjs",
     "pilot:validate-core": "node scripts/validate-hosted-pilot-core.mjs",
-    "pilot:test-browser-resilience": "playwright test --config=playwright.hosted.config.ts",
+    "pilot:test-browser-resilience": "playwright test hosted-tests/hosted-browser-resilience.spec.ts --config=playwright.hosted.config.ts",
     "pilot:validate-browser-resilience": "node scripts/validate-hosted-browser-resilience.mjs",
     "pilot:test-multi-account-authorization": "playwright test hosted-tests/hosted-multi-account-authorization.spec.ts --config=playwright.hosted.config.ts",
     "pilot:validate-multi-account-authorization": "node scripts/validate-hosted-multi-account-authorization.mjs",
