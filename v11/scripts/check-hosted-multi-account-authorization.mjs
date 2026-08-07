@@ -29,7 +29,8 @@ for (const marker of [
   'Parent could read an unrelated household learner',
   'Director received household or learner visibility from organization membership alone',
   'Primary Group Administrator could see an unrelated organization',
-  'Second Group Administrator retained learner visibility into the prior organization',
+  'Household membership is intentionally separate from organization role membership.',
+  'Second Group Administrator could read an unrelated learner in the prior organization',
   'browserSessionSeparationPreserved',
   'primaryOrganizationDeleted',
   'secondOrganizationDeleted',
@@ -121,4 +122,4 @@ assert(!authorizationJob.includes('CLOUDFLARE_API_TOKEN'), 'authorization job mu
 assert(!authorizationJob.includes('wrangler deploy'), 'authorization job must not deploy Cloudflare');
 assert(!authorizationJob.includes('supabase db push'), 'authorization job must not mutate provider schema');
 
-console.log('Gate C multi-account authorization guard passed: separate protected adult identities, one-time invitation and replay boundaries, revoked denial, ordinary-role-only membership administration, parent family scope, Director/System Administrator family denial, cross-organization isolation, session separation, sanitized evidence, exact synthetic cleanup, and explicit mail-slice deferral are structurally enforced without application or deployment changes.');
+console.log('Gate C multi-account authorization guard passed: separate protected adult identities, one-time invitation and replay boundaries, revoked denial, ordinary-role-only membership administration, parent family scope, Director/System Administrator family denial, unrelated cross-organization isolation, session separation, sanitized evidence, exact synthetic cleanup, and explicit mail-slice deferral are structurally enforced without application or deployment changes.');
