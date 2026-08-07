@@ -92,9 +92,15 @@ for (const marker of [
 const familyTest = await readFile(path.join(root, 'supabase/tests/parent_managed_learning_test.sql'), 'utf8');
 for (const marker of [
   'Director does not automatically see household learners',
-  'Unrelated parent cannot read another household learner',
-  'System Administrator does not automatically see household learners'
+  'Unrelated parent cannot read another household learner'
 ]) assert(familyTest.includes(marker), `family pgTAP regression is missing ${marker}`);
+
+const systemAdminTest = await readFile(path.join(root, 'supabase/tests/system_admin_family_boundary_test.sql'), 'utf8');
+for (const marker of [
+  "'system-admin', 'active'",
+  'System Administrator does not automatically see household records',
+  'System Administrator does not automatically see household learners'
+]) assert(systemAdminTest.includes(marker), `System Administrator pgTAP regression is missing ${marker}`);
 
 const workflow = await readFile(path.join(repositoryRoot, '.github/workflows/run-v11-hosted-pilot.yml'), 'utf8');
 for (const marker of [
