@@ -5,7 +5,6 @@ const root = process.cwd();
 const inputPath = path.join(root, 'hosted-auth-email-recovery-report.json');
 const outputDirectory = path.join(root, 'test-results', 'rc2');
 const outputPath = path.join(outputDirectory, 'rc2-hosted-auth-email-recovery-evidence.json');
-const expectedDeployedRuntimeCommit = '138a33fe7703ce0c9729392f26f42d90bdb022df';
 
 function fail(message) {
   throw new Error(`Hosted auth email/recovery evidence validation failed: ${message}`);
@@ -31,7 +30,8 @@ if (report.failure !== null) fail('passing report unexpectedly contains failure 
 
 requireCommit(report.repositoryCommit, 'repositoryCommit');
 requireCommit(report.deployedRuntimeCommit, 'deployedRuntimeCommit');
-if (report.deployedRuntimeCommit !== expectedDeployedRuntimeCommit) fail('report does not reference the currently approved deployed runtime commit');
+if (report.deployedRuntimeCommit !== report.repositoryCommit) fail('hosted mail evidence was not collected against the same exact commit as the workflow source');
+if (process.env.GITHUB_SHA && report.repositoryCommit !== process.env.GITHUB_SHA) fail('report repository commit does not match the exact workflow head');
 if (!/^\d+$/.test(String(report.workflowRun ?? ''))) fail('workflowRun is not a bounded workflow identifier');
 
 for (const key of [
@@ -123,4 +123,4 @@ const evidence = {
 
 await mkdir(outputDirectory, { recursive: true });
 await writeFile(outputPath, `${JSON.stringify(evidence, null, 2)}\n`);
-console.log('Hosted Auth email/recovery evidence validated: custom-SMTP sandbox delivery, hosted confirmation/recovery callbacks, password replacement, duplicate-request rate limiting, and synthetic-user cleanup are evidenced without persisting private mail or credential material; real-recipient delivery and full Gate C remain explicitly incomplete.');
+console.log('Hosted Auth email/recovery evidence validated: exact-head preview identity, custom-SMTP sandbox delivery, hosted confirmation/recovery callbacks, password replacement, duplicate-request rate limiting, and synthetic-user cleanup are evidenced without persisting private mail or credential material; real-recipient delivery and full Gate C remain explicitly incomplete.');
