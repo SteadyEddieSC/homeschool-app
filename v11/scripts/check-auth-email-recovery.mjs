@@ -65,7 +65,7 @@ for (const marker of [
 ]) assert(localFlow.includes(marker), `local Auth mail test is missing ${marker}`);
 assert(!localFlow.includes('console.log(email') && !localFlow.includes('console.log(message') && !localFlow.includes('console.log(tokens'), 'local Auth mail test must never log sensitive values');
 
-const validator = await readFile(path.join(root, 'scripts/validate-local-auth-email-recovery.mjs'), 'utf8');
+const localValidator = await readFile(path.join(root, 'scripts/validate-local-auth-email-recovery.mjs'), 'utf8');
 for (const marker of [
   'local-auth-confirmation-recovery-and-rate-limit-complete-hosted-mail-delivery-incomplete',
   'evidence contains an email address',
@@ -74,14 +74,72 @@ for (const marker of [
   'hostedProviderDeliveryVerified',
   'customSmtpVerified',
   'fullGateCComplete'
-]) assert(validator.includes(marker), `local Auth evidence validator is missing ${marker}`);
+]) assert(localValidator.includes(marker), `local Auth evidence validator is missing ${marker}`);
 
-const workflow = await readFile(path.join(repositoryRoot, '.github/workflows/validate-v11.yml'), 'utf8');
+const hostedFlow = await readFile(path.join(root, 'hosted-tests/hosted-auth-email-recovery.spec.ts'), 'utf8');
+for (const marker of [
+  '/messages/${id}/body.html',
+  'confirmationDeliveredThroughCustomSmtp',
+  'duplicateRecoveryRateLimited',
+  'password-recovery-panel',
+  'syntheticAuthUserDeleted',
+  'sandboxMessagesProviderRetained: true',
+  'realRecipientDeliveryVerified: false',
+  'mailBodiesPersisted: false',
+  'providerCredentialsPersisted: false',
+  'secretKeyExposedToBrowser: false',
+  'fullGateCComplete: false'
+]) assert(hostedFlow.includes(marker), `hosted Auth mail test is missing ${marker}`);
+assert(!hostedFlow.includes('console.log(email') && !hostedFlow.includes('console.log(html') && !hostedFlow.includes('console.log(mailtrapApiToken') && !hostedFlow.includes('console.log(supabaseSecretKey'), 'hosted Auth mail test must never log protected mail or credential values');
+
+const hostedValidator = await readFile(path.join(root, 'scripts/validate-hosted-auth-email-recovery.mjs'), 'utf8');
+for (const marker of [
+  'hosted-custom-smtp-confirmation-recovery-complete-real-recipient-delivery-not-tested',
+  'evidence contains an email address',
+  'evidence contains a UUID',
+  'evidence contains a JWT-shaped value',
+  'evidence contains a verification URL',
+  'evidence contains privileged Supabase credential material',
+  'evidence contains Mailtrap credential material',
+  'sandboxMessagesProviderRetained',
+  'realRecipientDeliveryVerified',
+  'fullGateCComplete'
+]) assert(hostedValidator.includes(marker), `hosted Auth evidence validator is missing ${marker}`);
+
+const validationWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/validate-v11.yml'), 'utf8');
 for (const marker of [
   'Run local Auth confirmation, recovery, and rate-limit pilot',
   'npm run pilot:test-local-auth-email-recovery',
   'npm run pilot:validate-local-auth-email-recovery',
-  'rc2-local-auth-email-recovery-evidence.json'
-]) assert(workflow.includes(marker), `v11 validation workflow is missing ${marker}`);
+  'rc2-local-auth-email-recovery-evidence.json',
+  '.github/workflows/run-v11-hosted-mail-pilot.yml'
+]) assert(validationWorkflow.includes(marker), `v11 validation workflow is missing ${marker}`);
 
-console.log('Gate C Auth mail/recovery guard passed: local confirmation and recovery capture, implicit-flow-safe callbacks, password replacement, enumeration-safe copy, rate-limit evidence, sensitive-value exclusion, and explicit hosted-mail deferral are structurally enforced.');
+const hostedWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/run-v11-hosted-mail-pilot.yml'), 'utf8');
+for (const marker of [
+  'RUN_V11_HOSTED_MAIL_PILOT',
+  'environment: v11-preview',
+  'PILOT_SUPABASE_SECRET_KEY: ${{ secrets.PILOT_SUPABASE_SECRET_KEY }}',
+  'PILOT_MAILTRAP_API_TOKEN: ${{ secrets.PILOT_MAILTRAP_API_TOKEN }}',
+  'PILOT_MAILTRAP_ACCOUNT_ID: ${{ vars.PILOT_MAILTRAP_ACCOUNT_ID }}',
+  'PILOT_MAILTRAP_SANDBOX_ID: ${{ vars.PILOT_MAILTRAP_SANDBOX_ID }}',
+  'V11_DEPLOYED_APP_COMMIT: 138a33fe7703ce0c9729392f26f42d90bdb022df',
+  'git diff --quiet "${V11_DEPLOYED_APP_COMMIT}..${GITHUB_SHA}"',
+  'npx playwright test hosted-tests/hosted-auth-email-recovery.spec.ts --config=playwright.hosted.config.ts',
+  'node scripts/validate-hosted-auth-email-recovery.mjs',
+  'rc2-hosted-auth-email-recovery-evidence.json'
+]) assert(hostedWorkflow.includes(marker), `protected hosted Auth mail workflow is missing ${marker}`);
+for (const forbidden of ['SMTP_PASSWORD', 'SMTP_USERNAME', 'MAILTRAP_SMTP_PASSWORD', 'MAILTRAP_SMTP_USERNAME']) {
+  assert(!hostedWorkflow.includes(forbidden), `protected hosted Auth mail workflow must not copy provider SMTP credentials: ${forbidden}`);
+}
+
+const hostedRunbook = await readFile(path.join(repositoryRoot, 'docs/v11/rc2-hosted-mail-pilot.md'), 'utf8');
+for (const marker of [
+  'sandboxMessagesProviderRetained: true',
+  'real-recipient delivery',
+  'Gate C remains incomplete',
+  'Gate D remains blocked',
+  'v10.43 remains the stable production/downloadable fallback'
+]) assert(hostedRunbook.includes(marker), `hosted Auth mail runbook is missing ${marker}`);
+
+console.log('Gate C Auth mail/recovery guard passed: local capture/recovery and protected hosted custom-SMTP sandbox contracts are structurally enforced, implicit-flow callbacks remain safe, sensitive values remain excluded from persisted evidence, and hosted execution stays manual with full Gate C and Gate D blocked.');
