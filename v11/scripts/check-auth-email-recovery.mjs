@@ -149,8 +149,10 @@ assert(!validationWorkflow.includes('run-v11-hosted-mail-pilot.yml'), 'ordinary 
 
 const deployWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/deploy-v11-preview.yml'), 'utf8');
 for (const marker of [
-  'Stamp exact Git commit into ephemeral preview deployment config',
-  'config.vars.APP_COMMIT = process.env.GITHUB_SHA',
+  'Stamp exact Git commit into generated Cloudflare deployment config',
+  ".wrangler/deploy/config.json",
+  "relative.startsWith('../') || !relative.startsWith('dist/')",
+  'config.vars.APP_COMMIT = sha',
   'Verify deployed health and exact-head boundary',
   'health.commit !== process.env.GITHUB_SHA'
 ]) assert(deployWorkflow.includes(marker), `protected preview deployment exact-head proof is missing ${marker}`);
@@ -188,4 +190,4 @@ for (const marker of [
   'v10.43 remains the stable production/downloadable fallback'
 ]) assert(hostedRunbook.includes(marker), `hosted Auth mail runbook is missing ${marker}`);
 
-console.log('Gate C Auth mail/recovery guard passed: compact themed account access, viewport regression coverage, exact-head preview stamping, local capture/recovery, and the protected hosted custom-SMTP sandbox job are structurally enforced through the visible hosted-pilot workflow; sensitive values remain excluded from persisted evidence and full Gate C/Gate D remain blocked.');
+console.log('Gate C Auth mail/recovery guard passed: compact themed account access, viewport regression coverage, exact-head generated Cloudflare deployment stamping, local capture/recovery, and the protected hosted custom-SMTP sandbox job are structurally enforced through the visible hosted-pilot workflow; sensitive values remain excluded from persisted evidence and full Gate C/Gate D remain blocked.');
