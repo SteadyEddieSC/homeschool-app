@@ -1,0 +1,184 @@
+.signin-shell {
+  min-height: 100dvh;
+  padding: clamp(12px, 2.5vh, 24px);
+}
+
+.signin-card {
+  width: min(520px, 100%);
+  padding: clamp(22px, 3vw, 30px);
+}
+
+.signin-card .brand-lockup.centered {
+  justify-content: flex-start;
+  gap: 16px;
+  text-align: left;
+}
+
+.signin-card .brand-mark {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  font-size: 0.9rem;
+}
+
+.signin-card .eyebrow {
+  margin-bottom: 5px;
+}
+
+.signin-card h1 {
+  max-width: 13ch;
+  margin: 0;
+  font-size: clamp(2rem, 4.8vw, 3rem);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+}
+
+.signin-intro {
+  margin: 14px 0 16px;
+  color: var(--muted);
+  font-size: 0.94rem;
+  line-height: 1.48;
+  text-align: left;
+}
+
+.segmented-control {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 5px;
+  margin-bottom: 16px;
+  padding: 5px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface-soft);
+}
+
+.segmented-control button {
+  min-width: 0;
+  min-height: 38px;
+  padding: 8px 9px;
+  border: 0;
+  border-radius: 10px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 850;
+  line-height: 1.1;
+  white-space: nowrap;
+  transition: background 120ms ease, color 120ms ease, box-shadow 120ms ease;
+}
+
+.segmented-control button:hover {
+  color: var(--text);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+}
+
+.segmented-control button.active,
+.segmented-control button[aria-selected='true'] {
+  color: var(--surface);
+  background: var(--brand);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--brand) 20%, transparent);
+}
+
+.signin-card .form-stack {
+  gap: 12px;
+}
+
+.signin-card .form-stack label {
+  gap: 5px;
+}
+
+.signin-card .form-stack label > span:first-child {
+  font-size: 0.78rem;
+}
+
+.signin-card input {
+  min-height: 44px;
+  padding: 9px 12px;
+}
+
+.signin-card .button.primary {
+  min-height: 46px;
+  margin-top: 2px;
+  color: var(--surface);
+  background: var(--brand);
+}
+
+.signin-card .button.primary:hover {
+  background: color-mix(in srgb, var(--brand) 86%, var(--accent));
+}
+
+.signin-card .privacy-callout {
+  gap: 3px;
+  margin-top: 16px;
+  padding: 11px 13px;
+  font-size: 0.76rem;
+  line-height: 1.38;
+}
+
+@media (max-height: 820px) and (min-width: 681px) {
+  .signin-shell {
+    padding: 10px;
+  }
+
+  .signin-card {
+    padding: 20px 26px;
+  }
+
+  .signin-card .brand-mark {
+    width: 48px;
+    height: 48px;
+    border-radius: 15px;
+  }
+
+  .signin-card h1 {
+    font-size: clamp(1.9rem, 4vw, 2.35rem);
+  }
+
+  .signin-intro {
+    margin: 10px 0 12px;
+    font-size: 0.88rem;
+    line-height: 1.4;
+  }
+
+  .segmented-control {
+    margin-bottom: 12px;
+  }
+
+  .signin-card .form-stack {
+    gap: 10px;
+  }
+
+  .signin-card input {
+    min-height: 42px;
+  }
+
+  .signin-card .button.primary {
+    min-height: 43px;
+  }
+
+  .signin-card .privacy-callout {
+    margin-top: 12px;
+    padding: 9px 11px;
+  }
+}
+
+@media (max-width: 420px) {
+  .signin-card .brand-lockup.centered {
+    gap: 12px;
+  }
+
+  .signin-card .brand-mark {
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+  }
+
+  .signin-card h1 {
+    font-size: clamp(1.75rem, 9vw, 2.2rem);
+  }
+
+  .segmented-control button {
+    padding-inline: 4px;
+    font-size: 0.7rem;
+  }
+}
