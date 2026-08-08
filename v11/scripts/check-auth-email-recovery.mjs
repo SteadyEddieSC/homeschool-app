@@ -136,7 +136,7 @@ for (const forbidden of ['SMTP_PASSWORD', 'SMTP_USERNAME', 'MAILTRAP_SMTP_PASSWO
 const hostedRunbook = await readFile(path.join(repositoryRoot, 'docs/v11/rc2-hosted-mail-pilot.md'), 'utf8');
 for (const marker of [
   'sandboxMessagesProviderRetained: true',
-  'real-recipient delivery',
+  'Real-recipient delivery',
   'Gate C remains incomplete',
   'Gate D remains blocked',
   'v10.43 remains the stable production/downloadable fallback'
