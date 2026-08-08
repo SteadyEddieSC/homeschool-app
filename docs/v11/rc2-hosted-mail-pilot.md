@@ -2,7 +2,7 @@
 
 This runbook defines the bounded provider-backed email slice for Gate C. It is synthetic-only, non-production, and does not advance the application beyond `11.0.0-rc.1`.
 
-The currently approved deployed application runtime for this slice is commit `138a33fe7703ce0c9729392f26f42d90bdb022df`. The protected workflow refuses to execute against a branch that differs from that deployment in runtime-affecting v11 files.
+The hosted mail slice runs as the final job in the existing manual **Run v11 Hosted Pilot** workflow. That workflow already exists on the default branch, so it remains visible in the GitHub Actions menu while the RC.2 branch supplies the additional protected mail job.
 
 ## Provider boundary
 
@@ -15,15 +15,26 @@ The protected GitHub environment `v11-preview` owns these additional values:
 - variable `PILOT_MAILTRAP_ACCOUNT_ID` — Mailtrap account identifier required by the sandbox API;
 - variable `PILOT_MAILTRAP_SANDBOX_ID` — Mailtrap sandbox/inbox identifier required by the sandbox API.
 
-The workflow also reuses the already-protected preview URL, Supabase URL/publishable key, and disposable schema-verifier credentials. No SMTP username or SMTP password is copied into GitHub for this test; Supabase owns the SMTP configuration directly.
+The workflow also reuses the already-protected preview URL and Supabase URL/publishable key. No SMTP username or SMTP password is copied into GitHub for this test; Supabase owns the SMTP configuration directly.
 
 Never paste any protected value into chat, source control, workflow output, issue comments, pull-request comments, reports, or artifacts.
 
+## How to run
+
+Before collecting hosted mail evidence, deploy the exact RC.2 branch head through **Deploy v11 Preview** and verify the deployment receipt. The hosted pilot must then be dispatched from that same branch head.
+
+In GitHub Actions:
+
+1. open **Run v11 Hosted Pilot**;
+2. choose branch `release/v11.0.0-rc.2-hosted-pilot`;
+3. choose confirmation `RUN_V11_SYNTHETIC_PILOT`;
+4. approve the protected `v11-preview` environment if prompted.
+
+The workflow runs the existing core, browser-resilience, and multi-account authorization jobs first. The final `hosted-auth-email-recovery` job then consumes the four protected Mailtrap/Supabase values and records the current workflow commit as the deployed runtime commit for sanitized evidence.
+
 ## What one run proves
 
-The manual **Run v11 Hosted Mail Pilot** workflow requires the exact confirmation phrase `RUN_V11_HOSTED_MAIL_PILOT` and the `v11-preview` protected environment.
-
-A passing run must prove, using one disposable synthetic adult identity:
+A passing hosted-mail job must prove, using one disposable synthetic adult identity:
 
 1. the Mailtrap sandbox is readable with the bounded API token;
 2. account creation is submitted through the deployed hosted UI;
@@ -66,12 +77,6 @@ The validator rejects evidence containing email addresses, UUIDs, JWT-shaped val
 A passing Mailtrap sandbox run does **not** prove delivery to a real external mailbox, sender-domain reputation, SPF/DKIM/DMARC effectiveness, production SMTP capacity, production readiness, production data authorization, real-family readiness, cutover approval, or complete Gate C.
 
 Real-recipient delivery remains explicitly false for this evidence class. Production SMTP/domain work, if ever approved, belongs to a separate later decision.
-
-## Runtime-equivalence stop condition
-
-Before touching any provider, the workflow compares the current branch with the approved deployed runtime commit. It stops if deploy-affecting v11 files differ. Test scripts, protected workflows, validators, and documentation may advance without requiring another Cloudflare deployment; application runtime changes may not.
-
-If the runtime-equivalence check fails, redeploy and revalidate the exact application head before collecting hosted email evidence.
 
 ## Release boundary
 
