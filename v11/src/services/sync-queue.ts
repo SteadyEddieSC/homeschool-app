@@ -8,11 +8,17 @@ import {
 
 const STORAGE_KEY = 'beaufortLearningHarbor.v11.beta2.syncQueue';
 const MAX_OPERATIONS = 250;
+const DEFAULT_OPERATION_TIMEOUT_MS = 20_000;
 
 interface StoredQueueState {
   schema: 'beaufort-learning-harbor-sync-queue-v1';
   lastSuccessfulSyncAt: string | null;
   operations: SyncOperation[];
+}
+
+interface StructuredSyncError {
+  code?: unknown;
+  message?: unknown;
 }
 
 function now(): string {
@@ -48,14 +54,56 @@ function saveState(state: StoredQueueState): void {
   }));
 }
 
+function structuredError(error: unknown): StructuredSyncError {
+  if (!error || typeof error !== 'object') return {};
+  return error as StructuredSyncError;
+}
+
+function safeProviderCode(error: unknown): string {
+  const code = String(structuredError(error).code ?? '').trim().toUpperCase();
+  return /^[A-Z0-9_-]{1,20}$/.test(code) ? code : '';
+}
+
 function safeError(error: unknown): string {
-  if (error instanceof Error) return error.message.slice(0, 500);
-  return 'Synchronization failed.';
+  const structured = structuredError(error);
+  const message = error instanceof Error
+    ? error.message
+    : typeof structured.message === 'string'
+      ? structured.message
+      : '';
+  const code = safeProviderCode(error);
+  const normalized = `${code} ${message}`.toLowerCase();
+
+  if (message === 'Synchronization timed out. Retry when the connection is stable.' || normalized.includes('timed out')) {
+    return 'Synchronization timed out. Retry when the connection is stable.';
+  }
+  if (normalized.includes('failed to fetch') || normalized.includes('network') || normalized.includes('internet')) {
+    return 'Synchronization failed because the network connection was interrupted. Retry when the connection is stable.';
+  }
+  if (
+    code === '42501'
+    || normalized.includes('permission')
+    || normalized.includes('row-level')
+    || normalized.includes('not authorized')
+    || normalized.includes('unauthorized')
+    || normalized.includes('forbidden')
+  ) {
+    return 'Hosted synchronization was not authorized. Confirm access and retry.';
+  }
+  if (message === 'Synchronization executor is unavailable.') return message;
+  if (/^Hosted [A-Za-z -]+ synchronization is not configured\.$/.test(message)) return message;
+  if (code) return `Hosted provider rejected synchronization (${code}). Retry or contact support.`;
+  return 'Synchronization failed. Retry or contact support.';
+}
+
+function timeoutError(): Error {
+  return new Error('Synchronization timed out. Retry when the connection is stable.');
 }
 
 export interface SyncQueueManagerOptions {
   mode: SyncQueueSnapshot['mode'];
   onlineProvider?: () => boolean;
+  operationTimeoutMs?: number;
 }
 
 export class SyncQueueManager {
@@ -65,10 +113,12 @@ export class SyncQueueManager {
   private executor: SyncOperationExecutor | null = null;
   private mode: SyncQueueSnapshot['mode'];
   private readonly onlineProvider: () => boolean;
+  private readonly operationTimeoutMs: number;
 
   constructor(options: SyncQueueManagerOptions) {
     this.mode = options.mode;
     this.onlineProvider = options.onlineProvider ?? (() => navigator.onLine);
+    this.operationTimeoutMs = Math.max(100, options.operationTimeoutMs ?? DEFAULT_OPERATION_TIMEOUT_MS);
   }
 
   setMode(mode: SyncQueueSnapshot['mode']): void {
@@ -163,7 +213,7 @@ export class SyncQueueManager {
         this.emit();
 
         try {
-          await this.executor(operation);
+          await this.executeWithDeadline(operation);
           const latest = loadState();
           const completed = latest.operations.find((candidate) => candidate.id === operation.id);
           if (completed) {
@@ -227,6 +277,19 @@ export class SyncQueueManager {
   reset(): void {
     saveState(emptyState());
     this.emit();
+  }
+
+  private async executeWithDeadline(operation: SyncOperation): Promise<void> {
+    if (!this.executor) throw new Error('Synchronization executor is unavailable.');
+    let timeoutHandle: ReturnType<typeof setTimeout> | null = null;
+    const deadline = new Promise<never>((_, reject) => {
+      timeoutHandle = setTimeout(() => reject(timeoutError()), this.operationTimeoutMs);
+    });
+    try {
+      await Promise.race([this.executor(operation), deadline]);
+    } finally {
+      if (timeoutHandle) clearTimeout(timeoutHandle);
+    }
   }
 
   private emit(): void {

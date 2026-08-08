@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import type { HostedPilotOperationalSnapshot } from '../domain/pilot';
+import type { HostedPilotOperationalSnapshot, StudioConflictEntityType } from '../domain/pilot';
 import type { SyncQueueSnapshot } from '../domain/sync';
 import { runtimeConfiguration } from '../lib/supabase';
 import { StudioConflictStore } from '../services/studio-conflicts';
@@ -13,6 +13,26 @@ interface HostedPilotWorkspaceProps {
 
 function formatTime(value: string | null): string {
   return value ? new Date(value).toLocaleString() : 'Not yet';
+}
+
+function diagnosticDigest(value: string): string {
+  let hash = 2166136261;
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return (hash >>> 0).toString(16).padStart(8, '0');
+}
+
+function diagnosticConflictSummary(entityType: StudioConflictEntityType): string {
+  const labels: Record<StudioConflictEntityType, string> = {
+    'knowledge-check': 'Knowledge check conflict',
+    'knowledge-attempt': 'Knowledge attempt conflict',
+    'evidence-submission': 'Evidence submission conflict',
+    'weekly-plan': 'Weekly plan conflict',
+    'weekly-plan-item': 'Weekly plan item conflict'
+  };
+  return labels[entityType];
 }
 
 export function HostedPilotWorkspace({
@@ -31,7 +51,7 @@ export function HostedPilotWorkspace({
 
   function downloadDiagnostics(): void {
     const report = {
-      schema: 'beaufort-learning-harbor-hosted-pilot-diagnostics-v1',
+      schema: 'beaufort-learning-harbor-hosted-pilot-diagnostics-v2',
       release: runtimeConfiguration.release,
       createdAt: new Date().toISOString(),
       environment: runtimeConfiguration.environment,
@@ -50,7 +70,7 @@ export function HostedPilotWorkspace({
         completedCount: syncSnapshot.completedCount,
         lastSuccessfulSyncAt: syncSnapshot.lastSuccessfulSyncAt,
         operations: syncSnapshot.operations.map((operation) => ({
-          id: operation.id,
+          operationDigest: diagnosticDigest(operation.id),
           kind: operation.kind,
           status: operation.status,
           attempts: operation.attempts,
@@ -65,10 +85,10 @@ export function HostedPilotWorkspace({
         lastRemoteRefreshAt: snapshot.lastRemoteRefreshAt,
         hasRemoteRefreshError: snapshot.lastRemoteRefreshError.length > 0,
         conflicts: snapshot.conflicts.map((conflict) => ({
-          id: conflict.id,
+          conflictDigest: diagnosticDigest(conflict.id),
           entityType: conflict.entityType,
-          recordId: conflict.recordId,
-          summary: conflict.summary,
+          recordDigest: diagnosticDigest(conflict.recordId),
+          summary: diagnosticConflictSummary(conflict.entityType),
           localDigest: conflict.localDigest,
           remoteDigest: conflict.remoteDigest,
           detectedAt: conflict.detectedAt,
@@ -81,7 +101,8 @@ export function HostedPilotWorkspace({
         'browser keys and provider credentials',
         'OAuth and BAND tokens',
         'queue payloads',
-        'raw synchronization error text'
+        'raw synchronization error text',
+        'raw operation, conflict, and record identifiers'
       ]
     };
     const blob = new Blob([`${JSON.stringify(report, null, 2)}\n`], { type: 'application/json' });

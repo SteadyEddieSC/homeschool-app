@@ -142,7 +142,7 @@ export function useCloudIdentity(): CloudIdentityState {
       password,
       options: {
         data: { display_name: normalizedName },
-        emailRedirectTo: `${window.location.origin}/#/welcome`
+        emailRedirectTo: window.location.origin
       }
     });
     if (result.error) throw result.error;
@@ -153,7 +153,7 @@ export function useCloudIdentity(): CloudIdentityState {
   const requestPasswordReset = useCallback(async (email: string) => {
     if (!supabase) throw new Error('Supabase is not configured in local preview mode.');
     const result = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: `${window.location.origin}/#/recover`
+      redirectTo: window.location.origin
     });
     if (result.error) throw result.error;
   }, []);

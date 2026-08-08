@@ -106,6 +106,12 @@ function todayItemFromRow(row: TodayItemRow): TodayItem {
   };
 }
 
+function isUniqueViolation(error: unknown): boolean {
+  if (!error || typeof error !== 'object' || !('code' in error)) return false;
+  return String((error as { code?: unknown }).code ?? '') === '23505';
+}
+
+const householdColumns = 'id, organization_id, name, created_at';
 const learnerColumns = 'id, organization_id, household_id, preferred_name, pronouns, grade_band, avatar_key, access_mode, status, created_at, updated_at';
 const todayColumns = 'id, organization_id, household_id, learner_id, title, instructions, activity_type, due_date, status, learner_note, review_feedback, assigned_by, reviewed_by, completed_at, created_at, updated_at';
 
@@ -115,7 +121,7 @@ export class SupabaseLearningRepository implements LearningRepository {
   async listHouseholds(organizationId: string): Promise<HouseholdSummary[]> {
     const result = await this.client
       .from('households')
-      .select('id, organization_id, name, created_at')
+      .select(householdColumns)
       .eq('organization_id', organizationId)
       .order('created_at', { ascending: true });
     if (result.error) throw result.error;
@@ -128,19 +134,39 @@ export class SupabaseLearningRepository implements LearningRepository {
     name: string,
     options: CreateHouseholdOptions = {}
   ): Promise<HouseholdSummary> {
+    const householdId = options.householdId ?? crypto.randomUUID();
+    const operationId = options.operationId ?? crypto.randomUUID();
     const record = {
-      id: options.householdId,
+      id: householdId,
       organization_id: organizationId,
       name: normalizeHouseholdName(name),
       created_by: actorId,
-      client_operation_id: options.operationId
+      client_operation_id: operationId
     };
-    const query = options.operationId
-      ? this.client.from('households').upsert(record, { onConflict: 'client_operation_id' })
-      : this.client.from('households').insert(record);
-    const result = await query.select('id, organization_id, name, created_at').single();
-    if (result.error) throw result.error;
-    return householdFromRow(result.data as HouseholdRow);
+
+    // A request can commit even when the browser loses its response. Resolve the
+    // stable operation first, then use ordinary INSERT authority only. A 23505
+    // can occur when another attempt committed between the pre-read and insert.
+    const existingHousehold = await this.client
+      .from('households')
+      .select(householdColumns)
+      .eq('client_operation_id', operationId)
+      .maybeSingle();
+    if (existingHousehold.error) throw existingHousehold.error;
+    if (existingHousehold.data) return householdFromRow(existingHousehold.data as HouseholdRow);
+
+    const write = await this.client.from('households').insert(record);
+    if (write.error && !isUniqueViolation(write.error)) throw write.error;
+
+    // Read in a separate statement so trigger-created relationships and RLS
+    // visibility are evaluated after the idempotent insert has completed.
+    const visible = await this.client
+      .from('households')
+      .select(householdColumns)
+      .eq('client_operation_id', operationId)
+      .single();
+    if (visible.error) throw visible.error;
+    return householdFromRow(visible.data as HouseholdRow);
   }
 
   async listLearners(organizationId: string): Promise<LearnerProfile[]> {
@@ -154,8 +180,10 @@ export class SupabaseLearningRepository implements LearningRepository {
   }
 
   async createLearner(input: CreateLearnerInput): Promise<LearnerProfile> {
+    const learnerId = input.learnerId ?? crypto.randomUUID();
+    const operationId = input.operationId ?? crypto.randomUUID();
     const record = {
-      id: input.learnerId,
+      id: learnerId,
       organization_id: input.organizationId,
       household_id: input.householdId,
       preferred_name: normalizePreferredName(input.preferredName),
@@ -164,14 +192,27 @@ export class SupabaseLearningRepository implements LearningRepository {
       avatar_key: input.avatar,
       access_mode: 'parent-assisted',
       status: 'active',
-      client_operation_id: input.operationId
+      client_operation_id: operationId
     };
-    const query = input.operationId
-      ? this.client.from('learners').upsert(record, { onConflict: 'client_operation_id' })
-      : this.client.from('learners').insert(record);
-    const result = await query.select(learnerColumns).single();
-    if (result.error) throw result.error;
-    return learnerFromRow(result.data as unknown as LearnerRow);
+
+    const existingLearner = await this.client
+      .from('learners')
+      .select(learnerColumns)
+      .eq('client_operation_id', operationId)
+      .maybeSingle();
+    if (existingLearner.error) throw existingLearner.error;
+    if (existingLearner.data) return learnerFromRow(existingLearner.data as unknown as LearnerRow);
+
+    const write = await this.client.from('learners').insert(record);
+    if (write.error && !isUniqueViolation(write.error)) throw write.error;
+
+    const visible = await this.client
+      .from('learners')
+      .select(learnerColumns)
+      .eq('client_operation_id', operationId)
+      .single();
+    if (visible.error) throw visible.error;
+    return learnerFromRow(visible.data as unknown as LearnerRow);
   }
 
   async listTodayItems(organizationId: string, learnerId?: string): Promise<TodayItem[]> {
@@ -188,8 +229,10 @@ export class SupabaseLearningRepository implements LearningRepository {
   }
 
   async createTodayItem(input: CreateTodayItemInput): Promise<TodayItem> {
+    const itemId = input.itemId ?? crypto.randomUUID();
+    const operationId = input.operationId ?? crypto.randomUUID();
     const record = {
-      id: input.itemId,
+      id: itemId,
       organization_id: input.organizationId,
       household_id: input.householdId,
       learner_id: input.learnerId,
@@ -199,14 +242,27 @@ export class SupabaseLearningRepository implements LearningRepository {
       activity_type: input.activityType,
       due_date: input.dueDate,
       status: 'assigned',
-      client_operation_id: input.operationId
+      client_operation_id: operationId
     };
-    const query = input.operationId
-      ? this.client.from('learner_today_items').upsert(record, { onConflict: 'client_operation_id' })
-      : this.client.from('learner_today_items').insert(record);
-    const result = await query.select(todayColumns).single();
-    if (result.error) throw result.error;
-    return todayItemFromRow(result.data as unknown as TodayItemRow);
+
+    const existingTodayItem = await this.client
+      .from('learner_today_items')
+      .select(todayColumns)
+      .eq('client_operation_id', operationId)
+      .maybeSingle();
+    if (existingTodayItem.error) throw existingTodayItem.error;
+    if (existingTodayItem.data) return todayItemFromRow(existingTodayItem.data as unknown as TodayItemRow);
+
+    const write = await this.client.from('learner_today_items').insert(record);
+    if (write.error && !isUniqueViolation(write.error)) throw write.error;
+
+    const visible = await this.client
+      .from('learner_today_items')
+      .select(todayColumns)
+      .eq('client_operation_id', operationId)
+      .single();
+    if (visible.error) throw visible.error;
+    return todayItemFromRow(visible.data as unknown as TodayItemRow);
   }
 
   async transitionTodayItem(input: TransitionTodayItemInput): Promise<TodayItem> {

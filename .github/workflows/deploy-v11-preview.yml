@@ -48,25 +48,102 @@ jobs:
         run: npm run verify
       - name: Validate protected provider configuration
         run: npm run pilot:doctor
-      - name: Validate protected deployment boundary
+      - name: Validate protected deployment boundary and generated Cloudflare output
         run: npm run check:deploy-readiness
-      - name: Verify migrations 001-009 on the non-production Supabase project
+      - name: Verify migrations 001-010 on the non-production Supabase project
         run: npm run pilot:verify-schema
-      - name: Deploy isolated v11 preview Worker
-        run: npx wrangler deploy --config wrangler.jsonc
-      - name: Verify deployed health boundary
+      - name: Stamp exact Git commit into generated Cloudflare deployment config
         run: |
-          curl --fail --silent --show-error --retry 8 --retry-delay 5 "${V11_PREVIEW_URL%/}/api/health" --output deployment-health.json
           node --input-type=module <<'NODE'
-          import { readFile } from 'node:fs/promises';
-          const health = JSON.parse(await readFile('deployment-health.json', 'utf8'));
-          if (health.ok !== true) throw new Error('Preview health endpoint did not return ok=true');
-          if (health.release !== '11.0.0-rc.1') throw new Error(`Unexpected deployed release: ${health.release}`);
-          if (health.service !== process.env.EXPECTED_WORKER_NAME) throw new Error(`Unexpected Worker service: ${health.service}`);
+          import { readFile, writeFile } from 'node:fs/promises';
+          import path from 'node:path';
+          const sha = String(process.env.GITHUB_SHA ?? '');
+          if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error('GitHub did not provide an exact commit SHA');
+          const redirectPath = path.resolve('.wrangler/deploy/config.json');
+          const redirect = JSON.parse(await readFile(redirectPath, 'utf8'));
+          if (!redirect?.configPath) throw new Error('Generated Cloudflare deployment redirect is missing');
+          const generatedPath = path.resolve(path.dirname(redirectPath), redirect.configPath);
+          const relative = path.relative(process.cwd(), generatedPath).replaceAll('\\', '/');
+          if (relative.startsWith('../') || !relative.startsWith('dist/')) throw new Error('Generated Cloudflare deployment config escaped dist');
+          const config = JSON.parse(await readFile(generatedPath, 'utf8'));
+          config.vars ??= {};
+          config.vars.APP_COMMIT = sha;
+          await writeFile(generatedPath, `${JSON.stringify(config, null, 2)}\n`);
+          console.log('Generated Cloudflare deployment config stamped with the exact Git commit.');
+          NODE
+      - name: Deploy isolated v11 preview Worker from Cloudflare Vite output
+        id: cloudflare-deploy
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: v11
+          wranglerVersion: 4.114.0
+          command: deploy
+      - name: Record authoritative deployed preview origin
+        env:
+          CLOUDFLARE_DEPLOYMENT_URL: ${{ steps.cloudflare-deploy.outputs.deployment-url }}
+        run: |
+          node --input-type=module <<'NODE'
+          import { appendFile } from 'node:fs/promises';
+          const raw = String(process.env.CLOUDFLARE_DEPLOYMENT_URL ?? '').trim();
+          if (!raw) throw new Error('Cloudflare deployment did not return an authoritative deployment URL');
+          const deployed = new URL(raw);
+          const configured = new URL(process.env.V11_PREVIEW_URL);
+          if (deployed.protocol !== 'https:' || !deployed.hostname.endsWith('.workers.dev')) throw new Error('Cloudflare returned an unexpected deployment origin');
+          if (!deployed.hostname.startsWith(`${process.env.EXPECTED_WORKER_NAME}.`)) throw new Error(`Cloudflare deployed an unexpected Worker hostname: ${deployed.hostname}`);
+          if (configured.origin !== deployed.origin) throw new Error(`Configured V11_PREVIEW_URL (${configured.origin}) does not match Cloudflare's deployed origin (${deployed.origin})`);
+          await appendFile(process.env.GITHUB_ENV, `DEPLOYED_PREVIEW_URL=${deployed.origin}\n`);
+          console.log(`Authoritative deployed preview origin: ${deployed.origin}`);
+          NODE
+      - name: Verify deployed health and exact-head boundary
+        run: |
+          node --input-type=module <<'NODE'
+          import { writeFile } from 'node:fs/promises';
+
+          const expectedCommit = String(process.env.GITHUB_SHA ?? '');
+          const expectedService = String(process.env.EXPECTED_WORKER_NAME ?? '');
+          const endpoint = `${String(process.env.DEPLOYED_PREVIEW_URL ?? '').replace(/\/$/, '')}/api/health`;
+          if (!/^[0-9a-f]{40}$/i.test(expectedCommit)) throw new Error('GitHub did not provide an exact commit SHA');
+          if (!endpoint.startsWith('https://')) throw new Error('Deployed preview health endpoint is invalid');
+
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          let lastObserved = null;
+          for (let attempt = 1; attempt <= 24; attempt += 1) {
+            try {
+              const response = await fetch(endpoint, { headers: { 'cache-control': 'no-cache' } });
+              if (response.ok) {
+                const health = await response.json();
+                lastObserved = {
+                  ok: health?.ok === true,
+                  release: health?.release ?? null,
+                  service: health?.service ?? null,
+                  exactCommit: health?.commit === expectedCommit
+                };
+                if (
+                  health?.ok === true &&
+                  health?.release === '11.0.0-rc.1' &&
+                  health?.service === expectedService &&
+                  health?.commit === expectedCommit
+                ) {
+                  await writeFile('deployment-health.json', `${JSON.stringify(health, null, 2)}\n`);
+                  console.log(`Exact deployed preview commit observed after ${attempt} health check attempt(s).`);
+                  process.exit(0);
+                }
+              } else {
+                lastObserved = { httpStatus: response.status };
+              }
+            } catch {
+              lastObserved = { transportReady: false };
+            }
+            if (attempt < 24) await sleep(2500);
+          }
+
+          throw new Error(`Deployed preview did not converge to the exact workflow head within 60 seconds; sanitized last observation: ${JSON.stringify(lastObserved)}`);
           NODE
       - name: Verify release-candidate capability boundary
         run: |
-          curl --fail --silent --show-error --retry 8 --retry-delay 5 "${V11_PREVIEW_URL%/}/api/config" --output deployment-config.json
+          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 --connect-timeout 10 --max-time 20 "${DEPLOYED_PREVIEW_URL%/}/api/config" --output deployment-config.json
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const config = JSON.parse(await readFile('deployment-config.json', 'utf8'));
@@ -86,11 +163,12 @@ jobs:
           const configuration = JSON.parse(await readFile('deployment-config.json', 'utf8'));
           const schema = JSON.parse(await readFile('remote-schema-report.json', 'utf8'));
           const doctor = JSON.parse(await readFile('pilot-doctor-report.json', 'utf8'));
+          if (health.commit !== process.env.GITHUB_SHA) throw new Error('Deployment receipt cannot be created for a non-exact preview commit');
           const receipt = {
             schema: 'beaufort-learning-harbor-v11-preview-deployment-receipt-v2',
             release: '11.0.0-rc.1',
             worker: process.env.EXPECTED_WORKER_NAME,
-            previewHost: new URL(process.env.V11_PREVIEW_URL).hostname,
+            previewHost: new URL(process.env.DEPLOYED_PREVIEW_URL).hostname,
             commit: process.env.GITHUB_SHA,
             runId: process.env.GITHUB_RUN_ID,
             runAttempt: process.env.GITHUB_RUN_ATTEMPT,
@@ -106,6 +184,8 @@ jobs:
           };
           await writeFile('deployment-receipt.json', `${JSON.stringify(receipt, null, 2)}\n`);
           NODE
+      - name: Validate and summarize RC.2 provider evidence
+        run: npm run rc2:evidence:provider
       - name: Upload sanitized deployment receipt
         uses: actions/upload-artifact@v4
         with:
@@ -116,5 +196,6 @@ jobs:
             v11/deployment-receipt.json
             v11/pilot-doctor-report.json
             v11/remote-schema-report.json
+            v11/test-results/rc2/rc2-provider-evidence.json
           if-no-files-found: error
           retention-days: 90

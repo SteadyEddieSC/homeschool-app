@@ -53,7 +53,7 @@ Status: completed.
 
 ## v11.0.0-rc.1 — Migration Rehearsal and Production Readiness
 
-Status: current release candidate.
+Status: current released candidate.
 
 - strict repository-owned synthetic v10.43 export fixture and exact-schema parser;
 - malformed, unknown-field, credential-bearing, oversized, non-synthetic, and unsupported input rejection;
@@ -72,7 +72,9 @@ RC.1 is not a real migration utility and is not production approval. Provider ac
 
 ## v11.0.0-rc.2 — Bounded Hosted Pilot and Defect Closure
 
-Recommended next release.
+Status: in progress as a gated workstream in issue #47. The package/runtime remains RC.1 until hosted evidence exists and the exact RC.2 candidate is assembled.
+
+Repository activation plan: `docs/v11/rc2-hosted-pilot-plan.md`.
 
 - create or link one dedicated non-production Supabase project only after owner authorization;
 - apply and verify migrations `001–009` in non-production;
@@ -86,4 +88,4 @@ Recommended next release.
 
 ## Later production decision
 
-A production release should be considered only after rc.2 evidence is complete, privacy/legal and security reviews are approved, support and incident ownership are assigned, backup/restore and vendor-exit exercises pass, residual risks are accepted, and the owner records an explicit cutover decision. Production should remain a separate release and approval event.
+A production release should be considered only after RC.2 evidence is complete, privacy/legal and security reviews are approved, support and incident ownership are assigned, backup/restore and vendor-exit exercises pass, residual risks are accepted, and the owner records an explicit cutover decision. Production should remain a separate release and approval event.

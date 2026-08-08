@@ -6,8 +6,10 @@ on:
     paths:
       - 'v11/**'
       - 'docs/v11/**'
+      - '.github/ISSUE_TEMPLATE/v11-rc2-hosted-pilot-defect.yml'
       - '.github/workflows/validate-v11.yml'
       - '.github/workflows/deploy-v11-preview.yml'
+      - '.github/workflows/run-v11-hosted-pilot.yml'
       - '.gitignore'
       - 'README.md'
   push:
@@ -15,8 +17,10 @@ on:
     paths:
       - 'v11/**'
       - 'docs/v11/**'
+      - '.github/ISSUE_TEMPLATE/v11-rc2-hosted-pilot-defect.yml'
       - '.github/workflows/validate-v11.yml'
       - '.github/workflows/deploy-v11-preview.yml'
+      - '.github/workflows/run-v11-hosted-pilot.yml'
       - '.gitignore'
       - 'README.md'
 
@@ -56,11 +60,12 @@ jobs:
           if (report.ready !== false || report.productionCutoverApproved !== false) throw new Error('Unconfigured rc.1 must remain blocked');
           if (!Array.isArray(report.missing) || report.missing.length === 0) throw new Error('Missing provider configuration was not reported');
           if (!Array.isArray(report.unsafe) || report.unsafe.length !== 0) throw new Error('Unconfigured CI should be missing, not unsafe');
-          if (report.migrations?.latest !== '202608040009_v11_migration_rehearsal.sql') throw new Error('Migration 009 was not detected');
+          if (report.migrations?.latest !== '202608050010_v11_hosted_acl_hardening.sql') throw new Error('Migration 010 was not detected');
+          if (report.migrations?.releaseCandidate !== '202608040009_v11_migration_rehearsal.sql') throw new Error('Migration 009 release-candidate evidence was not detected');
           const text = JSON.stringify(report).toLowerCase();
           for (const forbidden of ['password', 'service_role', 'sb_secret_', 'access_token']) if (text.includes(forbidden)) throw new Error(`Pilot doctor leaked forbidden material: ${forbidden}`);
           NODE
-      - name: Upload sanitized rc.1 foundation evidence
+      - name: Upload sanitized rc.1 and RC.2 foundation evidence
         uses: actions/upload-artifact@v4
         with:
           name: v11-rc1-migration-rehearsal
@@ -68,6 +73,7 @@ jobs:
             v11/test-results/rc1/migration-rehearsal-report.json
             v11/test-results/rc1/production-readiness-report.json
             v11/test-results/rc1/vendor-exit-rehearsal-report.json
+            v11/test-results/rc2/rc2-repository-evidence.json
             v11/pilot-doctor-report.json
           if-no-files-found: error
           retention-days: 30
@@ -89,10 +95,24 @@ jobs:
       - run: npm install --no-package-lock
       - name: Start local Supabase stack
         run: npm run db:start
-      - name: Rebuild database from migrations 001-009
+      - name: Rebuild database from migrations 001-010
         run: npm run db:reset
-      - name: Run identity, family, studio, hosted-pilot, migration, idempotency, audit, and RLS tests
+      - name: Run identity, family, studio, hosted-pilot, ACL, migration, idempotency, audit, and RLS tests
         run: npm run db:test
+      - name: Run local Auth confirmation, recovery, and rate-limit pilot
+        run: npm run pilot:test-local-auth-email-recovery
+      - name: Validate sanitized local Auth email/recovery evidence
+        run: npm run pilot:validate-local-auth-email-recovery
+      - name: Upload sanitized local Auth email/recovery evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: v11-rc2-local-auth-email-recovery
+          path: |
+            v11/local-auth-email-recovery-report.json
+            v11/test-results/rc2/rc2-local-auth-email-recovery-evidence.json
+          if-no-files-found: warn
+          retention-days: 30
       - name: Stop local Supabase stack
         if: always()
         run: npm run db:stop

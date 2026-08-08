@@ -1,0 +1,153 @@
+name: v11 RC.2 hosted-pilot defect
+description: Report a synthetic hosted-pilot defect without exposing family, learner, provider, or credential data.
+title: "[RC.2 pilot] "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use synthetic reproduction data only. Do not include names, email addresses, learner work, schedules, accommodations, invitation links or codes, private support text, database rows, queue payloads, account/project identifiers, internal hostnames, passwords, sessions, recovery tokens, provider keys, screenshots containing private material, or any other credential.
+
+        Stop the pilot immediately for suspected privacy exposure, authorization bypass, secret exposure, destructive loss, silent conflict overwrite, automatic educational outcomes, production-target collision, or unsafe recovery/shutdown behavior.
+
+  - type: dropdown
+    id: gate
+    attributes:
+      label: RC.2 gate
+      options:
+        - Gate B — provider activation
+        - Gate C — synthetic hosted pilot
+        - Gate D — exact-head candidate verification
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Use the definitions in docs/v11/rc2-hosted-pilot-plan.md.
+      options:
+        - Blocker
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: dropdown
+    id: role
+    attributes:
+      label: Synthetic role
+      options:
+        - Signed out
+        - Student
+        - Parent/Guardian
+        - Teacher/Facilitator
+        - Director
+        - Group Administrator
+        - System Administrator/Developer
+        - Multiple roles
+        - Provider/operations only
+    validations:
+      required: true
+
+  - type: dropdown
+    id: device
+    attributes:
+      label: Device class
+      options:
+        - Desktop browser
+        - Touch tablet
+        - Pixel 7/mobile profile
+        - Multiple browser profiles
+        - Database/API only
+        - Provider/operations only
+    validations:
+      required: true
+
+  - type: input
+    id: commit
+    attributes:
+      label: Exact commit
+      description: Enter only the Git commit SHA. Do not enter a provider deployment identifier.
+      placeholder: 40-character Git commit SHA
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Synthetic reproduction steps
+      description: Use synthetic labels and bounded steps. Do not paste raw requests, responses, rows, logs, or payloads.
+      placeholder: |
+        1. Sign in as the synthetic Parent/Guardian account.
+        2. Open the synthetic Today item.
+        3. Disconnect the network and submit once.
+        4. Reconnect and select Retry once.
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Describe the authority, privacy, data-integrity, recovery, accessibility, or workflow contract that should hold.
+    validations:
+      required: true
+
+  - type: textarea
+    id: observed
+    attributes:
+      label: Observed behavior
+      description: Summarize without private content, provider identifiers, raw errors, or payloads. Prefer bounded error codes and counts.
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact
+    attributes:
+      label: Privacy, authority, or data-integrity impact
+      options:
+        - None observed
+        - Potential privacy exposure — pilot stopped
+        - Authorization boundary failure — pilot stopped
+        - Secret or session exposure — pilot stopped
+        - Destructive loss or recovery failure — pilot stopped
+        - Duplicate or idempotency failure
+        - Silent conflict overwrite — pilot stopped
+        - Automatic educational outcome — pilot stopped
+        - Accessibility or critical usability impact
+        - Provider operations impact only
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence references
+      description: Reference GitHub Actions run/artifact IDs, test names, bounded error codes, counts, or non-reversible digests. Do not paste artifact contents or protected URLs.
+      placeholder: Validate v11 run #___; test ___; sanitized digest ___
+    validations:
+      required: true
+
+  - type: textarea
+    id: resolution
+    attributes:
+      label: Resolution and exact-head verification
+      description: For triage, state the current hypothesis. For closure, identify the fix commit and exact-head validation evidence.
+      placeholder: Root cause / fix commit / validation run / closure decision
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: Safety confirmations
+      options:
+        - label: I used synthetic data only.
+          required: true
+        - label: I did not include names, email addresses, learner work, schedules, invitation material, private support content, raw rows, queue payloads, sessions, credentials, provider identifiers, or private screenshots.
+          required: true
+        - label: I stopped the pilot if a documented RC.2 stop condition occurred.
+          required: true
+        - label: This report does not claim production readiness, production migration, or cutover approval.
+          required: true

@@ -35,11 +35,12 @@ assert(wrangler.includes('"APP_RELEASE": "11.0.0-rc.1"'), 'Wrangler release must
 assert(wrangler.includes('"/api/*"'), 'Worker-first API routing is required');
 
 const migrationNames = (await readdir(path.join(root, 'supabase/migrations'))).filter((name) => name.endsWith('.sql')).sort();
-assert(migrationNames.at(-1) === '202608040009_v11_migration_rehearsal.sql', 'migration 009 must be latest');
+assert(migrationNames.at(-1) === '202608050010_v11_hosted_acl_hardening.sql', 'migration 010 hosted ACL hardening must be latest');
+assert(migrationNames.includes('202608040009_v11_migration_rehearsal.sql'), 'migration 009 release-candidate rehearsal must remain present');
 const migrationText = (await Promise.all(migrationNames.map((name) => readFile(path.join(root, 'supabase/migrations', name), 'utf8')))).join('\n');
 const rlsCount = (migrationText.match(/enable row level security/gi) ?? []).length;
 assert(rlsCount >= 20, `Expected at least 20 RLS tables; found ${rlsCount}`);
-for (const boundary of ['current_org_role','can_view_family','can_manage_family','organization_invites','learner_today_items','learning_operation_receipts','client_operation_id','transition_learner_today_item','knowledge_checks','knowledge_attempts','evidence_submissions','weekly_plans','weekly_plan_items','learning_studio_operation_receipts','submit_knowledge_attempt_v2','review_evidence_submission','hosted_pilot_schema_status','migration_import_receipts','production_readiness_decisions','release_candidate_readiness_status','rehearsal_only','production_cutover_approved']) assert(migrationText.includes(boundary), `missing database boundary ${boundary}`);
+for (const boundary of ['current_org_role','can_view_family','can_manage_family','organization_invites','learner_today_items','learning_operation_receipts','client_operation_id','transition_learner_today_item','knowledge_checks','knowledge_attempts','evidence_submissions','weekly_plans','weekly_plan_items','learning_studio_operation_receipts','submit_knowledge_attempt_v2','review_evidence_submission','hosted_pilot_schema_status','migration_import_receipts','production_readiness_decisions','release_candidate_readiness_status','hosted_acl_status','rehearsal_only','production_cutover_approved']) assert(migrationText.includes(boundary), `missing database boundary ${boundary}`);
 assert(migrationText.includes("source_release = '10.43.0'"), 'migration receipts must be limited to reviewed v10.43 records');
 assert(migrationText.includes("source_record_id ~ '^syn-"), 'migration 009 must reject non-synthetic IDs');
 assert(migrationText.includes('check (rehearsal_only = true)'), 'migration receipts must remain rehearsal-only');
@@ -52,6 +53,10 @@ assert(migrationText.includes('Target attempt ID is required'), 'hosted scoring 
 assert(migrationText.includes('Operation ID was already used for a different action'), 'operation IDs must reject cross-action reuse');
 assert(migrationText.includes('revoke all on public.knowledge_attempts'), 'attempts must use constrained RPCs');
 assert(migrationText.includes('revoke all on function public.review_evidence_submission'), 'proof review must use constrained RPC');
+assert(migrationText.includes("execute format('revoke execute on function %s from public'"), 'migration 010 must revoke inherited PUBLIC function execution');
+assert(migrationText.includes("execute format('revoke execute on function %s from anon'"), 'migration 010 must revoke direct anonymous function execution');
+assert(migrationText.includes('revoke execute on function public.submit_knowledge_attempt(uuid, jsonb, uuid) from authenticated'), 'legacy scoring RPC must be disabled');
+assert(migrationText.includes("'anonymous_security_definer_executable', anonymous_security_definer_count"), 'ACL status must report anonymous security-definer execution');
 assert(!/target_role\s+in\s*\([^)]*system-admin/i.test(migrationText), 'System Administrator must not be invitable');
 assert(migrationText.includes("access_mode text not null default 'parent-assisted'"), 'learner access must remain parent-assisted');
 assert(migrationText.includes('revoke update, delete on public.learner_today_items from authenticated'), 'Today transitions must use the constrained RPC');
@@ -102,22 +107,23 @@ assert(readinessScript.includes("effectiveDecision: 'not-ready'") && readinessSc
 const vendorScript = await readFile(path.join(root, 'scripts/vendor-exit-rehearsal.mjs'), 'utf8');
 for (const boundary of ['checksumMatched','rpoRecords','providerTokensIncluded: false','passwordsIncluded: false','learnerWorkIncluded: false']) assert(vendorScript.includes(boundary), `vendor exit missing ${boundary}`);
 const doctor = await readFile(path.join(root, 'scripts/pilot-doctor.mjs'), 'utf8');
-assert(doctor.includes('11.0.0-rc.1') && doctor.includes('202608040009_v11_migration_rehearsal.sql') && doctor.includes('productionCutoverApproved: false'), 'pilot doctor must target rc.1 and keep cutover disabled');
+assert(doctor.includes('11.0.0-rc.1') && doctor.includes('202608040009_v11_migration_rehearsal.sql') && doctor.includes('202608050010_v11_hosted_acl_hardening.sql') && doctor.includes('productionCutoverApproved: false'), 'pilot doctor must target rc.1, migrations 009/010, and keep cutover disabled');
 assert(!doctor.includes('PILOT_TEST_PASSWORD'), 'pilot doctor must not inspect test credentials');
 const verifier = await readFile(path.join(root, 'scripts/verify-remote-schema.mjs'), 'utf8');
 assert(verifier.includes('release_candidate_readiness_status'), 'remote verifier must use the rc.1 status RPC');
+assert(verifier.includes('hosted_acl_status'), 'remote verifier must validate migration 010 ACL status');
 assert(verifier.includes('persistSession: false') && verifier.includes('client.auth.signOut'), 'remote verifier must not persist sessions');
 
 const worker = await readFile(path.join(root, 'worker/index.ts'), 'utf8');
 for (const boundary of ["const RELEASE = '11.0.0-rc.1'",'parentManagedLearners: true','deterministicObjectiveScoring: true','explicitEvidenceReview: true','orderedMutationQueue: true','clientRecordIdsPreserved: true','conflictAwareStudioReconciliation: true','silentConflictOverwrite: false','syntheticV1043Rehearsal: true','strictParser: true','liveMigrationEnabled: false','productionWriteEnabled: false',"decision: 'not-ready'",'productionReady: false','automatedPromotionAllowed: false','productionCutover: false']) assert(worker.includes(boundary), `worker config missing ${boundary}`);
 
 const databaseTests = (await Promise.all((await readdir(path.join(root, 'supabase/tests'))).filter((name) => name.endsWith('.sql')).map((name) => readFile(path.join(root, 'supabase/tests', name), 'utf8')))).join('\n');
-for (const assertion of ['Director does not automatically see household learners','Transition retry creates one receipt','Knowledge retry creates one attempt','Evidence retry creates one receipt','Hosted attempt preserves the local record ID','Eighth day is rejected by the database','Non-synthetic source IDs are rejected','Live migration receipts are rejected','Status RPC keeps live migration and production cutover disabled']) assert(databaseTests.includes(assertion), `database tests must cover ${assertion}`);
+for (const assertion of ['Director does not automatically see household learners','Transition retry creates one receipt','Knowledge retry creates one attempt','Evidence retry creates one receipt','Hosted attempt preserves the local record ID','Eighth day is rejected by the database','Non-synthetic source IDs are rejected','Live migration receipts are rejected','Status RPC keeps live migration and production cutover disabled','Anonymous security-definer RPC execution is disabled','Trigger-only functions are not browser-callable','Superseded scoring RPC is disabled','Authenticated ACL status reports migration 010']) assert(databaseTests.includes(assertion), `database tests must cover ${assertion}`);
 const validateWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/validate-v11.yml'), 'utf8');
 for (const boundary of ['v11-rc1-migration-rehearsal','test-results/rc1','chromium-desktop','chromium-tablet','chromium-mobile','beaufort-learning-harbor-v11.0.0-rc.1-preview']) assert(validateWorkflow.includes(boundary), `validation workflow missing ${boundary}`);
 const deployWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/deploy-v11-preview.yml'), 'utf8');
 assert(deployWorkflow.includes('workflow_dispatch:') && !/\npush:\s*\n/.test(deployWorkflow), 'preview deployment must be manual only');
-for (const boundary of ['environment: v11-preview','DEPLOY_V11_PREVIEW','11.0.0-rc.1','pilot:verify-schema','automaticDeployment']) assert(deployWorkflow.includes(boundary), `deployment workflow missing ${boundary}`);
+for (const boundary of ['environment: v11-preview','DEPLOY_V11_PREVIEW','11.0.0-rc.1','pilot:verify-schema','automaticDeployment','migrations 001-010']) assert(deployWorkflow.includes(boundary), `deployment workflow missing ${boundary}`);
 const pointer = JSON.parse(await readFile(path.join(root, '../source/current-release.json'), 'utf8'));
 assert(String(pointer.manifest).includes('v10.43'), 'v10.43 stable pointer must remain unchanged');
 
@@ -132,4 +138,4 @@ for (const file of await collectFiles(root)) {
   const content = await readFile(file, 'utf8');
   for (const forbidden of forbiddenPatterns) assert(!forbidden.pattern.test(content), `${forbidden.label} found in ${path.relative(root, file)}`);
 }
-console.log(`v11 rc.1 boundary checks passed: ${rlsCount} RLS tables, beta.4 family/sync/privacy gates preserved, strict synthetic migration, reversible isolated apply, vendor-exit integrity, owner-blocked promotion, protected deployment, exact dependencies, and unchanged v10.43 fallback`);
+console.log(`v11 rc.1 boundary checks passed: ${rlsCount} RLS tables, beta.4 family/sync/privacy gates preserved, strict synthetic migration, hosted ACL hardening, reversible isolated apply, vendor-exit integrity, owner-blocked promotion, protected deployment, exact dependencies, and unchanged v10.43 fallback`);
