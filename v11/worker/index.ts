@@ -6,6 +6,7 @@ interface Env {
   ASSETS: AssetsBinding;
   APP_ENV?: string;
   APP_RELEASE?: string;
+  APP_COMMIT?: string;
 }
 
 const RELEASE = '11.0.0-rc.1';
@@ -37,7 +38,13 @@ export default {
       return json({ error: 'Method not allowed' }, { status: 405, headers: { allow: 'GET, HEAD' } });
     }
     if (url.pathname === '/api/health') {
-      return json({ ok: true, service: SERVICE, release: env.APP_RELEASE ?? RELEASE, environment: env.APP_ENV ?? 'preview' });
+      return json({
+        ok: true,
+        service: SERVICE,
+        release: env.APP_RELEASE ?? RELEASE,
+        environment: env.APP_ENV ?? 'preview',
+        commit: env.APP_COMMIT ?? null
+      });
     }
     if (url.pathname === '/api/config') {
       return json({
