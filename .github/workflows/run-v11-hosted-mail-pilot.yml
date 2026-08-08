@@ -1,0 +1,85 @@
+name: Run v11 Hosted Mail Pilot
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: Type RUN_V11_HOSTED_MAIL_PILOT to run the bounded synthetic hosted Auth mail slice
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: v11-hosted-mail-pilot
+  cancel-in-progress: false
+
+jobs:
+  hosted-auth-email-recovery:
+    if: ${{ inputs.confirmation == 'RUN_V11_HOSTED_MAIL_PILOT' && github.ref != 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    environment: v11-preview
+    defaults:
+      run:
+        working-directory: v11
+    env:
+      VITE_APP_ENV: preview
+      VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      V11_PREVIEW_URL: ${{ vars.V11_PREVIEW_URL }}
+      PILOT_TEST_EMAIL: ${{ secrets.PILOT_TEST_EMAIL }}
+      PILOT_TEST_PASSWORD: ${{ secrets.PILOT_TEST_PASSWORD }}
+      PILOT_SUPABASE_SECRET_KEY: ${{ secrets.PILOT_SUPABASE_SECRET_KEY }}
+      PILOT_MAILTRAP_API_TOKEN: ${{ secrets.PILOT_MAILTRAP_API_TOKEN }}
+      PILOT_MAILTRAP_ACCOUNT_ID: ${{ vars.PILOT_MAILTRAP_ACCOUNT_ID }}
+      PILOT_MAILTRAP_SANDBOX_ID: ${{ vars.PILOT_MAILTRAP_SANDBOX_ID }}
+      V11_DEPLOYED_APP_COMMIT: 138a33fe7703ce0c9729392f26f42d90bdb022df
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Prove current branch is runtime-equivalent to deployed preview
+        run: |
+          git cat-file -e "${V11_DEPLOYED_APP_COMMIT}^{commit}"
+          if ! git diff --quiet "${V11_DEPLOYED_APP_COMMIT}..${GITHUB_SHA}" -- \
+            src \
+            public \
+            index.html \
+            package.json \
+            package-lock.json \
+            tsconfig.json \
+            tsconfig.app.json \
+            tsconfig.node.json \
+            vite.config.ts \
+            wrangler.jsonc; then
+            echo "Runtime-affecting v11 files differ from the deployed preview commit. Redeploy the exact branch head before running hosted mail evidence."
+            exit 1
+          fi
+          echo "Current branch is runtime-equivalent to deployed preview commit ${V11_DEPLOYED_APP_COMMIT}."
+      - name: Install exact pilot dependencies
+        run: npm install --no-package-lock
+      - name: Install hosted Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Validate protected browser configuration
+        run: npm run pilot:doctor:browser
+      - name: Verify protected hosted schema
+        run: npm run pilot:verify-schema
+      - name: Run hosted custom-SMTP confirmation and recovery pilot
+        run: npx playwright test hosted-tests/hosted-auth-email-recovery.spec.ts --config=playwright.hosted.config.ts
+      - name: Validate sanitized hosted Auth mail evidence
+        run: node scripts/validate-hosted-auth-email-recovery.mjs
+      - name: Upload sanitized hosted Auth mail evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beaufort-learning-harbor-v11.0.0-rc.1-hosted-auth-email-recovery
+          path: |
+            v11/hosted-auth-email-recovery-report.json
+            v11/test-results/rc2/rc2-hosted-auth-email-recovery-evidence.json
+          if-no-files-found: warn
+          retention-days: 90
