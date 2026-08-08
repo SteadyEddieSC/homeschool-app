@@ -58,6 +58,14 @@ for (const marker of [
 ]) assert(signInStyles.includes(marker), `scoped account-access styling is missing ${marker}`);
 assert(!signInStyles.includes('position: fixed'), 'account-access styling must not solve viewport fit with a fixed-position card');
 
+const signInLayoutTest = await readFile(path.join(root, 'tests/signin-access-layout.spec.ts'), 'utf8');
+for (const marker of [
+  'width: 900, height: 800',
+  'document.documentElement.scrollHeight <= window.innerHeight',
+  "expect(segmentedDisplay).toBe('grid')",
+  'expect(activeBackground).not.toBe(inactiveBackground)'
+]) assert(signInLayoutTest.includes(marker), `account-access browser regression is missing ${marker}`);
+
 const passwordPanel = await readFile(path.join(root, 'src/components/PasswordUpdatePanel.tsx'), 'utf8');
 for (const marker of [
   'Use at least 12 characters for the new password.',
@@ -110,6 +118,8 @@ assert(!hostedFlow.includes('console.log(email') && !hostedFlow.includes('consol
 const hostedValidator = await readFile(path.join(root, 'scripts/validate-hosted-auth-email-recovery.mjs'), 'utf8');
 for (const marker of [
   'hosted-custom-smtp-confirmation-recovery-complete-real-recipient-delivery-not-tested',
+  'report.deployedRuntimeCommit !== report.repositoryCommit',
+  'report.repositoryCommit !== process.env.GITHUB_SHA',
   'evidence contains an email address',
   'evidence contains a UUID',
   'evidence contains a JWT-shaped value',
@@ -120,6 +130,12 @@ for (const marker of [
   'realRecipientDeliveryVerified',
   'fullGateCComplete'
 ]) assert(hostedValidator.includes(marker), `hosted Auth evidence validator is missing ${marker}`);
+assert(!hostedValidator.includes('138a33fe7703ce0c9729392f26f42d90bdb022df'), 'hosted mail validator must not remain pinned to a stale deployed commit');
+
+const worker = await readFile(path.join(root, 'worker/index.ts'), 'utf8');
+for (const marker of ['APP_COMMIT?: string', 'commit: env.APP_COMMIT ?? null']) {
+  assert(worker.includes(marker), `preview Worker exact-head marker is missing ${marker}`);
+}
 
 const validationWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/validate-v11.yml'), 'utf8');
 for (const marker of [
@@ -130,6 +146,14 @@ for (const marker of [
   '.github/workflows/run-v11-hosted-pilot.yml'
 ]) assert(validationWorkflow.includes(marker), `v11 validation workflow is missing ${marker}`);
 assert(!validationWorkflow.includes('run-v11-hosted-mail-pilot.yml'), 'ordinary CI must not reference a branch-only hidden hosted-mail workflow');
+
+const deployWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/deploy-v11-preview.yml'), 'utf8');
+for (const marker of [
+  'Stamp exact Git commit into ephemeral preview deployment config',
+  'config.vars.APP_COMMIT = process.env.GITHUB_SHA',
+  'Verify deployed health and exact-head boundary',
+  'health.commit !== process.env.GITHUB_SHA'
+]) assert(deployWorkflow.includes(marker), `protected preview deployment exact-head proof is missing ${marker}`);
 
 const hostedWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/run-v11-hosted-pilot.yml'), 'utf8');
 for (const marker of [
@@ -143,6 +167,8 @@ for (const marker of [
   'PILOT_MAILTRAP_ACCOUNT_ID: ${{ vars.PILOT_MAILTRAP_ACCOUNT_ID }}',
   'PILOT_MAILTRAP_SANDBOX_ID: ${{ vars.PILOT_MAILTRAP_SANDBOX_ID }}',
   'V11_DEPLOYED_APP_COMMIT: ${{ github.sha }}',
+  'Verify preview serves the exact workflow head',
+  "health.commit !== process.env.GITHUB_SHA",
   'npx playwright test hosted-tests/hosted-auth-email-recovery.spec.ts --config=playwright.hosted.config.ts',
   'node scripts/validate-hosted-auth-email-recovery.mjs',
   'rc2-hosted-auth-email-recovery-evidence.json'
@@ -162,4 +188,4 @@ for (const marker of [
   'v10.43 remains the stable production/downloadable fallback'
 ]) assert(hostedRunbook.includes(marker), `hosted Auth mail runbook is missing ${marker}`);
 
-console.log('Gate C Auth mail/recovery guard passed: compact themed account access, local capture/recovery, and the protected hosted custom-SMTP sandbox job are structurally enforced through the visible hosted-pilot workflow; sensitive values remain excluded from persisted evidence and full Gate C/Gate D remain blocked.');
+console.log('Gate C Auth mail/recovery guard passed: compact themed account access, viewport regression coverage, exact-head preview stamping, local capture/recovery, and the protected hosted custom-SMTP sandbox job are structurally enforced through the visible hosted-pilot workflow; sensitive values remain excluded from persisted evidence and full Gate C/Gate D remain blocked.');
