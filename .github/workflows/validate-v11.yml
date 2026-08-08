@@ -10,7 +10,6 @@ on:
       - '.github/workflows/validate-v11.yml'
       - '.github/workflows/deploy-v11-preview.yml'
       - '.github/workflows/run-v11-hosted-pilot.yml'
-      - '.github/workflows/run-v11-hosted-mail-pilot.yml'
       - '.gitignore'
       - 'README.md'
   push:
@@ -22,7 +21,6 @@ on:
       - '.github/workflows/validate-v11.yml'
       - '.github/workflows/deploy-v11-preview.yml'
       - '.github/workflows/run-v11-hosted-pilot.yml'
-      - '.github/workflows/run-v11-hosted-mail-pilot.yml'
       - '.gitignore'
       - 'README.md'
 
