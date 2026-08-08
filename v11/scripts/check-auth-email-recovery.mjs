@@ -154,8 +154,12 @@ for (const marker of [
   "relative.startsWith('../') || !relative.startsWith('dist/')",
   'config.vars.APP_COMMIT = sha',
   'Verify deployed health and exact-head boundary',
-  'health.commit !== process.env.GITHUB_SHA'
+  'for (let attempt = 1; attempt <= 24; attempt += 1)',
+  "health?.commit === expectedCommit",
+  'await sleep(2500)',
+  'did not converge to the exact workflow head within 60 seconds'
 ]) assert(deployWorkflow.includes(marker), `protected preview deployment exact-head proof is missing ${marker}`);
+assert(!deployWorkflow.includes("curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 --connect-timeout 10 --max-time 20 \"${DEPLOYED_PREVIEW_URL%/}/api/health\""), 'exact-head verification must not use a one-shot successful HTTP response as convergence proof');
 
 const hostedWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/run-v11-hosted-pilot.yml'), 'utf8');
 for (const marker of [
@@ -190,4 +194,4 @@ for (const marker of [
   'v10.43 remains the stable production/downloadable fallback'
 ]) assert(hostedRunbook.includes(marker), `hosted Auth mail runbook is missing ${marker}`);
 
-console.log('Gate C Auth mail/recovery guard passed: compact themed account access, viewport regression coverage, exact-head generated Cloudflare deployment stamping, local capture/recovery, and the protected hosted custom-SMTP sandbox job are structurally enforced through the visible hosted-pilot workflow; sensitive values remain excluded from persisted evidence and full Gate C/Gate D remain blocked.');
+console.log('Gate C Auth mail/recovery guard passed: compact themed account access, viewport regression coverage, exact-head generated Cloudflare deployment stamping with propagation-aware convergence, local capture/recovery, and the protected hosted custom-SMTP sandbox job are structurally enforced through the visible hosted-pilot workflow; sensitive values remain excluded from persisted evidence and full Gate C/Gate D remain blocked.');
