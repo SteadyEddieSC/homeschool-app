@@ -98,14 +98,48 @@ jobs:
           NODE
       - name: Verify deployed health and exact-head boundary
         run: |
-          curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 --connect-timeout 10 --max-time 20 "${DEPLOYED_PREVIEW_URL%/}/api/health" --output deployment-health.json
           node --input-type=module <<'NODE'
-          import { readFile } from 'node:fs/promises';
-          const health = JSON.parse(await readFile('deployment-health.json', 'utf8'));
-          if (health.ok !== true) throw new Error('Preview health endpoint did not return ok=true');
-          if (health.release !== '11.0.0-rc.1') throw new Error(`Unexpected deployed release: ${health.release}`);
-          if (health.service !== process.env.EXPECTED_WORKER_NAME) throw new Error(`Unexpected Worker service: ${health.service}`);
-          if (health.commit !== process.env.GITHUB_SHA) throw new Error('Deployed preview commit does not match the exact workflow head');
+          import { writeFile } from 'node:fs/promises';
+
+          const expectedCommit = String(process.env.GITHUB_SHA ?? '');
+          const expectedService = String(process.env.EXPECTED_WORKER_NAME ?? '');
+          const endpoint = `${String(process.env.DEPLOYED_PREVIEW_URL ?? '').replace(/\/$/, '')}/api/health`;
+          if (!/^[0-9a-f]{40}$/i.test(expectedCommit)) throw new Error('GitHub did not provide an exact commit SHA');
+          if (!endpoint.startsWith('https://')) throw new Error('Deployed preview health endpoint is invalid');
+
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+          let lastObserved = null;
+          for (let attempt = 1; attempt <= 24; attempt += 1) {
+            try {
+              const response = await fetch(endpoint, { headers: { 'cache-control': 'no-cache' } });
+              if (response.ok) {
+                const health = await response.json();
+                lastObserved = {
+                  ok: health?.ok === true,
+                  release: health?.release ?? null,
+                  service: health?.service ?? null,
+                  exactCommit: health?.commit === expectedCommit
+                };
+                if (
+                  health?.ok === true &&
+                  health?.release === '11.0.0-rc.1' &&
+                  health?.service === expectedService &&
+                  health?.commit === expectedCommit
+                ) {
+                  await writeFile('deployment-health.json', `${JSON.stringify(health, null, 2)}\n`);
+                  console.log(`Exact deployed preview commit observed after ${attempt} health check attempt(s).`);
+                  process.exit(0);
+                }
+              } else {
+                lastObserved = { httpStatus: response.status };
+              }
+            } catch {
+              lastObserved = { transportReady: false };
+            }
+            if (attempt < 24) await sleep(2500);
+          }
+
+          throw new Error(`Deployed preview did not converge to the exact workflow head within 60 seconds; sanitized last observation: ${JSON.stringify(lastObserved)}`);
           NODE
       - name: Verify release-candidate capability boundary
         run: |
