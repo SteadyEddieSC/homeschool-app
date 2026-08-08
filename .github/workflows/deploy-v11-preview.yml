@@ -52,6 +52,18 @@ jobs:
         run: npm run check:deploy-readiness
       - name: Verify migrations 001-010 on the non-production Supabase project
         run: npm run pilot:verify-schema
+      - name: Stamp exact Git commit into ephemeral preview deployment config
+        run: |
+          node --input-type=module <<'NODE'
+          import { readFile, writeFile } from 'node:fs/promises';
+          const file = 'wrangler.jsonc';
+          const config = JSON.parse(await readFile(file, 'utf8'));
+          if (!/^[0-9a-f]{40}$/i.test(process.env.GITHUB_SHA ?? '')) throw new Error('GitHub did not provide an exact commit SHA');
+          config.vars ??= {};
+          config.vars.APP_COMMIT = process.env.GITHUB_SHA;
+          await writeFile(file, `${JSON.stringify(config, null, 2)}\n`);
+          console.log('Ephemeral preview deployment config stamped with the exact Git commit.');
+          NODE
       - name: Deploy isolated v11 preview Worker from Cloudflare Vite output
         id: cloudflare-deploy
         uses: cloudflare/wrangler-action@v4
@@ -77,7 +89,7 @@ jobs:
           await appendFile(process.env.GITHUB_ENV, `DEPLOYED_PREVIEW_URL=${deployed.origin}\n`);
           console.log(`Authoritative deployed preview origin: ${deployed.origin}`);
           NODE
-      - name: Verify deployed health boundary
+      - name: Verify deployed health and exact-head boundary
         run: |
           curl --fail --silent --show-error --retry 12 --retry-all-errors --retry-delay 5 --connect-timeout 10 --max-time 20 "${DEPLOYED_PREVIEW_URL%/}/api/health" --output deployment-health.json
           node --input-type=module <<'NODE'
@@ -86,6 +98,7 @@ jobs:
           if (health.ok !== true) throw new Error('Preview health endpoint did not return ok=true');
           if (health.release !== '11.0.0-rc.1') throw new Error(`Unexpected deployed release: ${health.release}`);
           if (health.service !== process.env.EXPECTED_WORKER_NAME) throw new Error(`Unexpected Worker service: ${health.service}`);
+          if (health.commit !== process.env.GITHUB_SHA) throw new Error('Deployed preview commit does not match the exact workflow head');
           NODE
       - name: Verify release-candidate capability boundary
         run: |
@@ -109,6 +122,7 @@ jobs:
           const configuration = JSON.parse(await readFile('deployment-config.json', 'utf8'));
           const schema = JSON.parse(await readFile('remote-schema-report.json', 'utf8'));
           const doctor = JSON.parse(await readFile('pilot-doctor-report.json', 'utf8'));
+          if (health.commit !== process.env.GITHUB_SHA) throw new Error('Deployment receipt cannot be created for a non-exact preview commit');
           const receipt = {
             schema: 'beaufort-learning-harbor-v11-preview-deployment-receipt-v2',
             release: '11.0.0-rc.1',
