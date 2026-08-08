@@ -52,17 +52,24 @@ jobs:
         run: npm run check:deploy-readiness
       - name: Verify migrations 001-010 on the non-production Supabase project
         run: npm run pilot:verify-schema
-      - name: Stamp exact Git commit into ephemeral preview deployment config
+      - name: Stamp exact Git commit into generated Cloudflare deployment config
         run: |
           node --input-type=module <<'NODE'
           import { readFile, writeFile } from 'node:fs/promises';
-          const file = 'wrangler.jsonc';
-          const config = JSON.parse(await readFile(file, 'utf8'));
-          if (!/^[0-9a-f]{40}$/i.test(process.env.GITHUB_SHA ?? '')) throw new Error('GitHub did not provide an exact commit SHA');
+          import path from 'node:path';
+          const sha = String(process.env.GITHUB_SHA ?? '');
+          if (!/^[0-9a-f]{40}$/i.test(sha)) throw new Error('GitHub did not provide an exact commit SHA');
+          const redirectPath = path.resolve('.wrangler/deploy/config.json');
+          const redirect = JSON.parse(await readFile(redirectPath, 'utf8'));
+          if (!redirect?.configPath) throw new Error('Generated Cloudflare deployment redirect is missing');
+          const generatedPath = path.resolve(path.dirname(redirectPath), redirect.configPath);
+          const relative = path.relative(process.cwd(), generatedPath).replaceAll('\\', '/');
+          if (relative.startsWith('../') || !relative.startsWith('dist/')) throw new Error('Generated Cloudflare deployment config escaped dist');
+          const config = JSON.parse(await readFile(generatedPath, 'utf8'));
           config.vars ??= {};
-          config.vars.APP_COMMIT = process.env.GITHUB_SHA;
-          await writeFile(file, `${JSON.stringify(config, null, 2)}\n`);
-          console.log('Ephemeral preview deployment config stamped with the exact Git commit.');
+          config.vars.APP_COMMIT = sha;
+          await writeFile(generatedPath, `${JSON.stringify(config, null, 2)}\n`);
+          console.log('Generated Cloudflare deployment config stamped with the exact Git commit.');
           NODE
       - name: Deploy isolated v11 preview Worker from Cloudflare Vite output
         id: cloudflare-deploy
