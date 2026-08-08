@@ -179,6 +179,11 @@ for (const marker of [
   'node scripts/validate-hosted-auth-email-recovery.mjs',
   'rc2-hosted-auth-email-recovery-evidence.json'
 ]) assert(hostedWorkflow.includes(marker), `visible protected hosted pilot workflow is missing ${marker}`);
+const hostedMailJob = hostedWorkflow.split('\n  hosted-auth-email-recovery:\n')[1] ?? '';
+for (const marker of [
+  'PILOT_TEST_EMAIL: ${{ secrets.PILOT_TEST_EMAIL }}',
+  'PILOT_TEST_PASSWORD: ${{ secrets.PILOT_TEST_PASSWORD }}'
+]) assert(hostedMailJob.includes(marker), `hosted Auth mail job is missing protected schema-verifier mapping ${marker}`);
 for (const forbidden of ['SMTP_PASSWORD', 'SMTP_USERNAME', 'MAILTRAP_SMTP_PASSWORD', 'MAILTRAP_SMTP_USERNAME']) {
   assert(!hostedWorkflow.includes(forbidden), `protected hosted pilot workflow must not copy provider SMTP credentials: ${forbidden}`);
 }
@@ -194,4 +199,4 @@ for (const marker of [
   'v10.43 remains the stable production/downloadable fallback'
 ]) assert(hostedRunbook.includes(marker), `hosted Auth mail runbook is missing ${marker}`);
 
-console.log('Gate C Auth mail/recovery guard passed: compact themed account access, viewport regression coverage, exact-head generated Cloudflare deployment stamping with propagation-aware convergence, local capture/recovery, and the protected hosted custom-SMTP sandbox job are structurally enforced through the visible hosted-pilot workflow; sensitive values remain excluded from persisted evidence and full Gate C/Gate D remain blocked.');
+console.log('Gate C Auth mail/recovery guard passed: compact themed account access, viewport regression coverage, exact-head generated Cloudflare deployment stamping with propagation-aware convergence, local capture/recovery, protected schema-verifier mappings, and the hosted custom-SMTP sandbox job are structurally enforced through the visible hosted-pilot workflow; sensitive values remain excluded from persisted evidence and full Gate C/Gate D remain blocked.');
