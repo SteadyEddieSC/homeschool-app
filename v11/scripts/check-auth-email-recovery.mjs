@@ -38,10 +38,25 @@ assert(!cloudIdentity.includes('/#/welcome') && !cloudIdentity.includes('/#/reco
 
 const signInPanel = await readFile(path.join(root, 'src/components/SignInPanel.tsx'), 'utf8');
 for (const marker of [
+  "import '../signin-access.css';",
   'Check your email to confirm the address before signing in.',
   'If an account matches that address, a password recovery email has been sent.',
-  'minLength={mode === \'sign-up\' ? 12 : undefined}'
+  'minLength={mode === \'sign-up\' ? 12 : undefined}',
+  'className="segmented-control"',
+  "aria-selected={mode === 'sign-in'}"
 ]) assert(signInPanel.includes(marker), `sign-in recovery contract is missing ${marker}`);
+
+const signInStyles = await readFile(path.join(root, 'src/signin-access.css'), 'utf8');
+for (const marker of [
+  'min-height: 100dvh',
+  'width: min(520px, 100%)',
+  '.segmented-control {',
+  '.segmented-control button.active',
+  "button[aria-selected='true']",
+  '.signin-card .button.primary',
+  '@media (max-height: 820px) and (min-width: 681px)'
+]) assert(signInStyles.includes(marker), `scoped account-access styling is missing ${marker}`);
+assert(!signInStyles.includes('position: fixed'), 'account-access styling must not solve viewport fit with a fixed-position card');
 
 const passwordPanel = await readFile(path.join(root, 'src/components/PasswordUpdatePanel.tsx'), 'utf8');
 for (const marker of [
@@ -112,29 +127,34 @@ for (const marker of [
   'npm run pilot:test-local-auth-email-recovery',
   'npm run pilot:validate-local-auth-email-recovery',
   'rc2-local-auth-email-recovery-evidence.json',
-  '.github/workflows/run-v11-hosted-mail-pilot.yml'
+  '.github/workflows/run-v11-hosted-pilot.yml'
 ]) assert(validationWorkflow.includes(marker), `v11 validation workflow is missing ${marker}`);
+assert(!validationWorkflow.includes('run-v11-hosted-mail-pilot.yml'), 'ordinary CI must not reference a branch-only hidden hosted-mail workflow');
 
-const hostedWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/run-v11-hosted-mail-pilot.yml'), 'utf8');
+const hostedWorkflow = await readFile(path.join(repositoryRoot, '.github/workflows/run-v11-hosted-pilot.yml'), 'utf8');
 for (const marker of [
-  'RUN_V11_HOSTED_MAIL_PILOT',
+  'name: Run v11 Hosted Pilot',
+  'RUN_V11_SYNTHETIC_PILOT',
+  'hosted-auth-email-recovery:',
+  'needs: hosted-multi-account-authorization',
   'environment: v11-preview',
   'PILOT_SUPABASE_SECRET_KEY: ${{ secrets.PILOT_SUPABASE_SECRET_KEY }}',
   'PILOT_MAILTRAP_API_TOKEN: ${{ secrets.PILOT_MAILTRAP_API_TOKEN }}',
   'PILOT_MAILTRAP_ACCOUNT_ID: ${{ vars.PILOT_MAILTRAP_ACCOUNT_ID }}',
   'PILOT_MAILTRAP_SANDBOX_ID: ${{ vars.PILOT_MAILTRAP_SANDBOX_ID }}',
-  'V11_DEPLOYED_APP_COMMIT: 138a33fe7703ce0c9729392f26f42d90bdb022df',
-  'git diff --quiet "${V11_DEPLOYED_APP_COMMIT}..${GITHUB_SHA}"',
+  'V11_DEPLOYED_APP_COMMIT: ${{ github.sha }}',
   'npx playwright test hosted-tests/hosted-auth-email-recovery.spec.ts --config=playwright.hosted.config.ts',
   'node scripts/validate-hosted-auth-email-recovery.mjs',
   'rc2-hosted-auth-email-recovery-evidence.json'
-]) assert(hostedWorkflow.includes(marker), `protected hosted Auth mail workflow is missing ${marker}`);
+]) assert(hostedWorkflow.includes(marker), `visible protected hosted pilot workflow is missing ${marker}`);
 for (const forbidden of ['SMTP_PASSWORD', 'SMTP_USERNAME', 'MAILTRAP_SMTP_PASSWORD', 'MAILTRAP_SMTP_USERNAME']) {
-  assert(!hostedWorkflow.includes(forbidden), `protected hosted Auth mail workflow must not copy provider SMTP credentials: ${forbidden}`);
+  assert(!hostedWorkflow.includes(forbidden), `protected hosted pilot workflow must not copy provider SMTP credentials: ${forbidden}`);
 }
 
 const hostedRunbook = await readFile(path.join(repositoryRoot, 'docs/v11/rc2-hosted-mail-pilot.md'), 'utf8');
 for (const marker of [
+  'Run v11 Hosted Pilot',
+  'RUN_V11_SYNTHETIC_PILOT',
   'sandboxMessagesProviderRetained: true',
   'Real-recipient delivery',
   'Gate C remains incomplete',
@@ -142,4 +162,4 @@ for (const marker of [
   'v10.43 remains the stable production/downloadable fallback'
 ]) assert(hostedRunbook.includes(marker), `hosted Auth mail runbook is missing ${marker}`);
 
-console.log('Gate C Auth mail/recovery guard passed: local capture/recovery and protected hosted custom-SMTP sandbox contracts are structurally enforced, implicit-flow callbacks remain safe, sensitive values remain excluded from persisted evidence, and hosted execution stays manual with full Gate C and Gate D blocked.');
+console.log('Gate C Auth mail/recovery guard passed: compact themed account access, local capture/recovery, and the protected hosted custom-SMTP sandbox job are structurally enforced through the visible hosted-pilot workflow; sensitive values remain excluded from persisted evidence and full Gate C/Gate D remain blocked.');
