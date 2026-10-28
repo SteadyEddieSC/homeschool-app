@@ -22,7 +22,6 @@
     "d1:share-revocation-proof": "node scripts/share-revocation-proof.mjs",
     "d1:offline-queue-proof": "node scripts/offline-queue-d1-proof.mjs",
     "d1:capacity-model": "node scripts/capacity-estimate.mjs",
-    "d1:capacity-proof": "node scripts/capacity-scale-proof.mjs",
     "verify": "npm run typecheck && npm run check:boundaries && npm run migration:rehearse && npm run readiness:report && npm run vendor-exit:verify && npm run build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "test:e2e": "playwright test",
