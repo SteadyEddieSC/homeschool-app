@@ -29,6 +29,7 @@ Each proof uses fresh temporary local state and removes it after the run.
 
 - `architecture-decision.md` records the provisional household-first authority model and the personal-Cloudflare ownership direction.
 - `service-disposition.md` records `KEEP / ADAPT / RETIRE AFTER PARITY` decisions for the existing local, resilient and Supabase services.
+- `backup-migration-plan.md` defines provider-neutral backup/restore, Supabase→D1 migration, rollback, archive, and idempotency-receipt retention gates before any provider retirement.
 - `migrations/0001_household_first.sql` is the checked-in normalized D1 schema.
 - `capacity-model.md` separates the conservative planning model from the measured local scale evidence.
 - `npm run d1:capacity-model` regenerates the planning estimate; `npm run d1:capacity-proof` reruns the scale fixture independently.
