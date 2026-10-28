@@ -15,23 +15,25 @@ npm install --no-package-lock
 npm run d1:proof
 ```
 
-`d1:proof` currently runs four bounded checks:
+`d1:proof` currently runs five bounded checks:
 
 1. strict TypeScript validation of the isolated Worker/repository/domain adapter;
 2. the core household → evidence review → explicit co-op share → class assignment/submission flow, including replay suppression, household isolation and visible stale-write conflict;
 3. a share-revocation proof showing that a revoked class share stops future class projection without deleting household-authoritative work or already-submitted class history;
-4. an offline-queue proof that reuses the existing v11 `SyncQueueManager` behavior: local state remains usable while offline, duplicate active fingerprints collapse, queued household/learner operations flush to D1 when connectivity returns, and D1 readback preserves identity without duplicate rows.
+4. an offline-queue proof that reuses the existing v11 `SyncQueueManager` behavior: local state remains usable while offline, duplicate active fingerprints collapse, queued household/learner operations flush to D1 when connectivity returns, and D1 readback preserves identity without duplicate rows;
+5. a deterministic 25/50/100-family scale proof that seeds fresh local D1 databases, measures the persisted local footprint, captures representative D1-compatible `rows_read` metadata, and asserts indexed Today/weekly-review/class-roster/annual-attendance query plans.
 
-Each proof uses a fresh temporary local D1 database and removes it after the run.
+Each proof uses fresh temporary local state and removes it after the run.
 
 ## Architecture records
 
 - `architecture-decision.md` records the provisional household-first authority model and the personal-Cloudflare ownership direction.
 - `service-disposition.md` records `KEEP / ADAPT / RETIRE AFTER PARITY` decisions for the existing local, resilient and Supabase services.
 - `migrations/0001_household_first.sql` is the checked-in normalized D1 schema.
-- `capacity-model.md` is the first-pass free-tier model; `npm run d1:capacity-model` regenerates its underlying estimates.
+- `capacity-model.md` separates the conservative planning model from the measured local scale evidence.
+- `npm run d1:capacity-model` regenerates the planning estimate; `npm run d1:capacity-proof` reruns the scale fixture independently.
 
-The scale database-size/query-metadata run is still required before treating the free-tier capacity estimate as demonstrated rather than modeled.
+Exact-head CI measured the 100-family / 300-learner / 380,082-row local fixture at about **70.7 MiB** persisted after disposal. Representative 100-family queries read 7 rows for a household Today view, 22 for a seven-day household work-log review, 21 for a class roster, and 541 for a 540-row annual household attendance result. All four query plans used the intended indexes. These are local Miniflare/D1 measurements, not production Cloudflare usage or billing telemetry.
 
 ## South Carolina record-pack boundary
 
