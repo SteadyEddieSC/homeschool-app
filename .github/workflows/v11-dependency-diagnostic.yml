@@ -1,0 +1,73 @@
+name: v11 dependency diagnostic
+
+on:
+  push:
+    branches:
+      - security/sec-deps-001-diagnostic
+    paths:
+      - 'v11/package.json'
+      - '.github/workflows/v11-dependency-diagnostic.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: v11
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Resolve exact dependency graph without running lifecycle scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts 2>&1 | tee dependency-install.log
+          sha256sum package-lock.json | tee package-lock.sha256
+      - name: Capture exact npm audit and vulnerable paths
+        shell: bash
+        run: |
+          set +e
+          npm audit --json > npm-audit.json
+          audit_code=$?
+          npm ls vite sharp undici miniflare @cloudflare/vite-plugin --all --json > npm-ls-security.json
+          ls_code=$?
+          set -e
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const report = JSON.parse(await readFile('npm-audit.json', 'utf8'));
+          const metadata = report.metadata?.vulnerabilities ?? {};
+          console.log('npm audit exit is expected to be nonzero while findings exist.');
+          console.log('audit metadata:', JSON.stringify(metadata));
+          for (const [name, finding] of Object.entries(report.vulnerabilities ?? {})) {
+            console.log(JSON.stringify({
+              name,
+              severity: finding.severity,
+              isDirect: finding.isDirect,
+              via: finding.via,
+              effects: finding.effects,
+              range: finding.range,
+              nodes: finding.nodes,
+              fixAvailable: finding.fixAvailable
+            }));
+          }
+          NODE
+          echo "npm audit exit code: ${audit_code}"
+          echo "npm ls exit code: ${ls_code}"
+      - name: Upload diagnostic evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: v11-sec-deps-001-diagnostic
+          path: |
+            v11/package-lock.json
+            v11/package-lock.sha256
+            v11/dependency-install.log
+            v11/npm-audit.json
+            v11/npm-ls-security.json
+          if-no-files-found: error
+          retention-days: 14
