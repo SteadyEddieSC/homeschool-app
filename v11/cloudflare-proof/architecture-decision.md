@@ -1,6 +1,6 @@
 # ARCH-SPIKE-001 household-first architecture decision
 
-Status: **CANDIDATE ACCEPT pending independence-clean exact-head review** under #60. The local feasibility proof is complete enough to select the household-first Cloudflare/D1 direction for the next implementation stage; hosted pilot, production authentication, production migration, and provider retirement remain separate decisions.
+Status: **CANDIDATE CORRECTION pending fresh independence-clean exact-head re-review** under #60. The prior exact-head review returned `CHANGES_REQUIRED` on class-role authorization; the bounded correction preserves the selected household-first Cloudflare/D1 direction while proving that ordinary co-op membership is not equivalent to instructor/admin class authority. Hosted pilot, production authentication, production migration, and provider retirement remain separate decisions.
 
 ## Product boundary
 
@@ -36,6 +36,7 @@ The local proof chain demonstrates:
 
 - household A cannot enumerate household B records;
 - an instructor can read deliberately shared class results but cannot query the household Today surface;
+- an ordinary co-op `member` cannot create classes, create class assignments, or read class submissions/results merely from organization membership;
 - a parent cannot share another household's learner;
 - class assignments project into a household only through an active explicit enrollment/share;
 - revoking a class share removes future class projection while retaining household work and already-submitted class history;
@@ -74,7 +75,8 @@ The scale proof also shows that idempotency receipts are the dominant long-term 
 
 - production authentication provider;
 - child/learner cloud login;
-- per-instructor class-assignment administration beyond the demonstrated class/household privacy boundary;
+- per-instructor class-assignment administration beyond the demonstrated role/privacy boundary;
+- the production share-revocation command/API and its authorization policy; this spike proves revocation data semantics, while the mutation surface and who may invoke it remain a later implementation gate;
 - hosted D1/R2 creation;
 - custom domain/DNS;
 - production rollout;
@@ -101,4 +103,4 @@ Acceptance of this spike does **not** authorize immediate Supabase deletion or p
 
 ## Review disposition
 
-The architecture candidate should now be reviewed as a **feasibility decision**, not as a finished production migration. If exact-head CI remains green and independent review finds no material gap, #60 can close with D1 selected as the implementation direction and the remaining production-convergence work routed into the next bounded issue.
+The corrected architecture candidate should be re-reviewed as a **feasibility decision**, not as a finished production migration. If fresh exact-head CI remains green and independence-clean re-review finds no material gap, #60 can close with D1 selected as the implementation direction and the remaining production-convergence work routed into the next bounded issue.
