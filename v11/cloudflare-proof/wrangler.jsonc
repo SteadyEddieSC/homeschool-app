@@ -1,0 +1,17 @@
+{
+  "$schema": "../node_modules/wrangler/config-schema.json",
+  "name": "learning-harbor-local-d1-proof",
+  "main": "./worker.ts",
+  "compatibility_date": "2026-07-29",
+  "workers_dev": false,
+  "preview_urls": false,
+  "vars": { "APP_ENV": "local-proof" },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "learning-harbor-local-proof",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "./migrations"
+    }
+  ]
+}
