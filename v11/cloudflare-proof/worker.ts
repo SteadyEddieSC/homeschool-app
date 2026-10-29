@@ -69,6 +69,12 @@ async function requireOrgAdult(db: LocalD1, organizationId: string, adultId: str
   if (!row) throw new HttpError(404, 'Co-op not found or adult is not a member.');
 }
 
+async function requireOrgRole(db: LocalD1, organizationId: string, adultId: string, allowedRoles: readonly string[]): Promise<void> {
+  const row = await stmt(db, 'SELECT role FROM organization_adults WHERE organization_id = ? AND adult_id = ?', organizationId, adultId).first<{ role: string }>();
+  if (!row) throw new HttpError(404, 'Co-op not found or adult is not a member.');
+  if (!allowedRoles.includes(row.role)) throw new HttpError(403, 'This co-op role is not authorized for class operations.');
+}
+
 /**
  * The receipt claim and domain writes share one D1 batch. A replay with a
  * matching operation ID/fingerprint returns the recorded result; reuse of an
@@ -248,7 +254,7 @@ async function route(request: Request, env: Env): Promise<Response> {
 
   const classes = pathname.match(/^\/api\/coops\/([^/]+)\/classes$/);
   if (classes && request.method === 'POST') {
-    const organizationId = decodeURIComponent(classes[1]); await requireOrgAdult(db, organizationId, identity.adultId);
+    const organizationId = decodeURIComponent(classes[1]); await requireOrgRole(db, organizationId, identity.adultId, ['instructor', 'admin']);
     const id = text(body, 'id', 100); const name = text(body, 'name', 160); const operationId = text(body, 'operationId', 120); const createdAt = now(); const result = { id, organizationId, name, createdAt };
     const saved = await writeOnce(db, operationId, { kind: 'create-class', id, organizationId, name }, result, (claim) => [
       stmt(db, `INSERT INTO class_sections (id, organization_id, name, created_at) SELECT ?, ?, ?, ? WHERE ${claimExists(claim)}`, id, organizationId, name, createdAt)
@@ -270,7 +276,7 @@ async function route(request: Request, env: Env): Promise<Response> {
 
   const assignments = pathname.match(/^\/api\/coops\/([^/]+)\/assignments$/);
   if (assignments && request.method === 'POST') {
-    const organizationId = decodeURIComponent(assignments[1]); await requireOrgAdult(db, organizationId, identity.adultId);
+    const organizationId = decodeURIComponent(assignments[1]); await requireOrgRole(db, organizationId, identity.adultId, ['instructor', 'admin']);
     const id = text(body, 'id', 100); const classId = text(body, 'classId', 100); const title = text(body, 'title', 180); const dueOn = typeof body.dueOn === 'string' ? body.dueOn : null; const operationId = text(body, 'operationId', 120); const classRow = await stmt(db, 'SELECT id FROM class_sections WHERE id = ? AND organization_id = ?', classId, organizationId).first(); if (!classRow) throw new HttpError(404, 'Class not found in this co-op.');
     const createdAt = now(); const result = { id, organizationId, classId, title, dueOn, createdAt };
     const saved = await writeOnce(db, operationId, { kind: 'create-class-assignment', id, organizationId, classId, title, dueOn }, result, (claim) => [
@@ -294,7 +300,7 @@ async function route(request: Request, env: Env): Promise<Response> {
 
   const classRecords = pathname.match(/^\/api\/coops\/classes\/([^/]+)\/records$/);
   if (classRecords && request.method === 'GET') {
-    const classId = decodeURIComponent(classRecords[1]); const classRow = await stmt(db, 'SELECT organization_id FROM class_sections WHERE id = ?', classId).first<{ organization_id: string }>(); if (!classRow) throw new HttpError(404, 'Class not found.'); await requireOrgAdult(db, classRow.organization_id, identity.adultId);
+    const classId = decodeURIComponent(classRecords[1]); const classRow = await stmt(db, 'SELECT organization_id FROM class_sections WHERE id = ?', classId).first<{ organization_id: string }>(); if (!classRow) throw new HttpError(404, 'Class not found.'); await requireOrgRole(db, classRow.organization_id, identity.adultId, ['instructor', 'admin']);
     const rows = await stmt(db, `SELECT a.id AS assignmentId, a.title, s.learner_id AS learnerId, s.result, s.submitted_at AS submittedAt FROM class_assignments a LEFT JOIN class_submissions s ON s.assignment_id = a.id WHERE a.class_id = ? ORDER BY a.id, s.learner_id`, classId).all();
     return json(rows.results);
   }
