@@ -14,7 +14,7 @@ permissions:
 jobs:
   audit:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
     defaults:
       run:
         working-directory: v11
@@ -29,36 +29,27 @@ jobs:
           set -euo pipefail
           npm install --package-lock-only --ignore-scripts 2>&1 | tee dependency-install.log
           sha256sum package-lock.json | tee package-lock.sha256
-      - name: Capture exact npm audit and vulnerable paths
+          npm audit --json > npm-audit-preinstall.json
+      - name: Prove clean install from the generated lock
         shell: bash
         run: |
-          set +e
-          npm audit --json > npm-audit.json
-          audit_code=$?
+          set -euo pipefail
+          npm ci 2>&1 | tee npm-ci.log
           npm ls vite sharp undici miniflare @cloudflare/vite-plugin --all --json > npm-ls-security.json
-          ls_code=$?
-          set -e
+          npm audit --json > npm-audit.json
           node --input-type=module <<'NODE'
           import { readFile } from 'node:fs/promises';
           const report = JSON.parse(await readFile('npm-audit.json', 'utf8'));
-          const metadata = report.metadata?.vulnerabilities ?? {};
-          console.log('npm audit exit is expected to be nonzero while findings exist.');
-          console.log('audit metadata:', JSON.stringify(metadata));
+          console.log('audit metadata:', JSON.stringify(report.metadata?.vulnerabilities ?? {}));
           for (const [name, finding] of Object.entries(report.vulnerabilities ?? {})) {
-            console.log(JSON.stringify({
-              name,
-              severity: finding.severity,
-              isDirect: finding.isDirect,
-              via: finding.via,
-              effects: finding.effects,
-              range: finding.range,
-              nodes: finding.nodes,
-              fixAvailable: finding.fixAvailable
-            }));
+            console.log(JSON.stringify({ name, severity: finding.severity, isDirect: finding.isDirect, via: finding.via, effects: finding.effects, range: finding.range, nodes: finding.nodes, fixAvailable: finding.fixAvailable }));
           }
           NODE
-          echo "npm audit exit code: ${audit_code}"
-          echo "npm ls exit code: ${ls_code}"
+      - name: Run existing v11 foundation verification
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm run verify 2>&1 | tee verify.log
       - name: Upload diagnostic evidence
         uses: actions/upload-artifact@v4
         with:
@@ -67,7 +58,10 @@ jobs:
             v11/package-lock.json
             v11/package-lock.sha256
             v11/dependency-install.log
+            v11/npm-ci.log
+            v11/npm-audit-preinstall.json
             v11/npm-audit.json
             v11/npm-ls-security.json
+            v11/verify.log
           if-no-files-found: error
           retention-days: 14
