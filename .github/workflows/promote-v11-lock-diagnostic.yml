@@ -1,0 +1,53 @@
+name: promote v11 diagnostic lock
+
+on:
+  push:
+    branches:
+      - security/sec-deps-001-diagnostic
+    paths:
+      - '.github/workflows/promote-v11-lock-diagnostic.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  promote-lock:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out clean remediation branch
+        uses: actions/checkout@v4
+        with:
+          ref: security/sec-deps-001-clean-lock
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Generate and verify exact v11 lock
+        working-directory: v11
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --package-lock-only --ignore-scripts
+          actual="$(sha256sum package-lock.json | awk '{print $1}')"
+          expected='bc4816ac3e2ac38e1da857a5797752bb6a5ff5eeddab05b89be8dc553f66d906'
+          echo "package-lock sha256: ${actual}"
+          test "${actual}" = "${expected}"
+          npm audit --json > /tmp/npm-audit.json
+          node --input-type=module <<'NODE'
+          import { readFile } from 'node:fs/promises';
+          const report = JSON.parse(await readFile('/tmp/npm-audit.json', 'utf8'));
+          if ((report.metadata?.vulnerabilities?.total ?? -1) !== 0) throw new Error('Generated lock is not audit-clean');
+          NODE
+      - name: Commit only the generated lockfile
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add v11/package-lock.json
+          test "$(git diff --cached --name-only)" = 'v11/package-lock.json'
+          git commit -m 'fix: commit audit-clean v11 lockfile'
+          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" HEAD:security/sec-deps-001-clean-lock
