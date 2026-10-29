@@ -43,7 +43,7 @@ jobs:
         with:
           node-version: 22
       - name: Install exact pilot dependencies
-        run: npm install --no-package-lock
+        run: npm ci
       - name: Validate exact repository head
         run: npm run verify
       - name: Validate protected provider configuration
@@ -87,7 +87,7 @@ jobs:
         with:
           node-version: 22
       - name: Install exact pilot dependencies
-        run: npm install --no-package-lock
+        run: npm ci
       - name: Install hosted Chromium
         run: npx playwright install --with-deps chromium
       - name: Validate protected browser configuration
