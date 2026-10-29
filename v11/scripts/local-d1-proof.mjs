@@ -77,15 +77,22 @@ async function main() {
 
   await write('/api/coops', 'adult-family-a', { id: 'coop-a', name: 'Synthetic Co-op', operationId: 'op-coop-a-01' });
   await write('/api/coops/coop-a/adults', 'adult-family-a', { adultId: 'adult-instructor', role: 'instructor', operationId: 'op-instructor-01' });
+  await write('/api/coops/coop-a/adults', 'adult-family-a', { adultId: 'adult-member', role: 'member', operationId: 'op-member-01' });
+  const deniedMemberClassCreate = await request('/api/coops/coop-a/classes', { method: 'POST', adultId: 'adult-member', body: { id: 'class-member-denied', name: 'Denied Member Class', operationId: 'op-member-class-01' } });
+  assert(deniedMemberClassCreate.status === 403, 'ordinary co-op member cannot create a class');
   const classroom = await write('/api/coops/coop-a/classes', 'adult-family-a', { id: 'class-a', name: 'Nature Studies', operationId: 'op-class-a-01' });
   const deniedShare = await request('/api/coops/classes/class-a/enrollments', { method: 'POST', adultId: 'adult-family-a', body: { id: 'share-b', learnerId: 'learner-b', householdId: 'home-b', operationId: 'op-share-b-01' } });
   assert(deniedShare.status === 404, 'a parent cannot grant co-op access to a learner in another household');
   await write('/api/coops/classes/class-a/enrollments', 'adult-family-a', { id: 'share-a', learnerId: learner.id, householdId: 'home-a', operationId: 'op-share-a-01' });
+  const deniedMemberAssignment = await request('/api/coops/coop-a/assignments', { method: 'POST', adultId: 'adult-member', body: { id: 'assignment-member-denied', classId: classroom.id, title: 'Denied member assignment', dueOn: '2026-10-28', operationId: 'op-member-assignment-01' } });
+  assert(deniedMemberAssignment.status === 403, 'ordinary co-op member cannot create a class assignment');
   const assignment = await write('/api/coops/coop-a/assignments', 'adult-family-a', { id: 'assignment-a', classId: classroom.id, title: 'Observe a local plant', dueOn: '2026-10-28', operationId: 'op-assignment-a-01' });
   const householdToday = await request('/api/households/home-a/today?date=2026-10-28', { adultId: 'adult-family-a' });
   assert(householdToday.payload.some((item) => item.id === assignment.id && item.source === 'co-op'), 'shared class assignment projects into household Today');
   await write('/api/coops/assignments/assignment-a/submissions', 'adult-family-a', { id: 'submission-a', learnerId: learner.id, result: 'Synthetic class result only.', operationId: 'op-submission-a-01' });
 
+  const deniedMemberClassView = await request('/api/coops/classes/class-a/records', { adultId: 'adult-member' });
+  assert(deniedMemberClassView.status === 403, 'ordinary co-op member cannot read class submissions/results');
   const classView = await request('/api/coops/classes/class-a/records', { adultId: 'adult-instructor' });
   assert(classView.status === 200 && classView.payload.length === 1, 'instructor sees the class-scoped submission');
   assert(classView.payload[0].result === 'Synthetic class result only.', 'only deliberately shared class result is returned');
@@ -103,7 +110,7 @@ async function main() {
     const count = await db.prepare(`SELECT count(*) AS rows FROM ${table}`).first();
     counts[table] = count.rows;
   }
-  console.log('Local D1 architecture proof passed: household isolation, explicit co-op sharing, adult review, idempotent replay, and conflict visibility.');
+  console.log('Local D1 architecture proof passed: household isolation, explicit co-op sharing, class-role authorization, adult review, idempotent replay, and conflict visibility.');
   console.log(`Synthetic row counts: ${JSON.stringify(counts)}`);
   console.log('No remote Cloudflare or Supabase resource was contacted.');
 }
