@@ -10,6 +10,7 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "typecheck": "tsc -b --pretty false",
+    "test:planner": "vitest run src/domain/family-planner.test.ts",
     "check:boundaries": "node scripts/check-boundaries-rc1.mjs",
     "check:deploy-readiness": "node scripts/check-deploy-readiness.mjs",
     "migration:rehearse": "node scripts/migration-rehearsal.mjs",
@@ -23,7 +24,7 @@
     "d1:offline-queue-proof": "node scripts/offline-queue-d1-proof.mjs",
     "d1:capacity-model": "node scripts/capacity-estimate.mjs",
     "d1:capacity-proof": "node scripts/capacity-scale-proof.mjs",
-    "verify": "npm run typecheck && npm run check:boundaries && npm run migration:rehearse && npm run readiness:report && npm run vendor-exit:verify && npm run build",
+    "verify": "npm run typecheck && npm run test:planner && npm run check:boundaries && npm run migration:rehearse && npm run readiness:report && npm run vendor-exit:verify && npm run build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
     "test:e2e": "playwright test",
     "db:start": "supabase start",
@@ -49,6 +50,7 @@
     "supabase": "2.110.0",
     "typescript": "6.0.3",
     "vite": "8.3.5",
+    "vitest": "5.0.5",
     "wrangler": "4.114.0"
   },
   "overrides": {
