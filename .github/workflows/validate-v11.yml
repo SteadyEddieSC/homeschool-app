@@ -37,7 +37,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-package-lock
+      - run: npm ci
       - run: npm run verify
       - name: Run isolated local D1 household and sharing proof
         run: npm run d1:proof
@@ -88,7 +88,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-package-lock
+      - run: npm ci
       - name: Start local Supabase stack
         run: npm run db:start
       - name: Rebuild database from migrations 001-009
@@ -116,7 +116,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-package-lock
+      - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test --project=${{ matrix.project }}
       - name: Upload v11 rc.1 Playwright results
@@ -141,7 +141,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --no-package-lock
+      - run: npm ci
       - run: npm run verify
       - name: Upload validated rc.1 preview build
         uses: actions/upload-artifact@v4

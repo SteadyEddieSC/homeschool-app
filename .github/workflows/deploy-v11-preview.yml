@@ -43,7 +43,7 @@ jobs:
         with:
           node-version: 22
       - name: Install exact preview dependencies
-        run: npm install --no-package-lock
+        run: npm ci
       - name: Validate source, migration rehearsal, readiness evidence, and build
         run: npm run verify
       - name: Validate protected provider configuration
