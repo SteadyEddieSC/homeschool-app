@@ -72,6 +72,12 @@ Frozen donor: `mblayman/homeschool@3becaa83887b94b116ea2be2bb784a65783a3095` (MI
 - academic-year exhaustion fails closed;
 - malformed dates/completion references fail closed.
 
+## Synthetic Today/review integration
+
+This slice includes the required synthetic household Today/review path at the domain boundary. The test `preserves household and co-op source authority in the same Today projection` feeds two independently forecast courses into `buildTodayReview` and proves that household and explicitly shared co-op work can coexist on the same date without changing either item's source authority.
+
+This is intentionally not a React or persistence integration. A later UI/repository binding may consume the same projection, but it must not duplicate scheduling rules outside this domain module.
+
 ## Explicit non-goals
 
 - no automatic completion, attendance, grade, mastery, or planner mutation;
@@ -80,7 +86,3 @@ Frozen donor: `mblayman/homeschool@3becaa83887b94b116ea2be2bb784a65783a3095` (MI
 - no AI scheduling;
 - no requirement that a co-op control unrelated household work;
 - no production deployment or resource creation.
-
-## Next integration
-
-After this pure forecast slice is independently accepted, a later #65 slice may connect the derived projection to one existing v11 household Today/review surface. That UI/repository integration must consume the domain output without copying scheduling rules into React or persistence code.
