@@ -152,6 +152,13 @@ test('authenticates adults while preserving existing household/co-op authorizati
   const adultB = await signUp('Synthetic Adult B', 'adult-b@example.test', 'SyntheticPassphrase-B-2026');
   const adultC = await signUp('Synthetic Adult C', 'adult-c@example.test', 'SyntheticPassphrase-C-2026');
 
+  const ipProbe = await request('/api/auth/get-session', {
+    jar: adultA.jar,
+    headers: { 'x-forwarded-for': '203.0.113.42' }
+  });
+  expect(ipProbe.status).toBe(200);
+  expect(ipProbe.payload?.user?.id).toBe(adultA.user.id);
+
   const sessionRow = await db
     .prepare('SELECT "ipAddress" AS ip, "userAgent" AS agent, "userId" AS user_id FROM "session" WHERE "userId" = ?')
     .bind(adultA.user.id)
@@ -317,16 +324,16 @@ test('authenticates adults while preserving existing household/co-op authorizati
   const rateLimitTable = await db
     .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'rateLimit'")
     .first<Record<string, unknown>>();
-  expect(rateLimitTable?.name).toBe('rateLimit');
+  expect(rateLimitTable).toBeNull();
 
   const authTables = await db
-    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('user','session','account','verification','rateLimit') ORDER BY name")
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name IN ('user','session','account','verification') ORDER BY name")
     .all<Record<string, unknown>>();
-  expect(authTables.results).toHaveLength(5);
+  expect(authTables.results).toHaveLength(4);
 
   console.log(`AUTH-FOUNDATION-001 Better Auth bundle bytes: ${bundleBytes}`);
   console.log(`AUTH-FOUNDATION-001 auth tables: ${authTables.results.map((row) => row.name).join(', ')}`);
-  console.log('AUTH-FOUNDATION-001 privacy: session IP persistence disabled; no geolocation plugin or columns.');
+  console.log('AUTH-FOUNDATION-001 privacy: client IP tracking and the built-in IP-keyed limiter are disabled; no geolocation plugin or columns.');
   console.log('AUTH-FOUNDATION-001 authority: verified session -> existing AdultIdentity/household/co-op rules.');
   console.log('AUTH-FOUNDATION-001 session lifecycle: sign-out and forced expiry both fail closed.');
 }, 60_000);
