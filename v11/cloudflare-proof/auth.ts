@@ -2,12 +2,16 @@ import { betterAuth } from 'better-auth';
 
 export interface AuthRuntimeEnv {
   DB: unknown;
+  APP_ENV: string;
   BETTER_AUTH_SECRET: string;
 }
 
 type BetterAuthDatabase = NonNullable<Parameters<typeof betterAuth>[0]['database']>;
 
 export function createAuth(env: AuthRuntimeEnv, requestUrl: string) {
+  if (env.APP_ENV !== 'local-proof') {
+    throw new Error('AUTH-FOUNDATION-001 auth adapter is restricted to APP_ENV=local-proof.');
+  }
   if (typeof env.BETTER_AUTH_SECRET !== 'string' || env.BETTER_AUTH_SECRET.length < 32) {
     throw new Error('BETTER_AUTH_SECRET must be at least 32 characters.');
   }
