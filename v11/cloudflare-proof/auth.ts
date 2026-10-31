@@ -26,9 +26,12 @@ export function createAuth(env: AuthRuntimeEnv, requestUrl: string) {
       expiresIn: 60 * 60 * 24 * 7,
       updateAge: 60 * 60 * 24
     },
+    // Better Auth's built-in limiter is keyed by client IP. This bounded local
+    // proof intentionally collects no client IP, so rate limiting is disabled
+    // rather than implying an IP-free limiter exists. A hosted rollout must
+    // choose and prove its abuse-control/privacy boundary separately.
     rateLimit: {
-      enabled: true,
-      storage: 'database'
+      enabled: false
     },
     advanced: {
       ipAddress: {
