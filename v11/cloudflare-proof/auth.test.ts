@@ -2,6 +2,7 @@ import { build } from 'esbuild';
 import { Miniflare } from 'miniflare';
 import { readFile } from 'node:fs/promises';
 import { afterAll, beforeAll, expect, test } from 'vitest';
+import { createAuth } from './auth';
 import authWorker from './auth-worker';
 
 const origin = 'http://local.learning-harbor.test';
@@ -136,6 +137,11 @@ afterAll(async () => {
   await miniflare?.dispose();
 });
 
+test('refuses the proof-only auth configuration outside local-proof', () => {
+  expect(() => createAuth({ DB: db, APP_ENV: 'production', BETTER_AUTH_SECRET: secret }, origin))
+    .toThrow('AUTH-FOUNDATION-001 auth adapter is restricted to APP_ENV=local-proof.');
+});
+
 test('authenticates adults while preserving existing household/co-op authorization', async () => {
   const unauthenticated = await request('/api/households/guessed/learners', {
     headers: { 'x-synthetic-adult-id': 'forged-adult' }
@@ -244,6 +250,11 @@ test('authenticates adults while preserving existing household/co-op authorizati
     body: { adultId: adultC.user.id, role: 'instructor', operationId: 'op-auth-instructor-c-01' }
   });
   expect(instructor.status, JSON.stringify(instructor.payload)).toBe(201);
+
+  const instructorDeniedHousehold = await request('/api/households/home-auth-a/learners', { jar: adultC.jar });
+  expect(instructorDeniedHousehold.status).toBe(404);
+  const instructorDeniedHouseholdWork = await request('/api/households/home-auth-a/today?date=2026-11-03', { jar: adultC.jar });
+  expect(instructorDeniedHouseholdWork.status).toBe(404);
 
   const deniedClass = await request('/api/coops/coop-auth-a/classes', {
     method: 'POST',
