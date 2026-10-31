@@ -150,6 +150,7 @@ test('authenticates adults while preserving existing household/co-op authorizati
 
   const adultA = await signUp('Synthetic Adult A', 'adult-a@example.test', 'SyntheticPassphrase-A-2026');
   const adultB = await signUp('Synthetic Adult B', 'adult-b@example.test', 'SyntheticPassphrase-B-2026');
+  const adultC = await signUp('Synthetic Adult C', 'adult-c@example.test', 'SyntheticPassphrase-C-2026');
 
   const sessionRow = await db
     .prepare('SELECT "ipAddress" AS ip, "userAgent" AS agent, "userId" AS user_id FROM "session" WHERE "userId" = ?')
@@ -193,6 +194,29 @@ test('authenticates adults while preserving existing household/co-op authorizati
   const deniedHousehold = await request('/api/households/home-auth-a/learners', { jar: adultB.jar });
   expect(deniedHousehold.status).toBe(404);
 
+  const workItem = await request('/api/households/home-auth-a/work-items', {
+    method: 'POST',
+    jar: adultA.jar,
+    body: {
+      id: 'work-auth-a',
+      learnerId: 'learner-auth-a',
+      title: 'Synthetic household-only work',
+      instructions: 'Synthetic proof data only.',
+      dueOn: '2026-11-03',
+      operationId: 'op-auth-work-a-0001'
+    }
+  });
+  expect(workItem.status, JSON.stringify(workItem.payload)).toBe(201);
+
+  const householdToday = await request('/api/households/home-auth-a/today?date=2026-11-03', { jar: adultA.jar });
+  expect(householdToday.status).toBe(200);
+  expect(householdToday.payload).toEqual(expect.arrayContaining([
+    expect.objectContaining({ id: 'work-auth-a', learnerId: 'learner-auth-a', source: 'family' })
+  ]));
+
+  const deniedHouseholdWork = await request('/api/households/home-auth-a/today?date=2026-11-03', { jar: adultB.jar });
+  expect(deniedHouseholdWork.status).toBe(404);
+
   const coop = await request('/api/coops', {
     method: 'POST',
     jar: adultA.jar,
@@ -207,6 +231,13 @@ test('authenticates adults while preserving existing household/co-op authorizati
   });
   expect(member.status, JSON.stringify(member.payload)).toBe(201);
 
+  const instructor = await request('/api/coops/coop-auth-a/adults', {
+    method: 'POST',
+    jar: adultA.jar,
+    body: { adultId: adultC.user.id, role: 'instructor', operationId: 'op-auth-instructor-c-01' }
+  });
+  expect(instructor.status, JSON.stringify(instructor.payload)).toBe(201);
+
   const deniedClass = await request('/api/coops/coop-auth-a/classes', {
     method: 'POST',
     jar: adultB.jar,
@@ -214,12 +245,46 @@ test('authenticates adults while preserving existing household/co-op authorizati
   });
   expect(deniedClass.status).toBe(403);
 
+  const instructorClass = await request('/api/coops/coop-auth-a/classes', {
+    method: 'POST',
+    jar: adultC.jar,
+    body: { id: 'class-auth-instructor', name: 'Synthetic Instructor Class', operationId: 'op-auth-class-instructor-01' }
+  });
+  expect(instructorClass.status, JSON.stringify(instructorClass.payload)).toBe(201);
+
+  const instructorAssignment = await request('/api/coops/coop-auth-a/assignments', {
+    method: 'POST',
+    jar: adultC.jar,
+    body: {
+      id: 'assignment-auth-instructor',
+      classId: 'class-auth-instructor',
+      title: 'Synthetic Instructor Assignment',
+      dueOn: '2026-11-04',
+      operationId: 'op-auth-assignment-instructor-01'
+    }
+  });
+  expect(instructorAssignment.status, JSON.stringify(instructorAssignment.payload)).toBe(201);
+
   const allowedClass = await request('/api/coops/coop-auth-a/classes', {
     method: 'POST',
     jar: adultA.jar,
     body: { id: 'class-auth-a', name: 'Synthetic Auth Class', operationId: 'op-auth-class-a-01' }
   });
   expect(allowedClass.status, JSON.stringify(allowedClass.payload)).toBe(201);
+
+  const secondCoop = await request('/api/coops', {
+    method: 'POST',
+    jar: adultB.jar,
+    body: { id: 'coop-auth-b', name: 'Synthetic Separate Co-op', operationId: 'op-auth-coop-b-01' }
+  });
+  expect(secondCoop.status, JSON.stringify(secondCoop.payload)).toBe(201);
+
+  const deniedCrossOrg = await request('/api/coops/coop-auth-b/classes', {
+    method: 'POST',
+    jar: adultC.jar,
+    body: { id: 'class-cross-org-denied', name: 'Cross-org Denied', operationId: 'op-auth-cross-org-denied-01' }
+  });
+  expect(deniedCrossOrg.status).toBe(404);
 
   const staleCookie = adultA.jar.header();
   const signOut = await request('/api/auth/sign-out', { method: 'POST', jar: adultA.jar });
@@ -236,11 +301,18 @@ test('authenticates adults while preserving existing household/co-op authorizati
   expect(restored.status).toBe(200);
   expect(restored.payload).toHaveLength(1);
 
+  await db
+    .prepare('UPDATE "session" SET "expiresAt" = 0 WHERE "userId" = ?')
+    .bind(adultA.user.id)
+    .run();
+  const expired = await request('/api/households/home-auth-a/learners', { jar: signedInAgain });
+  expect(expired.status).toBe(401);
+
   const adultRows = await db
-    .prepare('SELECT count(*) AS rows FROM adult_accounts WHERE id IN (?, ?)')
-    .bind(adultA.user.id, adultB.user.id)
+    .prepare('SELECT count(*) AS rows FROM adult_accounts WHERE id IN (?, ?, ?)')
+    .bind(adultA.user.id, adultB.user.id, adultC.user.id)
     .first<Record<string, unknown>>();
-  expect(Number(adultRows?.rows ?? 0)).toBe(2);
+  expect(Number(adultRows?.rows ?? 0)).toBe(3);
 
   const rateLimitTable = await db
     .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name = 'rateLimit'")
@@ -254,6 +326,7 @@ test('authenticates adults while preserving existing household/co-op authorizati
 
   console.log(`AUTH-FOUNDATION-001 Better Auth bundle bytes: ${bundleBytes}`);
   console.log(`AUTH-FOUNDATION-001 auth tables: ${authTables.results.map((row) => row.name).join(', ')}`);
-  console.log('AUTH-FOUNDATION-001 privacy: IP tracking disabled; no geolocation plugin or columns.');
+  console.log('AUTH-FOUNDATION-001 privacy: session IP persistence disabled; no geolocation plugin or columns.');
   console.log('AUTH-FOUNDATION-001 authority: verified session -> existing AdultIdentity/household/co-op rules.');
+  console.log('AUTH-FOUNDATION-001 session lifecycle: sign-out and forced expiry both fail closed.');
 }, 60_000);
