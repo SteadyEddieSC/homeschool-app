@@ -26,7 +26,7 @@
     "d1:capacity-model": "node scripts/capacity-estimate.mjs",
     "d1:capacity-proof": "node scripts/capacity-scale-proof.mjs",
     "auth:proof": "npm run auth:proof:typecheck && node scripts/auth-foundation-proof.mjs",
-    "auth:proof:typecheck": "tsc --ignoreConfig --noEmit --strict --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM cloudflare-proof/auth.ts cloudflare-proof/auth-worker.ts cloudflare-proof/worker.ts cloudflare-proof/repositories.ts cloudflare-proof/domain.ts",
+    "auth:proof:typecheck": "tsc --ignoreConfig --noEmit --strict --skipLibCheck --types node --target ES2022 --module ESNext --moduleResolution Bundler --lib ES2022,DOM cloudflare-proof/auth.ts cloudflare-proof/auth-worker.ts cloudflare-proof/worker.ts cloudflare-proof/repositories.ts cloudflare-proof/domain.ts",
     "auth:audit": "npm audit --audit-level=high --omit=dev",
     "verify": "npm run typecheck && npm run test:planner && npm run test:schedule && npm run check:boundaries && npm run migration:rehearse && npm run readiness:report && npm run vendor-exit:verify && npm run build",
     "preview": "vite preview --host 127.0.0.1 --port 4173",
