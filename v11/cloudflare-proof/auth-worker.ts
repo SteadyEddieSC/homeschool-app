@@ -3,13 +3,14 @@ import { createAuth } from './auth';
 
 interface D1Statement {
   bind(...values: unknown[]): D1Statement;
-  first<T = Record<string, unknown>>(): Promise<T | null>;
+  first<T = Record<string, unknown>>(column?: string): Promise<T | null>;
   all<T = Record<string, unknown>>(): Promise<{ results: T[] }>;
   run(): Promise<{ success?: boolean; meta?: { changes?: number } }>;
 }
 
 interface LocalD1 {
   prepare(sql: string): D1Statement;
+  batch<T = unknown>(statements: D1Statement[]): Promise<T[]>;
 }
 
 interface Env {
