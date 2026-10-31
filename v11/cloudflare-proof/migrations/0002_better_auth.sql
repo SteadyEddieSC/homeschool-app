@@ -1,6 +1,6 @@
 -- Better Auth 1.7.14 core schema for the bounded local D1 proof.
--- Generated from the documented Better Auth core model; Cloudflare geolocation
--- enrichment is disabled, so no location columns are present.
+-- Client IP tracking and the built-in IP-keyed rate limiter are disabled for
+-- this privacy-minimal proof, so no geolocation or rate-limit storage is added.
 
 CREATE TABLE "user" (
   "id" TEXT NOT NULL PRIMARY KEY,
@@ -51,10 +51,3 @@ CREATE TABLE "verification" (
   "updatedAt" TIMESTAMP
 );
 CREATE INDEX "verification_identifier_idx" ON "verification"("identifier");
-
-CREATE TABLE "rateLimit" (
-  "id" TEXT NOT NULL PRIMARY KEY,
-  "key" TEXT NOT NULL UNIQUE,
-  "count" INTEGER NOT NULL,
-  "lastRequest" INTEGER NOT NULL
-);
