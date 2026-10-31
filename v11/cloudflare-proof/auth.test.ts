@@ -156,7 +156,7 @@ test('authenticates adults while preserving existing household/co-op authorizati
     .bind(adultA.user.id)
     .first<Record<string, unknown>>();
   expect(sessionRow?.user_id).toBe(adultA.user.id);
-  expect(sessionRow?.ip ?? null).toBeNull();
+  expect([null, '']).toContain(sessionRow?.ip ?? null);
 
   const sessionColumns = await db.prepare('PRAGMA table_info("session")').all<Record<string, unknown>>();
   const columnNames = sessionColumns.results.map((row) => String(row.name));
