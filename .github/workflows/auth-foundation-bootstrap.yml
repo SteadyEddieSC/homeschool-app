@@ -9,8 +9,8 @@ on:
       - 'v11/package-lock.json'
       - 'v11/cloudflare-proof/auth.ts'
       - 'v11/cloudflare-proof/auth-worker.ts'
+      - 'v11/cloudflare-proof/auth.test.ts'
       - 'v11/cloudflare-proof/migrations/0002_better_auth.sql'
-      - 'v11/scripts/auth-foundation-proof.mjs'
       - '.github/workflows/auth-foundation-bootstrap.yml'
   workflow_dispatch:
 
