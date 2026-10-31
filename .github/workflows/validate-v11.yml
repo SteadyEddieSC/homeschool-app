@@ -39,6 +39,10 @@ jobs:
           node-version: 22
       - run: npm ci
       - run: npm run verify
+      - name: Audit runtime auth dependencies
+        run: npm run auth:audit
+      - name: Run local Better Auth adult-session and authorization proof
+        run: npm run auth:proof
       - name: Run isolated local D1 household and sharing proof
         run: npm run d1:proof
       - name: Verify unconfigured pilot doctor fails safely
