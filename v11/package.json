@@ -39,7 +39,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.110.8",
-    "better-auth": "1.7.16",
+    "better-auth": "1.7.17",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },
